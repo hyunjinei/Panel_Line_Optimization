@@ -1,0 +1,223 @@
+PPO 네트워크/피처/학습 상세 설명 (논문용)
+
+0) 문서 목적
+이 문서는 본 연구에서 사용하는 RL 정책 네트워크와 입력 피처 구성, 학습 목적함수, 그리고 구현 세부를 논문에 그대로 옮길 수 있도록 정리한 것이다. 모든 내용은 실제 코드 구현과 일치한다.
+
+
+1) 학습 파이프라인 요약 (PPO)
+학습 스크립트는 `PPO/train/runner.py`, 롤아웃/업데이트 로직은 `PPO/train/assembly_rollout.py`를 사용한다.
+
+1.1 한 에피소드 흐름
+1) 데이터 생성
+- `OptimizedBlockGenerator`로 블록과 메타데이터를 생성한다.
+- 학습 분포는 `train_distribution` 옵션과 관련 파라미터(블록 수, 스케일, spread_days 등)로 결정된다.
+
+2) 정책 롤아웃
+- `run_rl_assembly_decoding_sequence_with_blocks`를 호출하여 스케줄을 생성한다.
+- 각 스텝에서 액션 마스킹으로 가능한 후보를 얻고, 네트워크는 후보 중 1개를 선택한다.
+- 스텝별 정보(선택된 블록, log_prob, step_reward, env_state 등)를 `episode_data`에 저장한다.
+
+3) 베이스라인 계산 (휴리스틱)
+- LPT, SEAM_MIN을 각각 여러 번(기본 10회) 샘플링한다.
+- 두 방법 중 더 좋은 쪽을 베이스라인으로 사용한다.
+
+4) 어드밴티지 계산
+- global_advantage = actor_makespan - baseline_makespan
+  - makespan이 작을수록 좋으므로, actor가 더 좋으면 global_advantage는 음수이다.
+- 스텝별 advantage = step_reward + global_advantage
+
+5) PPO 업데이트
+- old_log_probs는 롤아웃 시점의 log_prob를 사용한다.
+- new_log_probs는 현재 파라미터로 재계산한다.
+- ratio = exp(new_log_prob - old_log_prob)
+- surr1 = ratio * advantage
+- surr2 = clip(ratio, 1-eps, 1+eps) * advantage
+- actor_loss = mean(max(surr1, surr2))
+- entropy_loss = 엔트로피 평균
+- 최종 loss = actor_loss - entropy_coeff * entropy_loss
+- 지정된 ppo_iterations 횟수만큼 반복 업데이트한다.
+
+1.2 self_label 모드
+- K번 샘플링으로 best-of-K 시퀀스를 선택하고 교사 강제(teacher forcing)로 업데이트한다.
+- 선택 기준은 (1) makespan 최소, (2) 위반 최소 우선 중 하나를 사용한다.
+
+
+2) 네트워크 구조 요약 (SingleStepPtrNet)
+코드 위치: `PPO/models/single_step_actor.py`
+
+2.1 입력/출력
+입력
+- 후보 블록 피처: N x 34
+- 선택적 환경 상태(env_state): 31차원 (use_env_state=True일 때만)
+
+출력
+- 후보 블록에 대한 로짓(logits)
+- 확률 분포(softmax)
+- 선택 블록 인덱스(후보 내부 인덱스)
+
+2.2 입력 정규화 (블록 피처)
+- 이진 피처(0~17): 그대로 사용
+- 연속 피처(18~33): 분포 왜곡 완화를 위해 변환 후 정규화
+  - log1p 적용: 18~27
+  - signed log1p 적용: 28 (slack_days)
+- 정규화는 “전역 러닝 통계 + 스텝 통계” 혼합 방식
+  - global_norm = (x - global_mean) / global_std
+  - step_norm   = (x - step_mean) / step_std
+  - mix = sigmoid(feature_norm_mix_logit)
+  - normalized = mix * global_norm + (1 - mix) * step_norm
+- 연속 피처는 [-5, 5]로 클리핑한다.
+- 고정 통계 모드가 켜진 경우(fixed_norm_stats), 러닝 통계 대신 고정 통계를 사용한다.
+
+2.3 임베딩과 포지셔널 인코딩
+- 입력 피처를 Linear(34 -> hidden_dim)로 임베딩한다.
+- 사인/코사인 포지셔널 인코딩을 추가해 순서 구분력을 높인다.
+
+2.4 블록 집계 (AttentionPooling)
+- 블록 임베딩을 AttentionPooling으로 요약해 graph_embedding을 만든다.
+- 평균 대신 중요 블록을 강조하는 가중합 구조다.
+
+2.5 환경 정보 융합 (use_env_state=True)
+- env_state는 2층 MLP(Linear-ReLU-Linear) + LayerNorm으로 인코딩된다.
+- 인코딩 결과를 Linear로 hidden_dim으로 투영하여 env_context를 만든다.
+- 최종 컨텍스트는 context = graph_embedding + env_context
+- cross-attention이나 FiLM은 현재 비활성화되어 있다.
+
+2.6 포인터 메커니즘 (Pointer Network)
+- query: 컨텍스트 벡터 (hidden_dim)
+- ref: 블록 임베딩 (N x hidden_dim)
+- 수식
+  u = v^T tanh(W_q * query + W_ref * ref)
+- logit clipping: u = C * tanh(u)
+- 마스크는 후보 블록에만 적용된다.
+
+2.7 로짓 보정 (Feature Bias Head)
+- 원본 피처를 작은 MLP로 다시 통과시켜 로짓 편향을 추가한다.
+- 목적: 특정 피처 패턴이 너무 희석되는 문제를 줄인다.
+
+2.8 디코딩
+- temperature T로 softmax를 계산한다.
+- greedy 또는 sampling으로 선택한다.
+- 필요 시 top-k 비율 제한을 적용한다.
+
+
+3) 블록 피처 정의 (총 34차원)
+코드 위치: `PPO/models/single_step_actor.py` - extract_block_features_single
+
+[Binary 0~17]
+0  has_ps_pair          : P/S 짝이 있으면 1
+1  is_port              : P
+2  is_starboard         : S
+3  is_center            : C
+4  has_curved_plate     : 곡판 포함
+5  is_draft             : draft 여부
+6  is_cross_seam        : cross seam 여부
+7  is_main_plate_only   : 주판 only 여부
+8  material_is_outsourcing : 외주
+9  material_is_lt       : LT 재질
+10 material_ready       : 자재 입고
+11 is_subassembly       : 별판 그룹 여부
+12 needs_pm_flag        : 오후 착수 필요(P6)
+13 candidate_branch_35a : 35A 후보
+14 candidate_branch_36b : 36B 후보
+15 ps_forced_flag       : P/S 강제 대상
+16 line_is_fixed        : fixed 타입
+17 line_is_line         : line 타입
+
+[Continuous 18~33]
+18 seam_count           : 심수
+19 c_seam_count         : C/Seam 심수
+20 longi_count          : 론지 개수
+21 width                : 폭
+22 length               : 길이
+23 max_thickness        : 최대 두께
+24 main_plate_count     : 주판 개수
+25 angle_count          : 앵글 개수
+26 buildup_count        : 빌드업 개수
+27 total_processing_time: 총 처리시간 합
+28 slack_days           : 마감 대비 여유(음수 가능)
+29 deadline_urgency     : 마감 긴급도(정규화 지표)
+30 workshop_backlog_ratio: 작업장 백로그 비율
+31 line_backlog_ratio   : 라인 백로그 비율
+32 masking_stage_value  : 마스킹 단계 인코딩 값
+33 three_bay_state      : 3베이 패턴 상태 인코딩
+
+
+4) 환경 피처 정의 (총 31차원)
+코드 위치: `scheduling/assembly_start/rl_assembly_scheduler.py` - _extract_environment_state
+
+[Time/Calendar 0~4]
+0 is_weekend
+1 is_holiday_eve
+2 is_hot_season
+3 day_of_week_norm (weekday/6)
+4 hour_of_day_norm (hour/23)
+
+[Capacity 5~7]
+5 daily_seam_usage_ratio
+6 daily_block_usage_ratio
+7 remaining_capacity_ratio
+
+[Block Count 8~10]
+8  total_blocks_norm        = log1p(total_blocks) / log1p(max_total_blocks)
+9  remaining_blocks_norm    = log1p(remaining_blocks) / log1p(max_total_blocks)
+10 remaining_ratio          = remaining_blocks / total_blocks
+
+[Remaining Distribution 11~17]
+11 ps_pair_ratio
+12 line_ratio
+13 fixed_ratio
+14 subassembly_ratio
+15 needs_pm_ratio
+16 curved_ratio
+17 high_seam_ratio
+
+[Bay Usage 18~20]
+18 bay_balance_delta
+19 count_35_ratio
+20 count_36_ratio
+
+[Constraint Debt 21~22]
+21 warning_ratio
+22 error_ratio
+
+[Available Summary 23~26]
+23 available_ratio
+24 diversity (가용 후보 라인 다양성)
+25 available_ps_forced_ratio
+26 available_masking_stage_mean
+
+[Slack Summary 27~30]
+27 overdue_ratio
+28 avg_slack_scaled
+29 min_slack_scaled
+30 max_slack_scaled
+
+env_state는 자동 스케일링을 사용한다.
+- block 수는 log 스케일 + 동적 최대치 기준
+- slack은 에피소드 내 최대 절대값을 기준으로 [-1, 1]로 정규화
+
+
+5) 액션 선택과 마스킹 결합
+- 네트워크는 “마스킹된 후보 집합” 안에서만 선택한다.
+- 즉, 정책의 범위는 현실 제약에 의해 제한된다.
+- 이 구조는 휴리스틱과 RL 모두 동일하게 적용되며 공정성을 보장한다.
+
+
+6) 주요 하이퍼파라미터 (기본값)
+- embedding_dim = 128
+- hidden_dim = 128
+- n_layers = 1
+- n_heads = 4
+- dropout = 0.1
+- temperature T = 1.0
+- PPO epsilon = 0.2
+- PPO iterations = 2
+- entropy_coeff = 0.01 (워밍업 포함)
+- grad_clip = 1.0
+
+
+7) 파일 경로 요약
+- 네트워크: `PPO/models/single_step_actor.py`
+- 환경 피처: `scheduling/assembly_start/rl_assembly_scheduler.py` (_extract_environment_state)
+- 학습 루프: `PPO/train/assembly_rollout.py`
+- 학습 실행: `PPO/train/runner.py`

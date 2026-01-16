@@ -1,0 +1,34 @@
+﻿type,date,total_blocks,total_steps,step,block_id,assembly_start_date,assembly_type,port_starboard,status,reason,assembly_masking_stage,three_bay_check,ps_forced,selected_block,available_count,excluded_count,emergency_mode,relax_level,relax_stage,relax_constraints,relax_target_count,relax_targets,relaxed_block_count,relax_target_total,final_choice_flag,final_violation_count,final_violation_list,seam_count,c_seam_count,has_curved_plate
+METADATA,20250610,68,16,,,,,,,,,,,,,,,,,,,,,,,,,,,
+STEP_SUMMARY,20250610,68,16,0,선택: 51,,,,"가용: 0, 제외: 0",,,,,51,0,0,,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250610,68,16,0,51,,fixed,S,AVAILABLE,RL_SELECTED,,,,★,,,,,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250610,68,16,1,선택: 39,,,,"가용: 0, 제외: 0",,,,,39,0,0,,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250610,68,16,1,39,,line,P,AVAILABLE,RL_SELECTED,,,,★,,,,,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250610,68,16,2,선택: 8,,,,"가용: 0, 제외: 0",,,,,8,0,0,,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250610,68,16,2,8,,fixed,P,AVAILABLE,RL_SELECTED,,,,★,,,,,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250610,68,16,3,선택: 25,,,,"가용: 0, 제외: 0",,,,,25,0,0,,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250610,68,16,3,25,,line,P,AVAILABLE,RL_SELECTED,,,,★,,,,,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250610,68,16,4,선택: 32,,,,"가용: 0, 제외: 0",,,,,32,0,0,,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250610,68,16,4,32,,line,S,AVAILABLE,RL_SELECTED,,,,★,,,,,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250610,68,16,5,선택: 57,,,,"가용: 0, 제외: 0",,,,,57,0,0,,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250610,68,16,5,57,,fixed,S,AVAILABLE,RL_SELECTED,,,,★,,,,,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250610,68,16,6,선택: 58,,,,"가용: 0, 제외: 0",,,,,58,0,0,,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250610,68,16,6,58,,fixed,P,AVAILABLE,RL_SELECTED,,,,★,,,,,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250610,68,16,7,선택: 10,,,,"가용: 0, 제외: 0",,,,,10,0,0,,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250610,68,16,7,10,,fixed,P,AVAILABLE,RL_SELECTED,,,,★,,,,,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250610,68,16,8,선택: 31,,,,"가용: 0, 제외: 0",,,,,31,0,0,,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250610,68,16,8,31,,line,P,AVAILABLE,RL_SELECTED,,,,★,,,,,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250610,68,16,9,선택: 40,,,,"가용: 0, 제외: 0",,,,,40,0,0,,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250610,68,16,9,40,,line,S,AVAILABLE,RL_SELECTED,,,,★,,,,,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250610,68,16,10,선택: 24,,,,"가용: 0, 제외: 0",,,,,24,0,0,,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250610,68,16,10,24,,line,S,AVAILABLE,RL_SELECTED,,,,★,,,,,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250610,68,16,11,선택: 9,,,,"가용: 0, 제외: 0",,,,,9,0,0,,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250610,68,16,11,9,,fixed,S,AVAILABLE,RL_SELECTED,,,,★,,,,,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250610,68,16,12,선택: 38,,,,"가용: 0, 제외: 0",,,,,38,0,0,,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250610,68,16,12,38,,fixed,C,AVAILABLE,RL_SELECTED,,,,★,,,,,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250610,68,16,13,선택: 56,,,,"가용: 0, 제외: 0",,,,,56,0,0,,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250610,68,16,13,56,,fixed,P,AVAILABLE,RL_SELECTED,,,,★,,,,,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250610,68,16,14,선택: 23,,,,"가용: 0, 제외: 0",,,,,23,0,0,,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250610,68,16,14,23,,fixed,C,AVAILABLE,RL_SELECTED,,,,★,,,,,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250610,68,16,15,선택: 53,,,,"가용: 0, 제외: 0",,,,,53,0,0,,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250610,68,16,15,53,,fixed,P,AVAILABLE,RL_SELECTED,,,,★,,,,,,,0,,,,False,0,,,,False
