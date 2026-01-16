@@ -273,7 +273,7 @@ training:
   # env_state 사용 여부
   use_env_state: true
   # feature 모드 (full / reduced / constraint)
-  feature_mode: reduced
+  feature_mode: constraint
   # 포지셔널 인코딩 사용 여부
   use_positional_encoding: false
   # 마스킹 디버그 출력
@@ -289,7 +289,7 @@ training:
   # self_label 샘플 수
   self_label_samples: 64
   # self_label 모드 (1 또는 2) # 1은 makespan이 가장 짧은거 중에서 제약조건을 가장장 적게 어긴 것을 학습, 2는 제약조건을 적게 어긴 것 중에서 makespan이 가장 짧은 것을 학습
-  self_label_mode: 1
+  self_label_mode: 2
   # 위반 페널티 가중치
   violation_penalty_weight: 1.0
   # 론지 부하 균형 가중치
