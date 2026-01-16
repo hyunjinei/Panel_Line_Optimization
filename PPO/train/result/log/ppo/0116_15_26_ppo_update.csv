@@ -1,6 +1,0 @@
-episode,check_triggered,current_mean,current_std,baseline_mean,baseline_std,t_statistic,p_value,statistical_alpha,is_significant,is_better,updated,total_updates,update_reason
-11,True,,,,,,,0.700,False,False,False,0,heuristic_baseline_fixed
-21,True,,,,,,,0.700,False,False,False,0,heuristic_baseline_fixed
-31,True,,,,,,,0.700,False,False,False,0,heuristic_baseline_fixed
-41,True,,,,,,,0.700,False,False,False,0,heuristic_baseline_fixed
-51,True,,,,,,,0.700,False,False,False,0,heuristic_baseline_fixed
