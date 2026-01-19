@@ -438,14 +438,13 @@ class AssemblyPPORollout:
         # 4. PPO 업데이트
         t3 = time.time()
         print(f"[3] PPO 업데이트 시작...")
-        # [AGENT-EDIT] 동점도 업데이트 허용 (baseline과 동일 score일 때도 학습)
-        update_allowed = actor_score <= baseline_score
-        update_applied = bool(update_allowed and episode_data)
+        # [AGENT-EDIT] 업데이트는 항상 수행 (baseline 대비 열세도 학습 신호로 사용)
+        update_allowed = bool(episode_data)
+        update_applied = bool(update_allowed)
         if update_applied:
-            # [AGENT-EDIT] LPT보다 좋은 경우에만 업데이트 (항상 LPT 이상 목표)
             actor_loss, entropy_loss = self._ppo_update(episode_data, advantage)  # 🔥 엔트로피 Loss
         else:
-            # [AGENT-EDIT] LPT보다 나쁘면 업데이트 스킵
+            # [AGENT-EDIT] 데이터가 없으면 업데이트 불가
             actor_loss = 0.0
             entropy_loss = 0.0  # 🔥 기본값
         print(f"[3] 완료: {time.time()-t3:.1f}초")

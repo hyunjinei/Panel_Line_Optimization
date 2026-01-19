@@ -47,7 +47,17 @@ python main.py replay_start_date --config config.yaml --yes
 python main.py compare --config config.yaml --yes
 ```
 
-### 1.7 내부 스크립트로 추가 인자 전달
+### 1.7 간트차트 생성 (gantt)
+```bash
+python main.py gantt --config config.yaml --yes
+```
+
+검색 폴더를 직접 지정하려면:
+```bash
+python main.py gantt --config config.yaml --yes --search_dir PPO/eval/20250609_0115_12_23_seed42
+```
+
+### 1.8 내부 스크립트로 추가 인자 전달
 `--` 이후의 인자는 내부 실행 스크립트에 그대로 전달됩니다.
 
 예시: 평가 모드 강제
@@ -175,6 +185,7 @@ main.py → scheduling/performance_replay/...
 | heuristic | 휴리스틱 단독 실행 | scheduling/* |
 | replay | 엑셀 실적 재현 | scheduling/performance_replay/* |
 | replay_start_date | 엑셀 + 착수일 휴리스틱 연속 실행 | replay → start_date |
+| gantt | 간트차트 생성 | utils/gantt_chart_enhanced.py |
 
 ---
 
@@ -197,6 +208,13 @@ confirm: true
 data:
   excel_path: environment/판넬 블록 데이터셋_250618_SNU.xlsx
   sheet: Sheet1
+```
+
+### 5.3 간트차트 설정
+```yaml
+gantt:
+  # 결과 폴더를 직접 지정 (비우면 최신 결과 자동 탐색)
+  search_dir: PPO/eval/20250609_0115_12_23_seed42
 ```
 설명
 - excel_path: 입력 엑셀 경로

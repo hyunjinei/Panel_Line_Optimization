@@ -23,8 +23,37 @@ def rename_excel_detailed_csv_files(
     if plan_label:
         label_suffix = f"_{plan_label}"
 
-    # 🔥 기존 결과 폴더의 해당 method 파일들을 먼저 모두 삭제
+    # ==== [AGENT-EDIT BEGIN: 소스 파일 존재 여부에 따라 삭제/이동 제어] ====
+    def _has_source_files() -> bool:
+        for date_key in date_keys:
+            if result_folder:
+                for pattern in [
+                    f"detailed_assembly_decoding_schedule_processes_{date_key}.csv",
+                    f"detailed_assembly_schedule_info_{date_key}.csv",
+                    f"detailed_assembly_bayselect_info_{date_key}.csv",
+                ]:
+                    candidate = os.path.join(result_folder, pattern)
+                    if os.path.exists(candidate):
+                        return True
+            for pattern in [
+                f"detailed_assembly_decoding_schedule_processes_{date_key}.csv",
+                f"detailed_assembly_schedule_info_{date_key}.csv",
+                f"detailed_assembly_bayselect_info_{date_key}.csv",
+            ]:
+                if os.path.exists(pattern):
+                    return True
+        return False
+
+    def _has_target_files() -> bool:
+        if result_folder and os.path.exists(result_folder):
+            import glob
+            return bool(glob.glob(os.path.join(result_folder, f"detailed_excel*{label_suffix}*")))
+        return False
+
     if result_folder and os.path.exists(result_folder):
+        # 소스가 없고 대상 파일이 이미 있으면 아무 것도 하지 않는다.
+        if not _has_source_files() and _has_target_files():
+            return
         import glob
         existing_files = glob.glob(os.path.join(result_folder, f"detailed_excel*{label_suffix}*"))
         for existing_file in existing_files:
@@ -32,6 +61,7 @@ def rename_excel_detailed_csv_files(
                 os.remove(existing_file)
             except Exception as e:
                 print(f"     ⚠️ 파일 삭제 실패: {existing_file} - {e}")
+    # ==== [AGENT-EDIT END] ====
 
     for date_key in date_keys:
         #  파일 경로 설정 (폴더 고려)
@@ -86,7 +116,37 @@ def rename_actionmasking_detailed_csv_files(date_keys: List[str], result_folder:
     integrated_learning_and_scheduling.py에서 생성되는 파일명과 동일하게 변경
     기존 파일이 있으면 덮어쓰기
     """
+    # ==== [AGENT-EDIT BEGIN: 소스 파일 존재 여부에 따라 삭제/이동 제어] ====
+    def _has_source_files() -> bool:
+        for date_key in date_keys:
+            if result_folder:
+                for pattern in [
+                    f"detailed_assembly_decoding_schedule_processes_{date_key}.csv",
+                    f"detailed_assembly_schedule_info_{date_key}.csv",
+                    f"detailed_assembly_bayselect_info_{date_key}.csv",
+                ]:
+                    candidate = os.path.join(result_folder, pattern)
+                    if os.path.exists(candidate):
+                        return True
+            for pattern in [
+                f"detailed_assembly_decoding_schedule_processes_{date_key}.csv",
+                f"detailed_assembly_schedule_info_{date_key}.csv",
+                f"detailed_assembly_bayselect_info_{date_key}.csv",
+            ]:
+                if os.path.exists(pattern):
+                    return True
+        return False
+
+    def _has_target_files() -> bool:
+        if result_folder and os.path.exists(result_folder):
+            import glob
+            return bool(glob.glob(os.path.join(result_folder, "detailed_actionmasking_*")))
+        return False
+
     if result_folder and os.path.exists(result_folder):
+        # 소스가 없고 대상 파일이 이미 있으면 아무 것도 하지 않는다.
+        if not _has_source_files() and _has_target_files():
+            return
         import glob
         existing_files = glob.glob(os.path.join(result_folder, "detailed_actionmasking_*"))
         for existing_file in existing_files:
@@ -94,6 +154,7 @@ def rename_actionmasking_detailed_csv_files(date_keys: List[str], result_folder:
                 os.remove(existing_file)
             except Exception as e:
                 print(f"     ⚠️ 파일 삭제 실패: {existing_file} - {e}")
+    # ==== [AGENT-EDIT END] ====
 
     for date_key in date_keys:
         #  파일 경로 설정 (폴더 고려)

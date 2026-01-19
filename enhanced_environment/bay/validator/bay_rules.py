@@ -222,33 +222,46 @@ class BayValidationMixin:
         return violations
 
     def validate_consecutive_constraints_realtime_action(
-        self, block: EnhancedBlock, assigned_bay: BayType
+        self,
+        block: EnhancedBlock,
+        assigned_bay: BayType,
+        current_in_history: bool = True,
     ) -> List[ConstraintViolation]:
-        """P7#7: 연속 배치 제약 검증 (Action Masking용 - 중복 카운팅 방지)"""
+        """
+        P7#7: 연속 배치 제약 검증 (Action Masking용 - 중복 카운팅 방지)
+
+        Args:
+            current_in_history: 현재 블록이 bay_tracker 히스토리에 이미 반영됐는지 여부
+                - True: history에 현재 블록 포함 (env.step 경로)
+                - False: history에 현재 블록 미포함 (엑셀/사후 검증 경로)
+        """
         violations: List[ConstraintViolation] = []
 
-        # Action Masking용: 현재 블록을 제외하고 연속 카운트 계산
-        consecutive_count = self.bay_tracker._get_consecutive_count_without_current_block(
+        # [AGENT-EDIT] 히스토리 포함 여부에 따라 연속 카운트 보정
+        consecutive_count = self.bay_tracker._get_consecutive_count_with_metadata(
             assigned_bay
         )
+        if not current_in_history:
+            # 현재 블록이 히스토리에 없다면 1개를 더해 “현재 포함” 기준으로 맞춘다.
+            consecutive_count += 1
 
         # A베이: 1개까지만 연속 가능
-        if assigned_bay == BayType.BAY_35A and consecutive_count >= 1:
+        if assigned_bay == BayType.BAY_35A and consecutive_count >= 2:
             violations.append(
                 ConstraintViolation(
                     constraint_id="P7#7",
-                    message=f"A베이 {consecutive_count + 1}개 연속 배치 불가 (현재 블록 제외 카운트)",
+                    message=f"A베이 {consecutive_count}개 연속 배치 불가 (현재 블록 포함 카운트)",
                     severity="WARNING",
                     block_id=block.block_id,
                 )
             )
 
         # B베이: 2개까지만 연속 가능
-        elif assigned_bay == BayType.BAY_36B and consecutive_count >= 2:
+        elif assigned_bay == BayType.BAY_36B and consecutive_count >= 3:
             violations.append(
                 ConstraintViolation(
                     constraint_id="P7#7",
-                    message=f"B베이 {consecutive_count + 1}개 연속 배치 불가 (현재 블록 제외 카운트)",
+                    message=f"B베이 {consecutive_count}개 연속 배치 불가 (현재 블록 포함 카운트)",
                     severity="WARNING",
                     block_id=block.block_id,
                 )

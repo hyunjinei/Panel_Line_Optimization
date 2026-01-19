@@ -100,6 +100,7 @@ def validate_config(mode: str, config: dict) -> tuple[list, list, dict]:
     summary: dict = {}
 
     data_cfg = config.get("data", {}) if isinstance(config, dict) else {}
+    gantt_cfg = config.get("gantt", {}) if isinstance(config, dict) else {}
     excel_path = data_cfg.get("excel_path")
     sheet = data_cfg.get("sheet")
 
@@ -123,6 +124,7 @@ def validate_config(mode: str, config: dict) -> tuple[list, list, dict]:
     summary["excel_path"] = excel_path or ""
     summary["sheet"] = sheet or ""
     summary["methods"] = selected_methods or ["(기본값 사용)"]
+    summary["gantt_search_dir"] = gantt_cfg.get("search_dir") if isinstance(gantt_cfg, dict) else ""
 
     # 엑셀 경로 필요 조건
     needs_excel = False
@@ -140,7 +142,7 @@ def validate_config(mode: str, config: dict) -> tuple[list, list, dict]:
         if eval_mode == 1 and method_set & {"EXCEL", "ACTIONMASKING"}:
             warnings.append("MODE 1에서는 엑셀/착수일은 실행되지 않습니다.")
 
-    if needs_excel:
+    if mode != "gantt" and needs_excel:
         if not excel_path:
             errors.append("data.excel_path가 필요하지만 설정되지 않았습니다.")
         elif not os.path.exists(str(excel_path)):
@@ -219,6 +221,8 @@ def print_summary(summary: dict) -> None:
         print(f"- 평가 방법: {_summarize_list(summary.get('methods') or [])}")
     if summary.get("model_path"):
         print(f"- 모델 경로: {summary.get('model_path')}")
+    if summary.get("gantt_search_dir"):
+        print(f"- 간트차트 검색 경로: {summary.get('gantt_search_dir')}")
     print(f"- 완화 순서(착수일): {_summarize_list(summary.get('relax_order_start_date') or [])}")
     print(f"- 완화 순서(조립): {_summarize_list(summary.get('relax_order_assembly') or [])}")
     print(f"- 완화 금지: {_summarize_list(summary.get('strict_rules') or [])}")
@@ -280,7 +284,7 @@ def main() -> None:
     parser.add_argument(
         "mode",
         nargs="?",
-        choices=["train", "eval", "compare", "heuristic", "replay", "replay_start_date"],
+        choices=["train", "eval", "compare", "heuristic", "replay", "replay_start_date", "gantt"],
         help="실행 모드",
     )
     parser.add_argument("--config", required=True, help="설정 파일 경로 (yaml/json)")
@@ -350,6 +354,24 @@ def main() -> None:
         # PPO 평가/비교 실행 (comprehensive_evaluation.py)
         # compare 모드도 현재는 동일 스크립트를 사용 (내부에서 비교 수행)
         _run_module("PPO.eval.runner", _get_cli_args("eval") + unknown)
+        return
+
+    if mode == "gantt":
+        # 간트차트 생성 (최신 결과 폴더 또는 지정 경로)
+        gantt_cfg = (config.get("gantt") if isinstance(config, dict) else {}) or {}
+        search_dir = gantt_cfg.get("search_dir")
+        # CLI로 search_dir를 넣고 싶으면 "--search_dir 경로" 형식 지원
+        if unknown:
+            if "--search_dir" in unknown:
+                try:
+                    idx = unknown.index("--search_dir")
+                    search_dir = unknown[idx + 1]
+                except Exception:
+                    pass
+            elif len(unknown) == 1:
+                search_dir = unknown[0]
+        from utils.gantt_chart_enhanced import generate_enhanced_gantt_charts
+        generate_enhanced_gantt_charts(search_dir=search_dir)
         return
 
     if mode == "replay":

@@ -1,7 +1,7 @@
 # PBS 통합 실행 설정 (샘플)
 # main.py에서 읽어 사용하는 기본 템플릿입니다.
 
-# 실행 모드: train | eval | compare | heuristic | replay | replay_start_date
+# 실행 모드: train | eval | compare | heuristic | replay | replay_start_date | gantt
 mode: eval
 
 # 실행 전 확인 여부 (true면 확인 질문, false면 바로 실행)
@@ -28,9 +28,17 @@ data:
 
 model:
   # RL 모델 경로 (RL 방법 선택 시 사용)
-  path: PPO/train/result/models/0109_18_09_ranger_adabelief_envTrue/best_ppo_rollout_ep2400.pth
+  # path: PPO/train/result/models/0109_18_09_ranger_adabelief_envTrue/best_ppo_rollout_ep2400.pth # self-label mode 1
+  path: PPO/train/result/models/0116_22_57_ranger_adabelief_envTrue/best_ppo_rollout_ep6700.pth # self-label mode 2
+
+  
   # RL 샘플링 횟수 (평가 시 여러 번 샘플링)
   sampling: 50
+
+gantt:
+  # 간트차트 생성 시 결과 폴더 (비우면 최신 결과 자동 탐색)
+  # 예: PPO/eval/20250609_0115_12_23_seed42
+  search_dir:
 
 heuristic:
   # heuristic 모드에서 어떤 경로를 실행할지 선택
@@ -321,7 +329,7 @@ evaluation:
   # eval 섹션과 동일하게 동작 (evaluation이 있으면 evaluation이 우선)
   # methods: [SPT, SEAM_MIN, RL]
   # methods: [엑셀, 착수일, RL]
-  # mode: 1  # 생성 데이터
+  mode: 1  # 생성 데이터
   # mode: 2  # SNU 데이터
   # MODE 1 생성 범위/분포 설정
   # 생성 데이터 개수

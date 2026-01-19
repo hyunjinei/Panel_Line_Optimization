@@ -7,7 +7,7 @@ from typing import Dict, List, Optional, Tuple
 import pandas as pd
 
 from enhanced_environment.models import BayType, ConstraintViolation, AssemblyType, ProcessStep
-from enhanced_environment.constraints import get_basic_constraints_only_config
+from enhanced_environment.constraints import get_all_enabled_config
 from enhanced_environment.pbs_env import EnhancedPanelBlockShop
 from enhanced_environment.common.utils_core import (
     DataConverter,
@@ -383,6 +383,9 @@ def save_detailed_process_schedule_excel(date_key: str, sequence: List[int], bay
         filename = f'detailed_excel_constraint_schedule_processes_{date_key}.csv'
         df.to_csv(filename, index=False, encoding='utf-8-sig')
         print(f"📄 엑셀 공정별 상세 스케줄: {filename} ({len(process_records)}개 공정)")
+        # [AGENT-ADD] 요구 파일명: detailed_excel_schedule_processes_{date_key}.csv
+        schedule_filename = f'detailed_excel_schedule_processes_{date_key}.csv'
+        df.to_csv(schedule_filename, index=False, encoding='utf-8-sig')
 
 
 #################################################################################################################################################
@@ -425,7 +428,8 @@ def create_makespan_schedule(blocks, metadata):
     total_violations = []
     
     # 환경 초기화 (makespan 계산용)
-    constraint_config = get_basic_constraints_only_config()
+    # [AGENT-EDIT] 엑셀 재현도 전체 제약을 검증 (C/Seam, 작업장 순서 등 포함)
+    constraint_config = get_all_enabled_config()
     # 🔧 용량 제약조건 비활성화 (디버깅만, 실제 차단 없음)
     constraint_config.enable_p5_8_weekday_capacity = False
     constraint_config.enable_p5_16_hot_season_capacity = False
@@ -530,8 +534,12 @@ def create_makespan_schedule(blocks, metadata):
             
             # ✅ 통합 실시간 검증 호출 (Action Masking과 동일한 전체 제약 세트)
             try:
+                # [AGENT-EDIT] 엑셀 재현 경로: 현재 블록이 히스토리에 없으므로 카운트 보정
                 all_violations = env._validate_all_constraints_realtime_action(
-                    block, assigned_bay, current_date
+                    block,
+                    assigned_bay,
+                    current_date,
+                    current_in_history=False,
                 )
                 violations.extend(all_violations)
             except Exception as validation_error:

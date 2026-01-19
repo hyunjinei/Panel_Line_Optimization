@@ -111,6 +111,7 @@ class ConstraintValidatorCore:
         current_time: datetime,
         actual_machine_2_start_time: datetime = None,
         capacity_time_override: Optional[datetime] = None,
+        current_in_history: bool = True,
     ) -> List[ConstraintViolation]:
         """
         Action Masking용 모든 제약조건 실시간 검증 (P7#7 중복 해결)
@@ -171,7 +172,7 @@ class ConstraintValidatorCore:
 
         # ✅ P7#7: 연속 배치 제약 검증 (Action Masking용 - 카운트 증가 없이)
         consecutive_violations = self.validate_consecutive_constraints_realtime_action(
-            block, assigned_bay
+            block, assigned_bay, current_in_history=current_in_history
         )
         violations.extend(consecutive_violations)
 

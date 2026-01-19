@@ -40,8 +40,20 @@ def _to_violation_objects(violations, block_id: Optional[int] = None) -> List[Co
 def save_detailed_process_schedule(date_key: str, sequence: List[int], bay_assignments: Dict, 
                                  ct_tables: Dict, blocks_dict: Dict, date_start_time: datetime):
     """공정별 상세 스케줄링 CSV 저장 (공통 유틸 위임)."""
-    # [AGENT-EDIT] 공통 유틸 함수로 위임
-    return _save_detailed_process_schedule(
+    # [AGENT-EDIT] 공통 유틸 함수로 위임 (요구 파일명 2종 모두 생성)
+    _save_detailed_process_schedule(
+        date_key=date_key,
+        sequence=sequence,
+        bay_assignments=bay_assignments,
+        ct_tables=ct_tables,
+        blocks_dict=blocks_dict,
+        date_start_time=date_start_time,
+        filename=f'detailed_actionmasking_schedule_processes_{date_key}.csv',
+        verbose=True,
+        label="공정별 상세 스케줄",
+    )
+    # [AGENT-ADD] 기존 호환: constraint 파일명도 유지
+    _save_detailed_process_schedule(
         date_key=date_key,
         sequence=sequence,
         bay_assignments=bay_assignments,
@@ -49,7 +61,7 @@ def save_detailed_process_schedule(date_key: str, sequence: List[int], bay_assig
         blocks_dict=blocks_dict,
         date_start_time=date_start_time,
         filename=f'detailed_actionmasking_constraint_schedule_processes_{date_key}.csv',
-        verbose=True,
+        verbose=False,
         label="공정별 상세 스케줄",
     )
 

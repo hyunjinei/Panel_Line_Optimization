@@ -20,27 +20,25 @@ plt.rcParams['axes.unicode_minus'] = False
 
 # 🆕 결과 폴더 설정 (최상단으로 이동)
 # 🆕 결과 폴더 설정 (최상단으로 이동)
-# 상대경로로 변경: PPO 폴더 하위의 결과 폴더
-RESULT_BASE_FOLDER = r"PPO\20240509_1202_14_21"
+# 상대경로 기본값: PPO/eval 하위 결과 폴더
+RESULT_BASE_FOLDER = "PPO/eval"
 
 # 🔧 동적으로 최신 결과 폴더 찾기 함수
 def find_latest_result_folder():
-    """PPO 폴더에서 가장 최신의 결과 폴더를 찾기"""
-    ppo_dir = "PPO"
-    
-    if not os.path.exists(ppo_dir):
+    """최신 결과 폴더 자동 탐색 (PPO/eval 우선, 없으면 PPO)"""
+    candidates = []
+    for base_dir in ("PPO/eval", "PPO"):
+        if not os.path.exists(base_dir):
+            continue
+        # YYYYMMDD_* 형태의 결과 폴더 수집
+        pattern = os.path.join(base_dir, "????????_*")
+        for folder in glob.glob(pattern):
+            if os.path.isdir(folder):
+                candidates.append(folder)
+
+    if not candidates:
         return None
-    
-    # YYYYMMDD_HHMM_MM 패턴의 폴더들 찾기
-    pattern = os.path.join(ppo_dir, "????????_??_??")
-    folders = glob.glob(pattern)
-    
-    if not folders:
-        return None
-    
-    # 가장 최신 폴더 반환 (이름 기준 정렬)
-    latest_folder = max(folders, key=os.path.getmtime)
-    return latest_folder
+    return max(candidates, key=os.path.getmtime)
 
 def create_gantt_folders(data_by_method=None, result_base_folder=None):
     """간트차트 저장을 위한 폴더 구조 생성"""

@@ -285,6 +285,11 @@ def _run_assembly_decoding_core(
     date_start_time = actual_start_time  # 날짜별 시작 시간 (8시)
     final_sequence = []  # 전체 선택 순서
     current_bay_assignments = {}  # 베이 할당 추적
+
+    # ==== [AGENT-ADD] env.step 경로: 일자별 공정 CSV 생성을 위한 누적 버퍼 ====
+    daily_sequences_by_date: Dict[str, List[int]] = defaultdict(list)
+    daily_bay_assignments_by_date: Dict[str, Dict[int, BayType]] = defaultdict(dict)
+    daily_guard_blocks_by_date: Dict[str, Set[int]] = defaultdict(set)
     
     # 🆕 머신 상태 추적 (날짜간 연결용)
     previous_machine_state = {} # 이전 날의 머신 완료 시간 상태
@@ -389,6 +394,18 @@ def _run_assembly_decoding_core(
             assembly_sequence += 1
             assembly_step_info.append(step_analysis)
 
+            # ==== [AGENT-ADD] 날짜별 공정 CSV 생성을 위한 누적 ====
+            date_key = env.assembly_current_date.strftime('%Y%m%d')
+            daily_sequences_by_date[date_key].append(selected_block_id)
+            daily_bay_assignments_by_date[date_key][selected_block_id] = (
+                BayType(assigned_bay) if isinstance(assigned_bay, str) else assigned_bay
+            )
+            # 당일 P6/리드타임 대상 기록
+            try:
+                daily_guard_blocks_by_date[date_key] = set(env.assembly_afternoon_guard_blocks_day)
+            except Exception:
+                pass
+
             # 베이 선택 상세 분석 수집
             date_key = env.assembly_current_date.strftime('%Y%m%d')
             if date_key not in assembly_bay_analyses_by_date:
@@ -426,6 +443,52 @@ def _run_assembly_decoding_core(
         current_bay_assignments = dict(env.assembly_current_bay_assignments)
         previous_machine_state = dict(env.assembly_previous_machine_state)
         afternoon_guard_blocks_day = set(env.assembly_afternoon_guard_blocks_day)
+
+        # ==== [AGENT-ADD] env.step 경로: 날짜별 공정 CSV 저장 ====
+        if save_detailed and daily_sequences_by_date:
+            try:
+                # 날짜 순서 보장
+                prev_state = {}
+                for dk in sorted(daily_sequences_by_date.keys()):
+                    seq = daily_sequences_by_date.get(dk) or []
+                    assigns = daily_bay_assignments_by_date.get(dk) or {}
+                    if not seq or not assigns:
+                        continue
+                    date_obj = datetime.strptime(dk, "%Y%m%d").date()
+                    date_start_time_local = datetime.combine(date_obj, datetime.min.time().replace(hour=8))
+                    makespan_sec, detailed = env.calculate_makespan(
+                        seq,
+                        assigns,
+                        prev_state,
+                        afternoon_guard_blocks=daily_guard_blocks_by_date.get(dk, set())
+                    )
+                    save_detailed_process_schedule_assembly(
+                        date_key=dk,
+                        sequence=seq,
+                        bay_assignments=assigns,
+                        ct_tables=detailed['ct_tables'],
+                        blocks_dict=blocks_dict,
+                        date_start_time=date_start_time_local
+                    )
+
+                    # 다음 날짜로 머신 상태 전달 (legacy 방식과 동일)
+                    final_state = detailed.get('final_machine_state', {}) or {}
+                    day_duration_seconds = 24 * 3600
+                    prev_offset = prev_state.get('day_start_offset', 0) if isinstance(prev_state, dict) else 0
+                    new_offset = prev_offset + day_duration_seconds
+
+                    def _shift(lst):
+                        return [t + prev_offset for t in lst] if isinstance(lst, list) else []
+
+                    prev_state = {
+                        'common_times': _shift(final_state.get('common_times', [])),
+                        'branch_a_times': _shift(final_state.get('branch_a_times', [])),
+                        'branch_b_times': _shift(final_state.get('branch_b_times', [])),
+                        'day_start_offset': new_offset
+                    }
+            except Exception as process_err:
+                if DEBUG_ASSEMBLY:
+                    print(f"   ⚠️ Assembly 공정별 상세 스케줄 생성 실패 (env.step 경로): {process_err}")
 
     # 메인 시퀀싱 루프: 전체 블록을 하나씩 선택 (레거시)
     while legacy_loop_enabled and len(selected_blocks) < len(blocks):

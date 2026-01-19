@@ -26,6 +26,8 @@ from copy import deepcopy
 ###############                                            완화 모드                                                               ###############  
 #################################################################################################################################################
 import shutil
+import re
+import glob
 import pandas as pd
 import torch
 import random
@@ -182,6 +184,24 @@ from PPO.eval.files import (
     rename_actionmasking_detailed_csv_files,
     rename_detailed_csv_files,
 )
+
+# [AGENT-ADD] 상세 공정 CSV에서 날짜 키를 추출 (결과 리스트가 1일만 포함하는 경우 보완)
+def _collect_date_keys_from_process_files(result_folder_path: Optional[str]) -> List[str]:
+    keys: set[str] = set()
+    search_dirs = []
+    if result_folder_path:
+        search_dirs.append(result_folder_path)
+    search_dirs.append(os.getcwd())
+    for base in search_dirs:
+        if not base:
+            continue
+        pattern = os.path.join(base, "detailed_assembly_decoding_schedule_processes_*.csv")
+        for path in glob.glob(pattern):
+            fname = os.path.basename(path)
+            match = re.search(r"(\\d{8})", fname)
+            if match:
+                keys.add(match.group(1))
+    return sorted(keys)
 
 # [AGENT-ADD] 평가 방법 선택 (config.yaml -> evaluation.methods)
 SELECTED_METHODS = _get_selected_methods()
@@ -518,8 +538,10 @@ def main():
                             'statistics': spt_stats,                                                                                                                                                                  
                             'makespan': spt_stats.get('makespan_hours', 0)                                                                                                                                            
                         }                                                                                                                                                                                             
-                        date_keys_spt = list(set([r.get('date', '20250101') for r in spt_results if r.get('date')]))                                                                                                  
-                        rename_detailed_csv_files('spt', date_keys_spt, result_folder_path)                                                                                                                           
+                        date_keys_spt = list(set([r.get('date', '20250101') for r in spt_results if r.get('date')]))
+                        # [AGENT-EDIT] process 파일 기반 날짜키도 합쳐서 누락 방지
+                        date_keys_spt = sorted(set(date_keys_spt + _collect_date_keys_from_process_files(result_folder_path)))
+                        rename_detailed_csv_files('spt', date_keys_spt, result_folder_path)
                     # LPT (MODE 1에서도 선택 가능)
                     if _should_run("LPT", default=False):
                         print(f"\n{'='*60}")
@@ -538,6 +560,8 @@ def main():
                             'makespan': lpt_stats.get('makespan_hours', 0)
                         }
                         date_keys_lpt = list(set([r.get('date', '20250101') for r in lpt_results if r.get('date')]))
+                        # [AGENT-EDIT] process 파일 기반 날짜키도 합쳐서 누락 방지
+                        date_keys_lpt = sorted(set(date_keys_lpt + _collect_date_keys_from_process_files(result_folder_path)))
                         rename_detailed_csv_files('lpt', date_keys_lpt, result_folder_path)
                     # SEAM_MIN                                                                                                                                                                                    
                     if _should_run("SEAM_MIN"):
@@ -556,8 +580,10 @@ def main():
                             'statistics': seam_min_stats,                                                                                                                                                             
                             'makespan': seam_min_stats.get('makespan_hours', 0)                                                                                                                                       
                         }                                                                                                                                                                                             
-                        date_keys_seam = list(set([r.get('date', '20250101') for r in seam_min_results if r.get('date')]))                                                                                            
-                        rename_detailed_csv_files('seam_min', date_keys_seam, result_folder_path)                                                                                                                     
+                        date_keys_seam = list(set([r.get('date', '20250101') for r in seam_min_results if r.get('date')]))
+                        # [AGENT-EDIT] process 파일 기반 날짜키도 합쳐서 누락 방지
+                        date_keys_seam = sorted(set(date_keys_seam + _collect_date_keys_from_process_files(result_folder_path)))
+                        rename_detailed_csv_files('seam_min', date_keys_seam, result_folder_path)
                     # RL                                                                                                                                                                                          
                     if _should_run("RL"):
                         print(f"\n{'='*60}")                                                                                                                                                                          
@@ -673,6 +699,8 @@ def main():
                             'makespan': spt_stats.get('makespan_hours', 0)
                         }
                         date_keys_spt = list(set([r.get('date', '20250101') for r in spt_results if r.get('date')]))
+                        # [AGENT-EDIT] process 파일 기반 날짜키도 합쳐서 누락 방지
+                        date_keys_spt = sorted(set(date_keys_spt + _collect_date_keys_from_process_files(result_folder_path)))
                         rename_detailed_csv_files('spt', date_keys_spt, result_folder_path)
 
                     if _should_run("LPT", default=False):
@@ -692,6 +720,8 @@ def main():
                             'makespan': lpt_stats.get('makespan_hours', 0)
                         }
                         date_keys_lpt = list(set([r.get('date', '20250101') for r in lpt_results if r.get('date')]))
+                        # [AGENT-EDIT] process 파일 기반 날짜키도 합쳐서 누락 방지
+                        date_keys_lpt = sorted(set(date_keys_lpt + _collect_date_keys_from_process_files(result_folder_path)))
                         rename_detailed_csv_files('lpt', date_keys_lpt, result_folder_path)
 
                     if _should_run("SEAM_MIN"):
@@ -711,6 +741,8 @@ def main():
                             'makespan': seam_min_stats.get('makespan_hours', 0)
                         }
                         date_keys_seam = list(set([r.get('date', '20250101') for r in seam_min_results if r.get('date')]))
+                        # [AGENT-EDIT] process 파일 기반 날짜키도 합쳐서 누락 방지
+                        date_keys_seam = sorted(set(date_keys_seam + _collect_date_keys_from_process_files(result_folder_path)))
                         rename_detailed_csv_files('seam_min', date_keys_seam, result_folder_path)
 
                     if _should_run("RL"):

@@ -9,12 +9,26 @@ import torch
 import os
 import sys
 import random
+from pathlib import Path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from scheduling.assembly_start.rl_assembly_scheduler import run_rl_assembly_decoding_sequence_with_blocks
 from scheduling.assembly_start.action_sequence_조립착수일기준휴리스틱 import run_assembly_decoding_sequence_with_blocks
 from enhanced_environment.common.utils_core import DataConverter
 from utils.optimized_block_generator import OptimizedBlockGenerator
+# [AGENT-ADD] main.py config.yaml 연동
+from runtime_config import get_runtime_config
+
+
+def _resolve_excel_path(path_str: str = None) -> str:
+    """[AGENT-ADD] Resolve excel path relative to repo root."""
+    base_dir = Path(__file__).resolve().parents[2]  # repo root
+    if not path_str:
+        return str(base_dir / "environment" / "판넬 블록 데이터셋_250618_SNU.xlsx")
+    candidate = Path(path_str)
+    if not candidate.is_absolute():
+        candidate = base_dir / candidate
+    return str(candidate)
 
 def comprehensive_evaluation(trainer, device, generator, episode, csv_path=None, eval_dir=None):
     """
@@ -52,9 +66,16 @@ def comprehensive_evaluation(trainer, device, generator, episode, csv_path=None,
     
     # 1. SNU 데이터 평가 (1개)
     print("📌 SNU 데이터셋 평가")
+    # [AGENT-EDIT] main.py/config.yaml 연동: SNU 엑셀 경로/시트 우선 적용
+    runtime_cfg = get_runtime_config() or {}
+    data_cfg = runtime_cfg.get("data", {}) if isinstance(runtime_cfg, dict) else {}
+    sheet_name = data_cfg.get("sheet") if isinstance(data_cfg, dict) else None
+    excel_path = _resolve_excel_path(
+        data_cfg.get("excel_path") if isinstance(data_cfg, dict) else None
+    )
     snu_blocks, snu_metadata = DataConverter.excel_to_blocks_with_metadata(
-        os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
-                    'environment', '판넬 블록 데이터셋_250618_SNU.xlsx')
+        excel_path,
+        sheet_name=sheet_name,
     )
     
     # 🔥 동적 시작일 계산 (integrated_learning_and_scheduling.py와 동일)

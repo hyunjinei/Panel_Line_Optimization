@@ -42,14 +42,16 @@ class ValidationRewardMixin:
         assigned_bay: BayType,
         current_time: datetime,
         actual_machine_2_start_time: datetime = None,
-        capacity_time_override: datetime = None
+        capacity_time_override: datetime = None,
+        current_in_history: bool = True,
     ) -> List[ConstraintViolation]:
         return self.validator.validate_all_constraints_realtime_action(
             block,
             assigned_bay,
             current_time,
             actual_machine_2_start_time,
-            capacity_time_override
+            capacity_time_override,
+            current_in_history
         )
     
 
