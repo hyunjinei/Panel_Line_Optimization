@@ -21,11 +21,10 @@ class CalendarManager:
     def __init__(self, daily_structure=None, calendar_overrides: Optional[Dict] = None):  # ✅ 메타데이터 매개변수 추가
         # ✅ 메타데이터 저장
         self.daily_structure = daily_structure or {}
+        overrides = calendar_overrides or {}
         
-        # ✅ holidays 라이브러리 사용 (한국 공휴일 자동 관리)
+        # [AGENT-EDIT] 입력 데이터 연도 범위를 따라 공휴일 연도를 동적으로 구성한다.
         import holidays
-        self.kr_holidays = holidays.KR(years=2025)  # 한국 공휴일 자동 생성
-        # print(f"✅ holidays 라이브러리 로드 성공: {len(self.kr_holidays)}개 공휴일 자동 생성")
         
         # ✅ 시간대 정의 수정 (현직자 정보 반영: 야간 = 15:00 이후)
         self.day_shift_start = time(8, 0)    # 08:00
@@ -37,7 +36,6 @@ class CalendarManager:
         self.hot_season_months = [6, 7, 8]  # [7, 8]에서 6월 추가
 
         # [AGENT-EDIT] 공장 휴무/중지/점심시간 오버라이드 (기본: 비활성)
-        overrides = calendar_overrides or {}
         self.enable_closed_dates = bool(overrides.get('enable_closed_dates', False))
         self.enable_afternoon_shutdown = bool(overrides.get('enable_afternoon_shutdown', False))
         self.enable_morning_shutdown = bool(overrides.get('enable_morning_shutdown', False))
@@ -48,6 +46,12 @@ class CalendarManager:
                 return value.date()
             if isinstance(value, date):
                 return value
+            if isinstance(value, (int, float)):
+                if isinstance(value, float) and value != value:
+                    return None
+                cleaned = str(int(value))
+                if cleaned.isdigit() and len(cleaned) == 8:
+                    return datetime.strptime(cleaned, "%Y%m%d").date()
             if isinstance(value, str):
                 cleaned = value.strip()
                 if cleaned.isdigit() and len(cleaned) == 8:
@@ -71,12 +75,59 @@ class CalendarManager:
                         continue
             return default
 
+        def _collect_holiday_years() -> Set[int]:
+            years: Set[int] = set()
+
+            def _register_year(value) -> None:
+                parsed = _parse_date(value)
+                if parsed is not None:
+                    years.add(parsed.year)
+
+            if isinstance(self.daily_structure, dict):
+                for day_key, day_value in self.daily_structure.items():
+                    _register_year(day_key)
+                    if isinstance(day_value, dict):
+                        for nested_key in ("date", "start_date", "target_date"):
+                            if nested_key in day_value:
+                                _register_year(day_value.get(nested_key))
+
+            for override_key in (
+                "closed_dates",
+                "work_dates",
+                "afternoon_shutdown_dates",
+                "morning_shutdown_dates",
+            ):
+                for item in overrides.get(override_key, []) or []:
+                    _register_year(item)
+
+            for schedule_key in ("afternoon_shutdown_schedule", "morning_shutdown_schedule"):
+                schedule = overrides.get(schedule_key) or {}
+                if isinstance(schedule, dict):
+                    for day_key in schedule.keys():
+                        _register_year(day_key)
+
+            if not years:
+                years.add(datetime.now().year)
+            return years
+
+        self.holiday_years = sorted(_collect_holiday_years())
+        self.kr_holidays = holidays.KR(years=self.holiday_years)  # 한국 공휴일 자동 생성
+        # print(f"✅ holidays 라이브러리 로드 성공: {len(self.kr_holidays)}개 공휴일 자동 생성")
+
         closed_dates_raw = overrides.get('closed_dates', []) or []
         self.closed_dates: Set[date] = set()
         for item in closed_dates_raw:
             parsed = _parse_date(item)
             if parsed:
                 self.closed_dates.add(parsed)
+
+        # [AGENT-ADD] GUI calendar: explicitly opened days override closed/partial shutdown dates.
+        work_dates_raw = overrides.get('work_dates', []) or []
+        self.work_dates: Set[date] = set()
+        for item in work_dates_raw:
+            parsed = _parse_date(item)
+            if parsed:
+                self.work_dates.add(parsed)
 
         afternoon_dates_raw = overrides.get('afternoon_shutdown_dates', []) or []
         self.afternoon_shutdown_dates: Set[date] = set()
@@ -115,6 +166,8 @@ class CalendarManager:
     # [AGENT-ADD] 하드코딩 휴무/중지 체크
     def is_closed_day(self, target_date: datetime) -> bool:
         """공장 휴무일 여부"""
+        if target_date.date() in self.work_dates:
+            return False
         if not self.enable_closed_dates:
             return False
         return target_date.date() in self.closed_dates
@@ -124,12 +177,14 @@ class CalendarManager:
         if not self.enable_closed_dates:
             return False
         date_only = target_time.date()
+        if date_only in self.work_dates:
+            return False
         # 휴무일 당일 08:00 이후
         if date_only in self.closed_dates and target_time.time() >= self.day_shift_start:
             return True
         # 휴무일 다음날 08:00 이전
         prev_day = date_only - timedelta(days=1)
-        if prev_day in self.closed_dates and target_time.time() < self.day_shift_start:
+        if prev_day in self.closed_dates and prev_day not in self.work_dates and target_time.time() < self.day_shift_start:
             return True
         return False
 
@@ -138,12 +193,14 @@ class CalendarManager:
         if not self.enable_afternoon_shutdown:
             return False
         date_only = target_time.date()
+        if date_only in self.work_dates:
+            return False
         t = target_time.time()
         start, end = self._get_afternoon_shutdown_range(date_only)
         if date_only in self.afternoon_shutdown_dates and self._time_in_range(t, start, end):
             return True
         prev_day = date_only - timedelta(days=1)
-        if prev_day in self.afternoon_shutdown_dates:
+        if prev_day in self.afternoon_shutdown_dates and prev_day not in self.work_dates:
             prev_start, prev_end = self._get_afternoon_shutdown_range(prev_day)
             if prev_start > prev_end and t < prev_end:
                 return True
@@ -154,6 +211,8 @@ class CalendarManager:
         if not self.enable_morning_shutdown:
             return False
         date_only = target_time.date()
+        if date_only in self.work_dates:
+            return False
         if date_only not in self.morning_shutdown_dates:
             return False
         t = target_time.time()
@@ -183,16 +242,17 @@ class CalendarManager:
         current = target_time
         while True:
             # 휴무일 08:00 이후면 다음날 08:00
-            if self.enable_closed_dates and current.date() in self.closed_dates and current.time() >= self.day_shift_start:
+            if self.enable_closed_dates and current.date() in self.closed_dates and current.date() not in self.work_dates and current.time() >= self.day_shift_start:
                 current = datetime.combine(current.date() + timedelta(days=1), self.day_shift_start)
                 continue
             # 휴무일 다음날 08:00 이전이면 오늘 08:00
-            if self.enable_closed_dates and (current.date() - timedelta(days=1)) in self.closed_dates and current.time() < self.day_shift_start:
+            prev_date = current.date() - timedelta(days=1)
+            if self.enable_closed_dates and prev_date in self.closed_dates and prev_date not in self.work_dates and current.time() < self.day_shift_start:
                 current = datetime.combine(current.date(), self.day_shift_start)
                 continue
 
             # 오후 중지 처리 (날짜별 시간 지원)
-            if self.enable_afternoon_shutdown and current.date() in self.afternoon_shutdown_dates:
+            if self.enable_afternoon_shutdown and current.date() in self.afternoon_shutdown_dates and current.date() not in self.work_dates:
                 start, end = self._get_afternoon_shutdown_range(current.date())
                 t = current.time()
                 if self._time_in_range(t, start, end):
@@ -206,13 +266,16 @@ class CalendarManager:
                     continue
             if self.enable_afternoon_shutdown and (current.date() - timedelta(days=1)) in self.afternoon_shutdown_dates:
                 prev_day = current.date() - timedelta(days=1)
-                prev_start, prev_end = self._get_afternoon_shutdown_range(prev_day)
+                if prev_day in self.work_dates:
+                    prev_start, prev_end = self.day_shift_start, self.day_shift_start
+                else:
+                    prev_start, prev_end = self._get_afternoon_shutdown_range(prev_day)
                 if prev_start > prev_end and current.time() < prev_end:
                     current = datetime.combine(current.date(), prev_end)
                     continue
 
             # 오전 중지: 해당일 오전 구간이면 종료 시각으로 이동
-            if self.enable_morning_shutdown and current.date() in self.morning_shutdown_dates:
+            if self.enable_morning_shutdown and current.date() in self.morning_shutdown_dates and current.date() not in self.work_dates:
                 start, end = self._get_morning_shutdown_range(current.date())
                 if self._time_in_range(current.time(), start, end):
                     current = datetime.combine(current.date(), end)
@@ -293,11 +356,17 @@ class CalendarManager:
             return False
         
         # 다음날의 공휴일 이름 확인
-        holiday_name = self.kr_holidays.get(next_day, "")
-        
-        # 설날, 추석 관련 명절만 명절 전날로 인식
-        major_holidays = ['설날', '추석']
-        is_major_holiday = any(major in holiday_name for major in major_holidays)
+        holiday_name = str(self.kr_holidays.get(next_day, ""))
+
+        # [AGENT-EDIT] holidays.KR가 영문 공휴일명을 반환하는 환경에서도
+        # 명절 전날 판정을 일관되게 유지한다.
+        major_holiday_markers = [
+            "설날",
+            "추석",
+            "Korean New Year",
+            "Chuseok",
+        ]
+        is_major_holiday = any(marker in holiday_name for marker in major_holiday_markers)
         
         # if is_major_holiday:
             # print(f"🎌 명절 전날 감지: {target_date.strftime('%Y-%m-%d')} (다음날: {holiday_name})")
@@ -349,6 +418,7 @@ class CalendarManager:
     
     def get_status(self, date: datetime) -> Dict:
         """특정 날짜의 달력 상태 반환"""
+        years_display = ",".join(str(year) for year in self.holiday_years)
         return {
             "date": date.strftime("%Y-%m-%d"),
             "is_holiday": self.is_holiday(date),
@@ -357,5 +427,5 @@ class CalendarManager:
             "has_night_work": self.has_night_work(date),
             "capacity_adjustment": self.get_capacity_factor(date),
             "shift_boundary": "15:00 (현직자 정보 반영)",
-            "library": f"holidays KR 2025 ({len(self.kr_holidays)}개 공휴일)"
+            "library": f"holidays KR {years_display} ({len(self.kr_holidays)}개 공휴일)"
         }

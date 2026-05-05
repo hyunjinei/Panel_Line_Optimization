@@ -1,0 +1,6 @@
+﻿method,method_label,makespan_best_or_tied,makespan_strict_best,violations_best_or_tied,violations_strict_best
+SPT,SPT,0,0,7,0
+SEAM_MIN,MSF,0,0,7,0
+LPT,LPT,4,3,8,0
+GA,GA,22,21,43,0
+RL,Proposed,90,88,114,70

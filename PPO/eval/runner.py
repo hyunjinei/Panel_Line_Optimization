@@ -20,6 +20,10 @@ import os
 # [AGENT-EDIT] OpenMP 중복 로딩 에러 회피 (필요 시에만 적용)
 if "KMP_DUPLICATE_LIB_OK" not in os.environ:
     os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+# [AGENT-ADD] Keep matplotlib cache local/writable without requiring MPLCONFIGDIR in every command.
+if "MPLCONFIGDIR" not in os.environ:
+    os.environ["MPLCONFIGDIR"] = "/tmp/matplotlib"
+    os.makedirs(os.environ["MPLCONFIGDIR"], exist_ok=True)
 import sys
 from copy import deepcopy
 #################################################################################################################################################
@@ -28,6 +32,7 @@ from copy import deepcopy
 import shutil
 import re
 import glob
+import argparse
 import pandas as pd
 import torch
 import random
@@ -49,10 +54,63 @@ if "PBS_TRACE_BLOCKS" not in os.environ:
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 project_root = os.path.dirname(parent_dir)
-sys.path.insert(0, parent_dir)
 
-# PPO 폴더를 우선순위로 설정 (PPO 폴더 내 모듈 우선 import)
-sys.path.insert(0, current_dir)
+# [AGENT-EDIT] Direct script execution needs the repository root for absolute
+# package imports such as `PPO.eval...`, `utils...`, and `enhanced_environment...`.
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+# [AGENT-EDIT] Keep legacy local import paths after repo root for compatibility.
+for _path in (parent_dir, current_dir):
+    if _path not in sys.path:
+        sys.path.append(_path)
+
+
+def _parse_cli_overrides() -> argparse.Namespace:
+    """[AGENT-ADD] Allow one-off eval overrides without editing yaml files."""
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--config")
+    parser.add_argument("--model_path")
+    parser.add_argument("--rl_model_path")
+    parser.add_argument("--excel_path")
+    parser.add_argument("--sheet")
+    parser.add_argument("--sampling", type=int)
+    parser.add_argument("--profile_sampling")
+    parser.add_argument("--use_self_label_profiles")
+    parser.add_argument("--rl_selection_mode")
+    parser.add_argument("--save_rl_samples_summary")
+    parser.add_argument("--heuristic_sampling")
+    parser.add_argument("--heuristic_profile_sampling")
+    parser.add_argument("--save_heuristic_all_mask_off")
+    parser.add_argument("--heuristic_decode_mode", type=int, choices=[1, 2])  # [AGENT-ADD] 1=기존프로파일조합, 2=all_on+all_mask_off만
+    parser.add_argument("--eval_parallel")
+    parser.add_argument("--eval_parallel_workers", type=int)
+    parser.add_argument("--eval_parallel_device")
+    parser.add_argument("--eval_worker_threads", type=int)
+    parser.add_argument("--eval_progress_interval", type=int)
+    parser.add_argument("--num_gen", type=int)
+    parser.add_argument("--num_blocks_min", type=int)
+    parser.add_argument("--num_blocks_max", type=int)
+    parser.add_argument("--generation_mode")
+    parser.add_argument("--block_counts")
+    parser.add_argument("--grid_repeats", type=int)
+    parser.add_argument("--ga_population", type=int)
+    parser.add_argument("--ga_generations", type=int)
+    parser.add_argument("--ga_elite", type=int)
+    parser.add_argument("--ga_mutation_rate", type=float)
+    parser.add_argument("--ga_seed", type=int)
+    parser.add_argument("--ga_parallel")
+    parser.add_argument("--ga_parallel_workers", type=int)
+    parser.add_argument("--ga_worker_threads", type=int)
+    parser.add_argument("--ga_ram_gb_per_worker", type=float)
+    parser.add_argument("--ga_progress_interval", type=int)
+    parser.add_argument("--methods")
+    parser.add_argument("--mode", type=int, choices=[1, 2])
+    args, _ = parser.parse_known_args()
+    return args
+
+
+_CLI_OVERRIDES = _parse_cli_overrides()
 
 # ==================== 모드 설정 ====================
 # 모드 1: 생성된 학습데이터 사용 (SPT, Random, RL)
@@ -84,6 +142,77 @@ CALENDAR_OVERRIDES = {
 # [AGENT-ADD] MODE 2에서도 NameError 방지를 위한 기본 평가 파라미터 (MODE 1 전용 값)
 NUM_GEN_DATASETS = 1
 BLOCK_COUNT_RANGE = (50, 200)
+GENERATION_MODE = "random"
+GRID_REPEATS = 1
+GRID_BLOCK_COUNTS = list(range(20, 201, 10))
+GRID_DISTRIBUTION_PROFILES = [
+    {
+        "name": "base",
+        "util_target": 1.00,
+        "ps_ratio": 0.00,
+        "sub_ratio": 0.00,
+        "seam_scale": 1.00,
+        "tact_scale": 1.00,
+        "length_scale": 1.00,
+        "width_scale": 1.00,
+        "thickness_scale": 1.00,
+    },
+    {
+        "name": "ps_heavy",
+        "util_target": 1.00,
+        "ps_ratio": 0.10,
+        "sub_ratio": 0.00,
+        "seam_scale": 1.00,
+        "tact_scale": 1.00,
+        "length_scale": 1.00,
+        "width_scale": 1.00,
+        "thickness_scale": 1.00,
+    },
+    {
+        "name": "sub_heavy",
+        "util_target": 1.00,
+        "ps_ratio": 0.00,
+        "sub_ratio": 0.10,
+        "seam_scale": 1.00,
+        "tact_scale": 1.00,
+        "length_scale": 1.00,
+        "width_scale": 1.00,
+        "thickness_scale": 1.00,
+    },
+    {
+        "name": "mixed_ps_sub",
+        "util_target": 1.00,
+        "ps_ratio": 0.10,
+        "sub_ratio": 0.10,
+        "seam_scale": 1.00,
+        "tact_scale": 1.00,
+        "length_scale": 1.00,
+        "width_scale": 1.00,
+        "thickness_scale": 1.00,
+    },
+    {
+        "name": "heavy_work",
+        "util_target": 1.00,
+        "ps_ratio": 0.05,
+        "sub_ratio": 0.05,
+        "seam_scale": 1.20,
+        "tact_scale": 1.20,
+        "length_scale": 1.05,
+        "width_scale": 1.05,
+        "thickness_scale": 1.20,
+    },
+    {
+        "name": "overload",
+        "util_target": 1.25,
+        "ps_ratio": 0.05,
+        "sub_ratio": 0.05,
+        "seam_scale": 1.10,
+        "tact_scale": 1.10,
+        "length_scale": 1.00,
+        "width_scale": 1.00,
+        "thickness_scale": 1.00,
+    },
+]
 PS_RATIO_RANGE = (0.0, 0.1)
 SUB_RATIO_RANGE = (0.0, 0.1)
 SEAM_SCALE_RANGE = (1.0, 1.2)
@@ -125,6 +254,9 @@ if isinstance(_runtime_cfg, dict):
                 MODE = _mode_override
         except Exception:
             pass
+if getattr(_CLI_OVERRIDES, "mode", None) in (1, 2):
+    # [AGENT-ADD] CLI mode override is useful for quick generated-vs-real eval switches.
+    MODE = int(_CLI_OVERRIDES.mode)
 from enhanced_environment.constraints import get_all_enabled_config
  
 # 공통 import
@@ -163,6 +295,7 @@ CURRENT_BASE_SEED = DEFAULT_SEED
 # [AGENT-ADD] 분리된 평가 유틸/메서드 import
 # [AGENT-EDIT] 분리된 평가 유틸/메서드 import
 from PPO.eval.helpers import (
+    _normalize_method_name,
     _get_selected_methods,
     _should_run as _should_run_core,
     set_random_seeds,
@@ -170,6 +303,7 @@ from PPO.eval.helpers import (
     _sample_util_bucket,
     _compute_spread_days,
     _adjust_reserved_counts,
+    sanitize_label_for_filename,  # [AGENT-EDIT] 결과 파일명 정규화 헬퍼 누락 import 보완
 )
 from PPO.eval.methods import (
     run_excel_heuristic,
@@ -177,6 +311,7 @@ from PPO.eval.methods import (
     run_spt_heuristic,
     run_lpt_heuristic,
     run_seam_min_heuristic,
+    run_ga_metaheuristic,
     run_rl_evaluation,
 )
 from PPO.eval.files import (
@@ -203,15 +338,98 @@ def _collect_date_keys_from_process_files(result_folder_path: Optional[str]) -> 
                 keys.add(match.group(1))
     return sorted(keys)
 
-# [AGENT-ADD] 평가 방법 선택 (config.yaml -> evaluation.methods)
+# [AGENT-ADD] 평가 방법 선택 (config.yaml -> evaluation.methods, CLI --methods overrides)
 SELECTED_METHODS = _get_selected_methods()
+if getattr(_CLI_OVERRIDES, "methods", None):
+    SELECTED_METHODS = {
+        _normalize_method_name(part)
+        for part in str(_CLI_OVERRIDES.methods).replace("/", ",").split(",")
+        if part.strip()
+    }
 
 # [AGENT-ADD] runner 전용 래퍼 (선택 목록을 캡쳐)
 def _should_run(method_key: str, *, default: bool = True) -> bool:
     return _should_run_core(method_key, SELECTED_METHODS, default=default)
 
+
+def _parse_int_list(value: object, default: Optional[List[int]] = None) -> List[int]:
+    """[AGENT-ADD] Parse fixed generated-data block counts from yaml or CLI."""
+    if value is None:
+        return list(default or [])
+    if isinstance(value, str):
+        raw = value.strip()
+        if not raw:
+            return list(default or [])
+        if ":" in raw and "," not in raw:
+            parts = [int(part.strip()) for part in raw.split(":") if part.strip()]
+            if len(parts) == 2:
+                start, stop = parts
+                step = 1
+            elif len(parts) == 3:
+                start, stop, step = parts
+            else:
+                return list(default or [])
+            if step == 0:
+                step = 1
+            limit = stop + (1 if step > 0 else -1)
+            return list(range(start, limit, step))
+        return [int(part.strip()) for part in raw.replace(";", ",").split(",") if part.strip()]
+    if isinstance(value, (list, tuple)):
+        return [int(item) for item in value]
+    return list(default or [])
+
+
+def _normalize_grid_profile(profile: Dict[str, object], index: int) -> Dict[str, object]:
+    """[AGENT-ADD] Normalize one fixed distribution profile for generated eval."""
+    profile = dict(profile or {})
+    name = str(profile.get("name") or profile.get("profile") or f"profile_{index + 1}")
+    tact_scale = profile.get("tact_time_scale", profile.get("tact_scale", 1.0))
+    return {
+        "name": name,
+        "util_target": float(profile.get("util_target", profile.get("util", 1.0))),
+        "ps_ratio": float(profile.get("ps_ratio", 0.0)),
+        "sub_ratio": float(profile.get("sub_ratio", 0.0)),
+        "seam_scale": float(profile.get("seam_scale", 1.0)),
+        "tact_time_scale": float(tact_scale),
+        "length_scale": float(profile.get("length_scale", 1.0)),
+        "width_scale": float(profile.get("width_scale", 1.0)),
+        "thickness_scale": float(profile.get("thickness_scale", 1.0)),
+    }
+
+
+def _build_generation_grid_cases() -> List[Dict[str, object]]:
+    """[AGENT-ADD] Build deterministic generated-data cases: block count x profile x repeat."""
+    block_counts = _parse_int_list(GRID_BLOCK_COUNTS, default=list(range(20, 201, 10)))
+    profiles = [
+        _normalize_grid_profile(profile, idx)
+        for idx, profile in enumerate(GRID_DISTRIBUTION_PROFILES or [])
+        if isinstance(profile, dict)
+    ]
+    if not profiles:
+        profiles = [_normalize_grid_profile({"name": "base"}, 0)]
+
+    repeats = max(1, int(GRID_REPEATS))
+    cases: List[Dict[str, object]] = []
+    for repeat_idx in range(repeats):
+        for block_count in block_counts:
+            for profile_idx, profile in enumerate(profiles):
+                seed = int(DEFAULT_SEED) + repeat_idx * 100000 + int(block_count) * 100 + profile_idx
+                case = dict(profile)
+                case.update({
+                    "case_id": f"b{int(block_count)}_{profile['name']}_r{repeat_idx + 1}",
+                    "repeat": repeat_idx + 1,
+                    "total_blocks": int(block_count),
+                    "seed": seed,
+                    "base_seed": int(DEFAULT_SEED),
+                    "profile_index": profile_idx,
+                })
+                cases.append(case)
+    return cases
+
+
 def _apply_evaluation_config_overrides():
     global NUM_GEN_DATASETS, BLOCK_COUNT_RANGE, PS_RATIO_RANGE, SUB_RATIO_RANGE
+    global GENERATION_MODE, GRID_REPEATS, GRID_BLOCK_COUNTS, GRID_DISTRIBUTION_PROFILES
     global SEAM_SCALE_RANGE, TACT_TIME_SCALE_RANGE, LENGTH_SCALE_RANGE, WIDTH_SCALE_RANGE, THICKNESS_SCALE_RANGE
     global MAX_DAILY_BLOCKS, MIN_SPREAD_DAYS, UTIL_BUCKETS
     global USE_FIXED_SEED, DEFAULT_SEED, EVAL_SEEDS
@@ -236,6 +454,24 @@ def _apply_evaluation_config_overrides():
 
     if "num_gen" in eval_cfg:
         NUM_GEN_DATASETS = int(eval_cfg["num_gen"])
+    if "generation_mode" in eval_cfg:
+        GENERATION_MODE = str(eval_cfg.get("generation_mode") or GENERATION_MODE).lower().strip()
+    if "grid_repeats" in eval_cfg:
+        GRID_REPEATS = max(1, int(eval_cfg.get("grid_repeats")))
+    if "grid_block_counts" in eval_cfg or "block_counts" in eval_cfg:
+        GRID_BLOCK_COUNTS = _parse_int_list(
+            eval_cfg.get("grid_block_counts", eval_cfg.get("block_counts")),
+            default=GRID_BLOCK_COUNTS,
+        )
+    if "grid_distribution_profiles" in eval_cfg:
+        raw_profiles = eval_cfg.get("grid_distribution_profiles")
+        if isinstance(raw_profiles, dict):
+            GRID_DISTRIBUTION_PROFILES = [
+                {"name": str(name), **(value if isinstance(value, dict) else {})}
+                for name, value in raw_profiles.items()
+            ]
+        elif isinstance(raw_profiles, list):
+            GRID_DISTRIBUTION_PROFILES = raw_profiles
     if "block_count_range" in eval_cfg:
         BLOCK_COUNT_RANGE = _pair(eval_cfg.get("block_count_range"), BLOCK_COUNT_RANGE)
     if "num_blocks_min" in eval_cfg or "num_blocks_max" in eval_cfg:
@@ -308,6 +544,28 @@ def _apply_evaluation_config_overrides():
             RL_SAMPLING_COUNT = int(rl_sampling)
         except Exception:
             pass
+    # [AGENT-ADD] CLI overrides are applied last so test commands do not require yaml edits.
+    if getattr(_CLI_OVERRIDES, "excel_path", None):
+        raw_path = str(_CLI_OVERRIDES.excel_path)
+        if not os.path.isabs(raw_path):
+            raw_path = os.path.join(project_root, raw_path)
+        EXCEL_PATH = os.path.normpath(raw_path)
+    if getattr(_CLI_OVERRIDES, "sheet", None):
+        EXCEL_SHEET = str(_CLI_OVERRIDES.sheet)
+    if getattr(_CLI_OVERRIDES, "sampling", None):
+        RL_SAMPLING_COUNT = int(_CLI_OVERRIDES.sampling)
+    if getattr(_CLI_OVERRIDES, "num_gen", None):
+        NUM_GEN_DATASETS = int(_CLI_OVERRIDES.num_gen)
+    if getattr(_CLI_OVERRIDES, "generation_mode", None):
+        GENERATION_MODE = str(_CLI_OVERRIDES.generation_mode).lower().strip()
+    if getattr(_CLI_OVERRIDES, "grid_repeats", None):
+        GRID_REPEATS = max(1, int(_CLI_OVERRIDES.grid_repeats))
+    if getattr(_CLI_OVERRIDES, "block_counts", None):
+        GRID_BLOCK_COUNTS = _parse_int_list(_CLI_OVERRIDES.block_counts, default=GRID_BLOCK_COUNTS)
+    if getattr(_CLI_OVERRIDES, "num_blocks_min", None) or getattr(_CLI_OVERRIDES, "num_blocks_max", None):
+        min_val = int(_CLI_OVERRIDES.num_blocks_min) if getattr(_CLI_OVERRIDES, "num_blocks_min", None) else int(BLOCK_COUNT_RANGE[0])
+        max_val = int(_CLI_OVERRIDES.num_blocks_max) if getattr(_CLI_OVERRIDES, "num_blocks_max", None) else int(BLOCK_COUNT_RANGE[1])
+        BLOCK_COUNT_RANGE = (min_val, max_val)
 
 RL_SAMPLING_COUNT = 50
 _apply_evaluation_config_overrides()
@@ -333,6 +591,14 @@ if isinstance(_runtime_cfg, dict):
             if not os.path.isabs(_cfg_path):
                 _cfg_path = os.path.abspath(os.path.join(project_root, _cfg_path))
             RL_MODEL_PATH = _cfg_path
+_cli_model_path = getattr(_CLI_OVERRIDES, "model_path", None) or getattr(_CLI_OVERRIDES, "rl_model_path", None)
+if _cli_model_path:
+    # [AGENT-ADD] One-off model override for real-data tests.
+    _cfg_path = str(_cli_model_path).strip()
+    if _cfg_path:
+        if not os.path.isabs(_cfg_path):
+            _cfg_path = os.path.abspath(os.path.join(project_root, _cfg_path))
+        RL_MODEL_PATH = _cfg_path
 def main():
     """메인 평가 함수 - integrated_learning_and_scheduling.py와 동일한 구조"""
     # [AGENT-EDIT] Step-level RL 로그 기본 활성화 (환경변수로 끌 수 있음)
@@ -340,6 +606,11 @@ def main():
     #  Random Seed 설정 (가장 먼저 실행)
     # set_random_seeds(RANDOM_SEED)  # [AGENT-EDIT] 고정 시드 실행 비활성화 (멀티 시드 평가)
     seed_list = [DEFAULT_SEED] if USE_FIXED_SEED else EVAL_SEEDS  # [AGENT-ADD] 평가 시드 리스트
+    generation_grid_cases = (
+        _build_generation_grid_cases()
+        if MODE == 1 and GENERATION_MODE in {"grid", "fixed_grid", "deterministic"}
+        else []
+    )
     global CURRENT_BASE_SEED
     # [AGENT-EDIT] main 내부 try/except 블록 들여쓰기 정리 (동작 유지 목적)
     # [AGENT-ADD] 결과 폴더명용 타임스탬프 (current_time 미정의 오류 방지)
@@ -361,13 +632,81 @@ def main():
         "feature_mode": FEATURE_MODE,
         "use_positional_encoding": USE_POSITIONAL_ENCODING,
     }
+    # [AGENT-ADD] 평가 메서드별 세부 설정 전달 (GA 포함)
+    _runtime_for_methods = get_runtime_config() or {}
+    _eval_cfg_for_methods = {}
+    if isinstance(_runtime_for_methods, dict):
+        _eval_fallback_for_methods = _runtime_for_methods.get("eval") or {}
+        _eval_primary_for_methods = _runtime_for_methods.get("evaluation") or {}
+        if isinstance(_eval_fallback_for_methods, dict):
+            _eval_cfg_for_methods.update(_eval_fallback_for_methods)
+        if isinstance(_eval_primary_for_methods, dict):
+            _eval_cfg_for_methods.update(_eval_primary_for_methods)
+    for _key in (
+        "ga_population", "ga_generations", "ga_elite", "ga_mutation_rate", "ga_seed",
+        "ga_parallel", "ga_parallel_workers", "ga_worker_threads",
+        "ga_ram_gb_per_worker", "ga_progress_interval",
+        "sampling", "use_self_label_profiles", "eval_use_self_label_profiles",
+        "profile_sampling", "rl_selection_mode", "save_rl_samples_summary",
+        "heuristic_sampling", "heuristic_profile_sampling",
+        "eval_parallel", "eval_parallel_workers", "eval_parallel_device",
+        "eval_worker_threads", "eval_progress_interval",
+        "eval_ram_gb_per_worker", "eval_gpu_gb_per_worker",
+        "eval_gpu_mem_per_worker_gb", "eval_max_gpu_workers",
+        "save_heuristic_all_mask_off",
+    ):
+        if _key in _eval_cfg_for_methods:
+            method_settings[_key] = _eval_cfg_for_methods[_key]
+    # [AGENT-ADD] CLI one-off profile/sample analysis overrides.
+    if getattr(_CLI_OVERRIDES, "sampling", None):
+        method_settings["sampling"] = int(_CLI_OVERRIDES.sampling)
+    if getattr(_CLI_OVERRIDES, "profile_sampling", None) is not None:
+        method_settings["profile_sampling"] = _CLI_OVERRIDES.profile_sampling
+    if getattr(_CLI_OVERRIDES, "use_self_label_profiles", None) is not None:
+        method_settings["use_self_label_profiles"] = _CLI_OVERRIDES.use_self_label_profiles
+    if getattr(_CLI_OVERRIDES, "rl_selection_mode", None):
+        method_settings["rl_selection_mode"] = _CLI_OVERRIDES.rl_selection_mode
+    if getattr(_CLI_OVERRIDES, "save_rl_samples_summary", None) is not None:
+        method_settings["save_rl_samples_summary"] = _CLI_OVERRIDES.save_rl_samples_summary
+    if getattr(_CLI_OVERRIDES, "heuristic_sampling", None) is not None:
+        method_settings["heuristic_sampling"] = _CLI_OVERRIDES.heuristic_sampling
+    if getattr(_CLI_OVERRIDES, "heuristic_profile_sampling", None) is not None:
+        method_settings["heuristic_profile_sampling"] = _CLI_OVERRIDES.heuristic_profile_sampling
+    if getattr(_CLI_OVERRIDES, "save_heuristic_all_mask_off", None) is not None:
+        method_settings["save_heuristic_all_mask_off"] = _CLI_OVERRIDES.save_heuristic_all_mask_off
+    if getattr(_CLI_OVERRIDES, "heuristic_decode_mode", None) is not None:  # [AGENT-ADD] decode_mode wiring
+        method_settings["heuristic_decode_mode"] = _CLI_OVERRIDES.heuristic_decode_mode
+    for _ga_key in (
+        "ga_population", "ga_generations", "ga_elite", "ga_mutation_rate", "ga_seed",
+        "ga_parallel", "ga_parallel_workers", "ga_worker_threads",
+        "ga_ram_gb_per_worker", "ga_progress_interval",
+    ):
+        if getattr(_CLI_OVERRIDES, _ga_key, None) is not None:
+            method_settings[_ga_key] = getattr(_CLI_OVERRIDES, _ga_key)
+    if getattr(_CLI_OVERRIDES, "eval_parallel", None) is not None:
+        method_settings["eval_parallel"] = _CLI_OVERRIDES.eval_parallel
+    if getattr(_CLI_OVERRIDES, "eval_parallel_workers", None) is not None:
+        method_settings["eval_parallel_workers"] = _CLI_OVERRIDES.eval_parallel_workers
+    if getattr(_CLI_OVERRIDES, "eval_parallel_device", None) is not None:
+        method_settings["eval_parallel_device"] = _CLI_OVERRIDES.eval_parallel_device
+    if getattr(_CLI_OVERRIDES, "eval_worker_threads", None) is not None:
+        method_settings["eval_worker_threads"] = _CLI_OVERRIDES.eval_worker_threads
+    if getattr(_CLI_OVERRIDES, "eval_progress_interval", None) is not None:
+        method_settings["eval_progress_interval"] = _CLI_OVERRIDES.eval_progress_interval
     # [AGENT-ADD] CSV 요약 저장용 버퍼
     gen_param_rows: List[Dict[str, object]] = []
     method_result_rows: List[Dict[str, object]] = []
     
     try:
         # MODE 1일 때 여러 생성 데이터셋을 순회 평가
-        num_runs = NUM_GEN_DATASETS if MODE == 1 else 1
+        num_runs = len(generation_grid_cases) if generation_grid_cases else (NUM_GEN_DATASETS if MODE == 1 else 1)
+        if MODE == 1 and generation_grid_cases:
+            profile_names = sorted({str(case.get("name")) for case in generation_grid_cases})
+            block_counts = sorted({int(case.get("total_blocks", 0)) for case in generation_grid_cases})
+            print(
+                f"\n🧪 생성 데이터 고정 격자: 블록수 {block_counts}, "
+                f"분포 {profile_names}, 반복 {GRID_REPEATS}회, 총 {num_runs}문제"
+            )
                                                                                                                                                                                                              
         # [AGENT-ADD] 전체 gen 요약용 누적 버퍼
         all_problem_summaries = []
@@ -375,11 +714,13 @@ def main():
 
         try:
             for ds_idx in range(num_runs):                                                                                                                                                                        
-                base_seed = seed_list[ds_idx % len(seed_list)]
+                grid_case = generation_grid_cases[ds_idx] if generation_grid_cases else None
+                base_seed = int(grid_case.get("base_seed", DEFAULT_SEED)) if grid_case else seed_list[ds_idx % len(seed_list)]
+                run_seed = int(grid_case.get("seed", base_seed + ds_idx * 100)) if grid_case else base_seed + ds_idx * 100
                 CURRENT_BASE_SEED = base_seed
                 # 각 데이터셋별 시드 오프셋                                                                                                                                                                       
-                set_random_seeds(base_seed + ds_idx * 100)                                                                                                                                                      
-                print(f"\n🔁 시드 적용: {base_seed} (dataset {ds_idx+1}/{num_runs})")
+                set_random_seeds(run_seed)                                                                                                                                                      
+                print(f"\n🔁 시드 적용: {run_seed} (dataset {ds_idx+1}/{num_runs})")
                 # [AGENT-ADD] 시드별 폴더 분리 (MODE 1)
                 seed_base_folder = run_base_folder
                 if MODE == 1 and run_base_folder:
@@ -395,25 +736,39 @@ def main():
                     if generator_cls is None:
                         from utils.optimized_block_generator import OptimizedBlockGenerator as generator_cls
                     generator = generator_cls.load_from_saved_values()                                                                                                                                  
-                    # [AGENT-EDIT] Randomized instance parameters (paper-scale)
-                    total_blocks = random.randint(BLOCK_COUNT_RANGE[0], BLOCK_COUNT_RANGE[1])
-                    util_bucket, util_target, util_range = _sample_util_bucket(UTIL_BUCKETS)
+                    # [AGENT-EDIT] MODE 1 supports fixed grid cases for paper-style generated tests.
+                    if grid_case:
+                        total_blocks = int(grid_case["total_blocks"])
+                        util_bucket = str(grid_case["name"])
+                        util_target = float(grid_case["util_target"])
+                        util_range = (util_target, util_target)
+                        ps_ratio_target = float(grid_case["ps_ratio"])
+                        sub_ratio_target = float(grid_case["sub_ratio"])
+                        seam_scale = float(grid_case["seam_scale"])
+                        tact_time_scale = float(grid_case["tact_time_scale"])
+                        length_scale = float(grid_case["length_scale"])
+                        width_scale = float(grid_case["width_scale"])
+                        thickness_scale = float(grid_case["thickness_scale"])
+                    else:
+                        # [AGENT-EDIT] Randomized instance parameters remain available for quick smoke tests.
+                        total_blocks = random.randint(BLOCK_COUNT_RANGE[0], BLOCK_COUNT_RANGE[1])
+                        util_bucket, util_target, util_range = _sample_util_bucket(UTIL_BUCKETS)
+                        ps_ratio_target = random.uniform(PS_RATIO_RANGE[0], PS_RATIO_RANGE[1])
+                        sub_ratio_target = random.uniform(SUB_RATIO_RANGE[0], SUB_RATIO_RANGE[1])
+                        seam_scale = random.uniform(SEAM_SCALE_RANGE[0], SEAM_SCALE_RANGE[1])
+                        tact_time_scale = random.uniform(TACT_TIME_SCALE_RANGE[0], TACT_TIME_SCALE_RANGE[1])
+                        length_scale = random.uniform(LENGTH_SCALE_RANGE[0], LENGTH_SCALE_RANGE[1])
+                        width_scale = random.uniform(WIDTH_SCALE_RANGE[0], WIDTH_SCALE_RANGE[1])
+                        thickness_scale = random.uniform(THICKNESS_SCALE_RANGE[0], THICKNESS_SCALE_RANGE[1])
                     spread_days = _compute_spread_days(
                         total_blocks,
                         util_target,
                         MAX_DAILY_BLOCKS,
                         MIN_SPREAD_DAYS
                     )
-                    ps_ratio_target = random.uniform(PS_RATIO_RANGE[0], PS_RATIO_RANGE[1])
-                    sub_ratio_target = random.uniform(SUB_RATIO_RANGE[0], SUB_RATIO_RANGE[1])
                     ps_pairs = int(round(total_blocks * ps_ratio_target / 2))
                     sub_groups = int(round(total_blocks * sub_ratio_target / 2))
                     ps_pairs, sub_groups = _adjust_reserved_counts(total_blocks, ps_pairs, sub_groups, min_basic_blocks=1)
-                    seam_scale = random.uniform(SEAM_SCALE_RANGE[0], SEAM_SCALE_RANGE[1])
-                    tact_time_scale = random.uniform(TACT_TIME_SCALE_RANGE[0], TACT_TIME_SCALE_RANGE[1])
-                    length_scale = random.uniform(LENGTH_SCALE_RANGE[0], LENGTH_SCALE_RANGE[1])
-                    width_scale = random.uniform(WIDTH_SCALE_RANGE[0], WIDTH_SCALE_RANGE[1])
-                    thickness_scale = random.uniform(THICKNESS_SCALE_RANGE[0], THICKNESS_SCALE_RANGE[1])
                     generator.assembly_date_config['spread_days'] = spread_days
                     blocks_data = generator.generate_blocks_with_ps_pairs_configurable(
                         total_blocks=total_blocks,
@@ -454,8 +809,13 @@ def main():
                     # [AGENT-ADD] per-gen parameter row for CSV export
                     gen_context = {
                         "gen": ds_idx + 1,
-                        "seed": base_seed + ds_idx * 100,
+                        "seed": run_seed,
                         "base_seed": base_seed,
+                        "generation_mode": "grid" if grid_case else "random",
+                        "grid_case_id": grid_case.get("case_id") if grid_case else "",
+                        "distribution_profile": grid_case.get("name") if grid_case else util_bucket,
+                        "repeat": grid_case.get("repeat") if grid_case else "",
+                        "profile_index": grid_case.get("profile_index") if grid_case else "",
                         "total_blocks": total_blocks,
                         "ps_ratio_target": ps_ratio_target,
                         "sub_ratio_target": sub_ratio_target,
@@ -502,7 +862,11 @@ def main():
                     # [AGENT-EDIT] MODE 1: 실행 시각 폴더 아래 gen1~genN으로 정리
                     base_folder_path = seed_base_folder or run_base_folder or os.path.join(os.path.dirname(__file__), current_run_str)
                     os.makedirs(base_folder_path, exist_ok=True)
-                    result_folder_name = f"gen{ds_idx+1}"
+                    if gen_context.get("grid_case_id"):
+                        case_label = sanitize_label_for_filename(str(gen_context.get("grid_case_id")))
+                        result_folder_name = f"gen{ds_idx+1}_{case_label}"
+                    else:
+                        result_folder_name = f"gen{ds_idx+1}"
                     result_folder_path = os.path.join(base_folder_path, result_folder_name)
                 else:
                     result_folder_name = f"{earliest_date_str}_{current_time}_seed{base_seed}"
@@ -519,13 +883,13 @@ def main():
                 results = {}                                                                                                                                                                                      
                 date_keys = []                                                                                                                                                                                    
 
-                if MODE == 1:                                                                                                                                                                                     
-                    print("\n MODE 1: 생성된 학습데이터로 3가지 방법 평가")
+                if MODE == 1:
+                    print("\n MODE 1: 생성된 학습데이터로 선택 방법 평가")
                     # SPT
                     if _should_run("SPT"):
-                        print(f"\n{'='*60}")                                                                                                                                                                          
-                        print(" 1. SPT 휴리스틱 평가")                                                                                                                                                                
-                        print(f"{'='*60}")                                                                                                                                                                            
+                        print(f"\n{'='*60}")
+                        print(" 1. SPT 휴리스틱 평가")
+                        print(f"{'='*60}")
                         spt_results, spt_stats, spt_episode_data, spt_env = run_spt_heuristic(
                             blocks,
                             metadata,
@@ -533,16 +897,15 @@ def main():
                             result_folder_path,
                             settings=method_settings,
                         )
-                        results['SPT'] = {                                                                                                                                                                            
-                            'results': spt_results,                                                                                                                                                                   
-                            'statistics': spt_stats,                                                                                                                                                                  
-                            'makespan': spt_stats.get('makespan_hours', 0)                                                                                                                                            
-                        }                                                                                                                                                                                             
+                        results['SPT'] = {
+                            'results': spt_results,
+                            'statistics': spt_stats,
+                            'makespan': spt_stats.get('makespan_hours', 0)
+                        }
                         date_keys_spt = list(set([r.get('date', '20250101') for r in spt_results if r.get('date')]))
-                        # [AGENT-EDIT] process 파일 기반 날짜키도 합쳐서 누락 방지
                         date_keys_spt = sorted(set(date_keys_spt + _collect_date_keys_from_process_files(result_folder_path)))
                         rename_detailed_csv_files('spt', date_keys_spt, result_folder_path)
-                    # LPT (MODE 1에서도 선택 가능)
+                    # LPT
                     if _should_run("LPT", default=False):
                         print(f"\n{'='*60}")
                         print(" 2. LPT 휴리스틱 평가")
@@ -560,14 +923,13 @@ def main():
                             'makespan': lpt_stats.get('makespan_hours', 0)
                         }
                         date_keys_lpt = list(set([r.get('date', '20250101') for r in lpt_results if r.get('date')]))
-                        # [AGENT-EDIT] process 파일 기반 날짜키도 합쳐서 누락 방지
                         date_keys_lpt = sorted(set(date_keys_lpt + _collect_date_keys_from_process_files(result_folder_path)))
                         rename_detailed_csv_files('lpt', date_keys_lpt, result_folder_path)
-                    # SEAM_MIN                                                                                                                                                                                    
+                    # SEAM_MIN
                     if _should_run("SEAM_MIN"):
-                        print(f"\n{'='*60}")                                                                                                                                                                          
-                        print(" 3. SEAM_MIN 휴리스틱 평가")                                                                                                                                                           
-                        print(f"{'='*60}")                                                                                                                                                                            
+                        print(f"\n{'='*60}")
+                        print(" 3. SEAM_MIN 휴리스틱 평가")
+                        print(f"{'='*60}")
                         seam_min_results, seam_min_stats, seam_min_episode_data, seam_min_env = run_seam_min_heuristic(
                             blocks,
                             metadata,
@@ -575,19 +937,38 @@ def main():
                             result_folder_path,
                             settings=method_settings,
                         )
-                        results['SEAM_MIN'] = {                                                                                                                                                                       
-                            'results': seam_min_results,                                                                                                                                                              
-                            'statistics': seam_min_stats,                                                                                                                                                             
-                            'makespan': seam_min_stats.get('makespan_hours', 0)                                                                                                                                       
-                        }                                                                                                                                                                                             
+                        results['SEAM_MIN'] = {
+                            'results': seam_min_results,
+                            'statistics': seam_min_stats,
+                            'makespan': seam_min_stats.get('makespan_hours', 0)
+                        }
                         date_keys_seam = list(set([r.get('date', '20250101') for r in seam_min_results if r.get('date')]))
-                        # [AGENT-EDIT] process 파일 기반 날짜키도 합쳐서 누락 방지
                         date_keys_seam = sorted(set(date_keys_seam + _collect_date_keys_from_process_files(result_folder_path)))
                         rename_detailed_csv_files('seam_min', date_keys_seam, result_folder_path)
+                    if _should_run("GA", default=False):
+                        print(f"\n{'='*60}")
+                        print(" GA baseline 평가")
+                        print(f"{'='*60}")
+                        ga_results, ga_stats, ga_episode_data, ga_env = run_ga_metaheuristic(
+                            blocks,
+                            metadata,
+                            start_date,
+                            result_folder_path,
+                            settings=method_settings,
+                        )
+                        results['GA'] = {
+                            'results': ga_results,
+                            'statistics': ga_stats,
+                            'makespan': ga_stats.get('makespan_hours', 0)
+                        }
+                        if ga_results:
+                            date_keys_ga = list(set([r.get('date', '20250101') for r in ga_results if r.get('date')]))
+                            rename_detailed_csv_files('ga', date_keys_ga, result_folder_path)
+
                     # RL                                                                                                                                                                                          
                     if _should_run("RL"):
                         print(f"\n{'='*60}")                                                                                                                                                                          
-                        print(" 4. RL 모델 평가")                                                                                                                                                                     
+                        print(" RL 모델 평가")                                                                                                                                                                     
                         print(f"{'='*60}")                                                                                                                                                                            
                         rl_results, rl_stats, rl_episode_data, rl_env = run_rl_evaluation(
                             blocks,
@@ -610,7 +991,7 @@ def main():
                             rename_detailed_csv_files('rl', date_keys_rl, result_folder_path)                                                                                                                         
 
                 elif MODE == 2:                                                                                                                                                                                   
-                    print("\n MODE 2: SNU 데이터로 5가지 방법 평가")                                                                                                                                              
+                    print("\n MODE 2: SNU 데이터로 선택 방법 평가")                                                                                                                                              
                     # 1) 엑셀 순번 기반 평가 (계획 시트 우선순위 적용)
                     excel_entry: Dict[str, object] = {}
                     if _should_run("EXCEL"):
@@ -745,9 +1126,29 @@ def main():
                         date_keys_seam = sorted(set(date_keys_seam + _collect_date_keys_from_process_files(result_folder_path)))
                         rename_detailed_csv_files('seam_min', date_keys_seam, result_folder_path)
 
+                    if _should_run("GA", default=False):
+                        print(f"\n{'='*60}")
+                        print(" GA baseline 평가")
+                        print(f"{'='*60}")
+                        ga_results, ga_stats, ga_episode_data, ga_env = run_ga_metaheuristic(
+                            blocks,
+                            metadata,
+                            start_date,
+                            result_folder_path,
+                            settings=method_settings,
+                        )
+                        results['GA'] = {
+                            'results': ga_results,
+                            'statistics': ga_stats,
+                            'makespan': ga_stats.get('makespan_hours', 0)
+                        }
+                        if ga_results:
+                            date_keys_ga = list(set([r.get('date', '20250101') for r in ga_results if r.get('date')]))
+                            rename_detailed_csv_files('ga', date_keys_ga, result_folder_path)
+
                     if _should_run("RL"):
                         print(f"\n{'='*60}")
-                        print(" 4. RL 모델 평가")
+                        print(" RL 모델 평가")
                         print(f"{'='*60}")
                         rl_results, rl_stats, rl_episode_data, rl_env = run_rl_evaluation(
                             blocks,
@@ -783,14 +1184,30 @@ def main():
                     missing_ids = data.get("missing_ids", [])
                     method_summaries.append({
                         "label": label,
+                        "selection_variant": "best",
                         "makespan": makespan,
                         "violations": violations,
-                        "missing_ids": missing_ids
+                        "missing_ids": missing_ids,
+                        "statistics": stats,
+                        "result_csv_name": stats.get("selected_result_csv_name", "")
                     })
+                    if stats.get("all_mask_off_result_csv_name"):
+                        no_mask_makespan = float(stats.get("all_mask_off_makespan_hours", 0) or 0)
+                        if no_mask_makespan > 0:
+                            method_summaries.append({
+                                "label": f"{label}_ALL_MASK_OFF",
+                                "selection_variant": "all_mask_off",
+                                "makespan": no_mask_makespan,
+                                "violations": int(stats.get("all_mask_off_total_violations", stats.get("all_mask_off_primary", 0)) or 0),
+                                "missing_ids": [],
+                                "statistics": stats,
+                                "result_csv_name": stats.get("all_mask_off_result_csv_name", "")
+                            })
                 
                 _add_method_summary("SPT", results.get("SPT"))
                 _add_method_summary("LPT", results.get("LPT"))
                 _add_method_summary("SEAM_MIN", results.get("SEAM_MIN"))
+                _add_method_summary("GA", results.get("GA"))
                 _add_method_summary("RL", results.get("RL"))
                 
                 if MODE == 2:
@@ -811,10 +1228,23 @@ def main():
                     for item in method_summaries:
                         method_result_rows.append({
                             "gen": gen_context.get("gen", ds_idx + 1),
+                            "seed": gen_context.get("seed"),
+                            "generation_mode": gen_context.get("generation_mode"),
+                            "grid_case_id": gen_context.get("grid_case_id"),
+                            "distribution_profile": gen_context.get("distribution_profile"),
+                            "repeat": gen_context.get("repeat"),
                             "method": item["label"],
+                            "selection_variant": item.get("selection_variant", "best"),
                             "makespan_hours": item["makespan"],
                             "violations": item["violations"],
                             "missing_blocks": len(item.get("missing_ids") or []),
+                            "computation_seconds": (item.get("statistics") or {}).get("computation_seconds", ""),
+                            "ga_candidates_evaluated": (item.get("statistics") or {}).get("ga_candidates_evaluated", ""),
+                            "ga_population": (item.get("statistics") or {}).get("ga_population", ""),
+                            "ga_generations": (item.get("statistics") or {}).get("ga_generations", ""),
+                            "ga_parallel_enabled": (item.get("statistics") or {}).get("ga_parallel_enabled", ""),
+                            "ga_parallel_workers": (item.get("statistics") or {}).get("ga_parallel_workers", ""),
+                            "ga_worker_threads": (item.get("statistics") or {}).get("ga_worker_threads", ""),
                             "total_blocks": gen_context.get("total_blocks"),
                             "spread_days": gen_context.get("spread_days"),
                             "util_bucket": gen_context.get("util_bucket"),
@@ -823,9 +1253,11 @@ def main():
                             "ps_ratio_actual": gen_context.get("ps_ratio_actual"),
                             "sub_ratio_actual": gen_context.get("sub_ratio_actual"),
                             "seam_scale": gen_context.get("seam_scale"),
+                            "tact_time_scale": gen_context.get("tact_time_scale"),
                             "length_scale": gen_context.get("length_scale"),
                             "width_scale": gen_context.get("width_scale"),
                             "thickness_scale": gen_context.get("thickness_scale"),
+                            "result_csv_name": item.get("result_csv_name", ""),
                             "result_folder": gen_context.get("result_folder")
                         })
                 
@@ -881,6 +1313,8 @@ def main():
                     print(f"   LPT 휴리스틱 결과: lpt_evaluation_results.csv")
                 if results.get("SEAM_MIN", {}).get("results"):
                     print(f"   SEAM_MIN 휴리스틱 결과: seam_min_evaluation_results.csv")
+                if results.get("GA", {}).get("results"):
+                    print(f"   GA baseline 결과: ga_evaluation_results.csv")
                 if results.get("RL", {}).get("results"):
                     print(f"   RL 모델 결과: rl_best_results.csv")
                 
@@ -1077,8 +1511,61 @@ def main():
                     results_df = pd.DataFrame(method_result_rows)
                     results_df.to_csv(results_path, index=False)
                     print(f"📌 방법별 결과 저장: {results_path}")
+                    # [AGENT-ADD] Fixed-grid summaries for generated-data experiments.
+                    if "distribution_profile" in results_df.columns:
+                        profile_summary_df = (
+                            results_df
+                            .groupby(["distribution_profile", "method"], dropna=False)
+                            .agg(
+                                n=("makespan_hours", "count"),
+                                makespan_mean=("makespan_hours", "mean"),
+                                makespan_std=("makespan_hours", "std"),
+                                violations_mean=("violations", "mean"),
+                                violations_std=("violations", "std"),
+                            )
+                            .reset_index()
+                        )
+                        profile_summary_path = os.path.join(run_base_folder, "distribution_profile_summary.csv")
+                        profile_summary_df.to_csv(profile_summary_path, index=False)
+                        print(f"📌 분포별 요약 저장: {profile_summary_path}")
+                    block_count_summary_df = (
+                        results_df
+                        .groupby(["total_blocks", "method"], dropna=False)
+                        .agg(
+                            n=("makespan_hours", "count"),
+                            makespan_mean=("makespan_hours", "mean"),
+                            makespan_std=("makespan_hours", "std"),
+                            violations_mean=("violations", "mean"),
+                            violations_std=("violations", "std"),
+                        )
+                        .reset_index()
+                        .sort_values(["total_blocks", "method"])
+                    )
+                    block_count_summary_path = os.path.join(run_base_folder, "block_count_summary.csv")
+                    block_count_summary_df.to_csv(block_count_summary_path, index=False)
+                    print(f"📌 블록수별 요약 저장: {block_count_summary_path}")
+                    if "grid_case_id" in results_df.columns and results_df["grid_case_id"].fillna("").astype(str).str.len().gt(0).any():
+                        grid_case_summary_df = (
+                            results_df
+                            .groupby(["grid_case_id", "total_blocks", "distribution_profile", "method"], dropna=False)
+                            .agg(
+                                n=("makespan_hours", "count"),
+                                makespan_mean=("makespan_hours", "mean"),
+                                makespan_std=("makespan_hours", "std"),
+                                violations_mean=("violations", "mean"),
+                                violations_std=("violations", "std"),
+                            )
+                            .reset_index()
+                            .sort_values(["total_blocks", "distribution_profile", "method"])
+                        )
+                        grid_case_summary_path = os.path.join(run_base_folder, "grid_case_summary.csv")
+                        grid_case_summary_df.to_csv(grid_case_summary_path, index=False)
+                        print(f"📌 고정 격자 케이스 요약 저장: {grid_case_summary_path}")
                     # [AGENT-ADD] util_bucket별 평균/분산 요약 CSV
-                    bucket_order = [bucket.get("name", "") for bucket in UTIL_BUCKETS]
+                    if generation_grid_cases:
+                        bucket_order = list(dict.fromkeys(str(case.get("name", "")) for case in generation_grid_cases))
+                    else:
+                        bucket_order = [bucket.get("name", "") for bucket in UTIL_BUCKETS]
                     summary_df = (
                         results_df
                         .groupby(["util_bucket", "method"], dropna=False)
@@ -1110,9 +1597,15 @@ def main():
                         matplotlib.use("Agg")
                         import matplotlib.pyplot as plt
 
+                        # [AGENT-EDIT] Paper plots exclude *_ALL_MASK_OFF rows; those are saved as separate comparison baselines.
+                        plot_df = results_df.copy()
+                        if "selection_variant" in plot_df.columns:
+                            plot_df = plot_df[plot_df["selection_variant"].fillna("best").astype(str) != "all_mask_off"].copy()
+                        plot_df = plot_df[~plot_df["method"].astype(str).str.endswith("_ALL_MASK_OFF")].copy()
+
                         # [AGENT-EDIT] LPT 포함 (MODE 1에서도 선택 가능)
-                        method_order_default = ["SPT", "LPT", "SEAM_MIN", "RL", "착수일기준휴리스틱"]
-                        available_methods = list(results_df["method"].unique())
+                        method_order_default = ["SPT", "LPT", "SEAM_MIN", "GA", "RL", "착수일기준휴리스틱"]
+                        available_methods = list(plot_df["method"].unique())
                         method_order = [m for m in method_order_default if m in available_methods]
                         for m in available_methods:
                             if m not in method_order:
@@ -1130,11 +1623,33 @@ def main():
                                 return "Medium (81-140)"
                             return "Large (141-200)"
 
-                        results_df["size_bucket"] = results_df["total_blocks"].apply(_size_bucket)
+                        plot_df["size_bucket"] = plot_df["total_blocks"].apply(_size_bucket)
                         size_bucket_order = ["Small (20-80)", "Medium (81-140)", "Large (141-200)"]
 
+                        summary_df_plot = (
+                            plot_df
+                            .groupby(["util_bucket", "method"], dropna=False)
+                            .agg(
+                                n=("makespan_hours", "count"),
+                                makespan_mean=("makespan_hours", "mean"),
+                                makespan_std=("makespan_hours", "std"),
+                                violations_mean=("violations", "mean"),
+                                violations_std=("violations", "std"),
+                                actual_util_mean=("actual_util", "mean"),
+                                actual_util_std=("actual_util", "std"),
+                            )
+                            .reset_index()
+                        )
+                        if bucket_order:
+                            summary_df_plot["util_bucket"] = pd.Categorical(
+                                summary_df_plot["util_bucket"],
+                                categories=bucket_order,
+                                ordered=True
+                            )
+                            summary_df_plot = summary_df_plot.sort_values(["util_bucket", "method"])
+
                         size_summary_df = (
-                            results_df
+                            plot_df
                             .groupby(["size_bucket", "method"], dropna=False)
                             .agg(
                                 n=("makespan_hours", "count"),
@@ -1171,12 +1686,14 @@ def main():
                         color_map = {
                             "SPT": "#4C78A8",
                             "SEAM_MIN": "#54A24B",
+                            "GA": "#F58518",
                             "RL": "#E45756",
                             "착수일기준휴리스틱": "#72B7B2",
                         }
                         marker_map = {
                             "SPT": "o",
                             "SEAM_MIN": "^",
+                            "GA": "s",
                             "RL": "D",
                             "착수일기준휴리스틱": "P",
                         }
@@ -1192,9 +1709,9 @@ def main():
                             for idx, method in enumerate(method_order):
                                 values = []
                                 for bucket in bucket_order:
-                                    subset = summary_df[
-                                        (summary_df["util_bucket"] == bucket) &
-                                        (summary_df["method"] == method)
+                                    subset = summary_df_plot[
+                                        (summary_df_plot["util_bucket"] == bucket) &
+                                        (summary_df_plot["method"] == method)
                                     ]
                                     if not subset.empty:
                                         values.append(float(subset[f"{metric}_mean"].iloc[0]))
@@ -1258,7 +1775,7 @@ def main():
                         def _plot_scatter(metric: str, ylabel: str, filename: str) -> None:
                             fig, ax = plt.subplots(figsize=(8, 6))
                             for method in method_order:
-                                subset = results_df[results_df["method"] == method]
+                                subset = plot_df[plot_df["method"] == method]
                                 if subset.empty:
                                     continue
                                 ax.scatter(
@@ -1280,7 +1797,7 @@ def main():
                             fig, axes = plt.subplots(1, len(size_bucket_order), figsize=(15, 4), sharey=True)
                             util_positions = {bucket: idx for idx, bucket in enumerate(bucket_order)}
                             for ax, size_bucket in zip(axes, size_bucket_order):
-                                subset_bucket = results_df[results_df["size_bucket"] == size_bucket]
+                                subset_bucket = plot_df[plot_df["size_bucket"] == size_bucket]
                                 for idx, method in enumerate(method_order):
                                     subset = subset_bucket[subset_bucket["method"] == method]
                                     if subset.empty:

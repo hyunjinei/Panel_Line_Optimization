@@ -1,0 +1,11 @@
+﻿type,date,total_blocks,total_steps,step,block_id,assembly_start_date,assembly_type,port_starboard,status,reason,assembly_masking_stage,three_bay_check,ps_forced,selected_block,available_count,excluded_count,emergency_mode,relax_level,relax_stage,relax_constraints,relax_target_count,relax_targets,relaxed_block_count,relax_target_total,final_choice_flag,final_violation_count,final_violation_list,seam_count,c_seam_count,has_curved_plate
+METADATA,20250515,110,4,,,,,,,,,,,,,,,,,,,,,,,,,,,
+STEP_SUMMARY,20250515,110,4,107,선택: 98,2025-05-17,fixed,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 107 선택,,,False,98,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250515,110,4,107,36,2025-05-13,line,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250515,110,4,108,선택: 36,2025-05-13,line,P,"가용: 1, 제외: 0",Assembly Decoding 스텝 108 선택,,,False,36,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250515,110,4,108,36,2025-05-13,line,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250515,110,4,109,선택: 59,2025-05-17,fixed,P,"가용: 2, 제외: 0",Assembly Decoding 스텝 109 선택,,,False,59,2,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250515,110,4,109,59,2025-05-17,fixed,P,AVAILABLE,[URGENT] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250515,110,4,109,109,2025-05-17,fixed,S,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250515,110,4,110,선택: 109,2025-05-17,fixed,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 110 선택,,,False,109,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250515,110,4,110,109,2025-05-17,fixed,S,AVAILABLE,[URGENT] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False

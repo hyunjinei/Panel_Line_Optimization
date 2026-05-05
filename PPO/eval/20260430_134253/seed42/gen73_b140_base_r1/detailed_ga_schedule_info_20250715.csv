@@ -1,0 +1,561 @@
+﻿type,date,total_blocks,total_steps,step,block_id,assembly_start_date,assembly_type,port_starboard,status,reason,assembly_masking_stage,three_bay_check,ps_forced,selected_block,available_count,excluded_count,emergency_mode,relax_level,relax_stage,relax_constraints,relax_target_count,relax_targets,relaxed_block_count,relax_target_total,final_choice_flag,final_violation_count,final_violation_list,seam_count,c_seam_count,has_curved_plate
+METADATA,20250715,140,18,,,,,,,,,,,,,,,,,,,,,,,,,,,
+STEP_SUMMARY,20250715,140,18,1,선택: 1,2025-07-15,line,C,"가용: 5, 제외: 0",Assembly Decoding 스텝 1 선택,,,False,1,5,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250715,140,18,1,1,2025-07-15,line,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,1,5,2025-07-15,line,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,1,9,2025-07-15,line,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,1,13,2025-07-15,line,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,1,17,2025-07-15,line,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250715,140,18,2,선택: 5,2025-07-15,line,C,"가용: 4, 제외: 0",Assembly Decoding 스텝 2 선택,,,False,5,4,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250715,140,18,2,5,2025-07-15,line,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,2,9,2025-07-15,line,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,2,13,2025-07-15,line,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,2,17,2025-07-15,line,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250715,140,18,3,선택: 9,2025-07-15,line,S,"가용: 3, 제외: 0",Assembly Decoding 스텝 3 선택,,,False,9,3,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250715,140,18,3,57,2025-07-16,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,3,77,2025-07-16,fixed,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,3,87,2025-07-16,fixed,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250715,140,18,4,선택: 13,2025-07-15,line,P,"가용: 5, 제외: 0",Assembly Decoding 스텝 4 선택,,,False,13,5,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250715,140,18,4,57,2025-07-16,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,4,67,2025-07-16,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,4,77,2025-07-16,fixed,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,4,87,2025-07-16,fixed,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,4,117,2025-07-16,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250715,140,18,5,선택: 17,2025-07-15,line,C,"가용: 3, 제외: 0",Assembly Decoding 스텝 5 선택,,,False,17,3,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250715,140,18,5,57,2025-07-16,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,5,77,2025-07-16,fixed,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,5,87,2025-07-16,fixed,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250715,140,18,6,선택: 87,2025-07-16,fixed,S,"가용: 5, 제외: 0",Assembly Decoding 스텝 6 선택,,,False,87,5,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250715,140,18,6,57,2025-07-16,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,6,67,2025-07-16,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,6,77,2025-07-16,fixed,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,6,87,2025-07-16,fixed,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,6,117,2025-07-16,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250715,140,18,7,선택: 25,2025-07-16,line,P,"가용: 4, 제외: 0",Assembly Decoding 스텝 7 선택,,,False,25,4,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250715,140,18,7,57,2025-07-16,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,7,67,2025-07-16,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,7,77,2025-07-16,fixed,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,7,117,2025-07-16,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250715,140,18,8,선택: 29,2025-07-16,line,S,"가용: 2, 제외: 0",Assembly Decoding 스텝 8 선택,,,False,29,2,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250715,140,18,8,57,2025-07-16,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,8,77,2025-07-16,fixed,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250715,140,18,9,선택: 33,2025-07-16,line,C,"가용: 4, 제외: 0",Assembly Decoding 스텝 9 선택,,,False,33,4,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250715,140,18,9,57,2025-07-16,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,9,67,2025-07-16,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,9,77,2025-07-16,fixed,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,9,117,2025-07-16,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250715,140,18,10,선택: 57,2025-07-16,fixed,C,"가용: 2, 제외: 0",Assembly Decoding 스텝 10 선택,,,False,57,2,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250715,140,18,10,57,2025-07-16,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,10,77,2025-07-16,fixed,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250715,140,18,11,선택: 67,2025-07-16,fixed,C,"가용: 3, 제외: 0",Assembly Decoding 스텝 11 선택,,,False,67,3,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250715,140,18,11,67,2025-07-16,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,11,77,2025-07-16,fixed,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,11,117,2025-07-16,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250715,140,18,12,선택: 77,2025-07-16,fixed,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 12 선택,,,False,77,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250715,140,18,12,77,2025-07-16,fixed,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250715,140,18,13,선택: 21,2025-07-16,line,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 13 선택,,,False,21,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250715,140,18,13,117,2025-07-16,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250715,140,18,14,선택: 117,2025-07-16,fixed,P,"가용: 1, 제외: 0",Assembly Decoding 스텝 14 선택,,,False,117,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250715,140,18,14,117,2025-07-16,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250715,140,18,15,선택: 35,2025-07-23,line,C,"가용: 2, 제외: 124",Assembly Decoding 스텝 15 선택,,,False,35,2,124,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250715,140,18,15,37,2025-07-18,line,P,EXCLUDED,ROUTING_C_SEAM_SPACING 위반,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,41,2025-07-18,line,P,EXCLUDED,ROUTING_C_SEAM_SPACING 위반,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,45,2025-07-18,line,P,AVAILABLE,모든 제약조건 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,49,2025-07-18,line,P,AVAILABLE,모든 제약조건 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,97,2025-07-19,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,107,2025-07-19,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,127,2025-07-19,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,137,2025-07-19,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,53,2025-07-20,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,58,2025-07-21,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,59,2025-07-21,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,62,2025-07-21,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,63,2025-07-21,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,68,2025-07-21,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,69,2025-07-21,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,72,2025-07-21,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,73,2025-07-21,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,78,2025-07-21,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,79,2025-07-21,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,83,2025-07-21,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,88,2025-07-21,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,89,2025-07-21,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,92,2025-07-21,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,93,2025-07-21,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,99,2025-07-21,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,108,2025-07-21,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,2,2025-07-22,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,6,2025-07-22,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,10,2025-07-22,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,14,2025-07-22,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,18,2025-07-22,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,42,2025-07-22,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,61,2025-07-22,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,71,2025-07-22,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,98,2025-07-22,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,101,2025-07-22,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,103,2025-07-22,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,111,2025-07-22,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,113,2025-07-22,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,118,2025-07-22,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,123,2025-07-22,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,128,2025-07-22,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,138,2025-07-22,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,3,2025-07-23,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,4,2025-07-23,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,7,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,8,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,11,2025-07-23,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,12,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,15,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,16,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,19,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,20,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,22,2025-07-23,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,23,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,24,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,26,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,27,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,28,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,30,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,31,2025-07-23,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,32,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,34,2025-07-23,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,35,2025-07-23,line,C,EXCLUDED,,,,False,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,36,2025-07-23,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,38,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,39,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,40,2025-07-23,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,43,2025-07-23,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,44,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,46,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,47,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,48,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,50,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,51,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,52,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,54,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,55,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,56,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,60,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,64,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,65,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,66,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,70,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,74,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,75,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,76,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,80,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,81,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,82,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,84,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,85,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,86,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,90,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,91,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,94,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,95,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,96,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,100,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,102,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,104,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,105,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,106,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,109,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,110,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,112,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,114,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,115,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,116,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,119,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,120,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,121,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,122,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,124,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,125,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,126,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,129,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,130,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,131,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,132,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,133,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,134,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,135,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,136,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,139,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,15,140,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250715,140,18,16,선택: 37,2025-07-18,line,P,"가용: 4, 제외: 121",Assembly Decoding 스텝 16 선택,,,False,37,4,121,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250715,140,18,16,37,2025-07-18,line,P,AVAILABLE,모든 제약조건 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,41,2025-07-18,line,P,AVAILABLE,모든 제약조건 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,45,2025-07-18,line,P,AVAILABLE,모든 제약조건 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,49,2025-07-18,line,P,AVAILABLE,모든 제약조건 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,97,2025-07-19,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,107,2025-07-19,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,127,2025-07-19,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,137,2025-07-19,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,53,2025-07-20,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,58,2025-07-21,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,59,2025-07-21,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,62,2025-07-21,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,63,2025-07-21,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,68,2025-07-21,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,69,2025-07-21,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,72,2025-07-21,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,73,2025-07-21,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,78,2025-07-21,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,79,2025-07-21,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,83,2025-07-21,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,88,2025-07-21,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,89,2025-07-21,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,92,2025-07-21,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,93,2025-07-21,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,99,2025-07-21,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,108,2025-07-21,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,2,2025-07-22,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,6,2025-07-22,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,10,2025-07-22,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,14,2025-07-22,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,18,2025-07-22,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,42,2025-07-22,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,61,2025-07-22,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,71,2025-07-22,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,98,2025-07-22,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,101,2025-07-22,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,103,2025-07-22,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,111,2025-07-22,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,113,2025-07-22,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,118,2025-07-22,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,123,2025-07-22,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,128,2025-07-22,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,138,2025-07-22,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,3,2025-07-23,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,4,2025-07-23,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,7,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,8,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,11,2025-07-23,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,12,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,15,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,16,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,19,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,20,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,22,2025-07-23,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,23,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,24,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,26,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,27,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,28,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,30,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,31,2025-07-23,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,32,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,34,2025-07-23,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,36,2025-07-23,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,38,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,39,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,40,2025-07-23,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,43,2025-07-23,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,44,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,46,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,47,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,48,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,50,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,51,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,52,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,54,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,55,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,56,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,60,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,64,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,65,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,66,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,70,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,74,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,75,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,76,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,80,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,81,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,82,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,84,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,85,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,86,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,90,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,91,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,94,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,95,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,96,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,100,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,102,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,104,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,105,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,106,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,109,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,110,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,112,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,114,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,115,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,116,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,119,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,120,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,121,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,122,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,124,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,125,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,126,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,129,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,130,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,131,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,132,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,133,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,134,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,135,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,136,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,139,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,16,140,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250715,140,18,17,선택: 107,2025-07-19,fixed,P,"가용: 2, 제외: 122",Assembly Decoding 스텝 17 선택,,,False,107,2,122,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250715,140,18,17,41,2025-07-18,line,P,EXCLUDED,ROUTING_C_SEAM_SPACING 위반,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,45,2025-07-18,line,P,AVAILABLE,모든 제약조건 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,49,2025-07-18,line,P,AVAILABLE,모든 제약조건 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,97,2025-07-19,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,107,2025-07-19,fixed,P,EXCLUDED,,,,False,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,127,2025-07-19,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,137,2025-07-19,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,53,2025-07-20,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,58,2025-07-21,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,59,2025-07-21,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,62,2025-07-21,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,63,2025-07-21,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,68,2025-07-21,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,69,2025-07-21,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,72,2025-07-21,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,73,2025-07-21,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,78,2025-07-21,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,79,2025-07-21,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,83,2025-07-21,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,88,2025-07-21,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,89,2025-07-21,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,92,2025-07-21,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,93,2025-07-21,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,99,2025-07-21,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,108,2025-07-21,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,2,2025-07-22,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,6,2025-07-22,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,10,2025-07-22,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,14,2025-07-22,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,18,2025-07-22,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,42,2025-07-22,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,61,2025-07-22,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,71,2025-07-22,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,98,2025-07-22,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,101,2025-07-22,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,103,2025-07-22,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,111,2025-07-22,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,113,2025-07-22,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,118,2025-07-22,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,123,2025-07-22,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,128,2025-07-22,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,138,2025-07-22,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,3,2025-07-23,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,4,2025-07-23,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,7,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,8,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,11,2025-07-23,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,12,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,15,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,16,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,19,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,20,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,22,2025-07-23,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,23,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,24,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,26,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,27,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,28,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,30,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,31,2025-07-23,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,32,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,34,2025-07-23,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,36,2025-07-23,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,38,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,39,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,40,2025-07-23,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,43,2025-07-23,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,44,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,46,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,47,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,48,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,50,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,51,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,52,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,54,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,55,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,56,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,60,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,64,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,65,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,66,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,70,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,74,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,75,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,76,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,80,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,81,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,82,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,84,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,85,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,86,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,90,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,91,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,94,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,95,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,96,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,100,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,102,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,104,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,105,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,106,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,109,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,110,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,112,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,114,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,115,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,116,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,119,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,120,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,121,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,122,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,124,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,125,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,126,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,129,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,130,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,131,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,132,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,133,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,134,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,135,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,136,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,139,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,17,140,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250715,140,18,18,선택: 78,2025-07-21,fixed,P,"가용: 3, 제외: 120",Assembly Decoding 스텝 18 선택,,,False,78,3,120,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250715,140,18,18,41,2025-07-18,line,P,AVAILABLE,모든 제약조건 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,45,2025-07-18,line,P,AVAILABLE,모든 제약조건 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,49,2025-07-18,line,P,AVAILABLE,모든 제약조건 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,97,2025-07-19,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,127,2025-07-19,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,137,2025-07-19,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,53,2025-07-20,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,58,2025-07-21,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,59,2025-07-21,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,62,2025-07-21,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,63,2025-07-21,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,68,2025-07-21,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,69,2025-07-21,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,72,2025-07-21,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,73,2025-07-21,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,78,2025-07-21,fixed,P,EXCLUDED,,,,False,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,79,2025-07-21,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,83,2025-07-21,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,88,2025-07-21,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,89,2025-07-21,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,92,2025-07-21,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,93,2025-07-21,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,99,2025-07-21,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,108,2025-07-21,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,2,2025-07-22,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,6,2025-07-22,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,10,2025-07-22,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,14,2025-07-22,line,C,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 70/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,18,2025-07-22,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,42,2025-07-22,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,61,2025-07-22,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,71,2025-07-22,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,98,2025-07-22,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,101,2025-07-22,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,103,2025-07-22,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,111,2025-07-22,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,113,2025-07-22,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,118,2025-07-22,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,123,2025-07-22,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,128,2025-07-22,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,138,2025-07-22,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,3,2025-07-23,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,4,2025-07-23,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,7,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,8,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,11,2025-07-23,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,12,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,15,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,16,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,19,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,20,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,22,2025-07-23,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,23,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,24,2025-07-23,line,S,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 70/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,26,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,27,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,28,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,30,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,31,2025-07-23,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,32,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,34,2025-07-23,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,36,2025-07-23,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,38,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,39,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,40,2025-07-23,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,43,2025-07-23,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,44,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,46,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,47,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,48,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,50,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,51,2025-07-23,line,P,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 71/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,52,2025-07-23,line,S,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 70/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,54,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,55,2025-07-23,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,56,2025-07-23,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,60,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,64,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,65,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,66,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,70,2025-07-23,fixed,P,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 70/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,74,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,75,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,76,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,80,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,81,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,82,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,84,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,85,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,86,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,90,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,91,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,94,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,95,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,96,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,100,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,102,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,104,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,105,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,106,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,109,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,110,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,112,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,114,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,115,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,116,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,119,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,120,2025-07-23,fixed,S,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 72/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,121,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,122,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,124,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,125,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,126,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,129,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,130,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,131,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,132,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,133,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,134,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,135,2025-07-23,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,136,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,139,2025-07-23,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250715,140,18,18,140,2025-07-23,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False

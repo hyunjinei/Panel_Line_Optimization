@@ -224,12 +224,7 @@ class StepLogicMixin:
             (analysis for analysis in block_analysis if analysis.get('block_id') == selected_block_id),
             None
         )
-        # [AGENT-ADD] 리드타임-가드 대상 추적
-        if selected_analysis:
-            inc = (selected_analysis.get('inclusion_reason') or '').strip()
-            if inc.startswith('[LEADTIME-GUARD]') and selected_block.needs_afternoon_start():
-                self.assembly_afternoon_guard_blocks_day.add(selected_block_id)
-                self.assembly_afternoon_guard_blocks_all.add(selected_block_id)
+        # [AGENT-EDIT] P6#1,#2,#3 제거 이후 afternoon_guard 추적은 legacy 호환용 빈 상태를 유지한다.
     
         # 베이 자동 할당 (상태 업데이트 포함)
         assigned_bay, bay_analysis = self._auto_assign_bay(selected_block, return_analysis=True)
@@ -246,16 +241,22 @@ class StepLogicMixin:
         # [AGENT-ADD] constraint_checker 내부 상태도 동기화
         try:
             self.constraint_checker.mark_block_selected(selected_block_id)
-        except Exception:
-            pass
+        except Exception as exc:
+            # [AGENT-EDIT] 핵심 선택 상태 동기화 실패는 숨기지 않는다.
+            raise RuntimeError(
+                f"constraint_checker 선택 상태 동기화 실패: block_id={selected_block_id}"
+            ) from exc
     
         # sequence_state에도 동기화 (env_state/로그용)
         try:
             self.sequence_state.selected_blocks = self.assembly_selected_blocks
             self.sequence_state.block_sequence = self.assembly_total_sequence
             self.sequence_state.last_assembly_type = selected_block.assembly_type
-        except Exception:
-            pass
+        except Exception as exc:
+            # [AGENT-EDIT] sequence_state 동기화 실패는 이후 관찰/검증을 오염시키므로 즉시 중단한다.
+            raise RuntimeError(
+                f"sequence_state 동기화 실패: block_id={selected_block_id}"
+            ) from exc
     
         # 현재 날짜 makespan 계산
         block_start_time = None
@@ -274,20 +275,21 @@ class StepLogicMixin:
             )
     
             bs = next((b for b in detailed['block_schedules'] if b['block_id'] == selected_block_id), None)
-            if bs:
-                start_hours = bs['start_seconds'] / 3600.0
-                end_hours = bs['end_seconds'] / 3600.0
-                if hasattr(self, "calendar_manager") and self.calendar_manager is not None:
-                    # [AGENT-EDIT] 공장 휴무/중지 반영한 실제 시간 계산
-                    block_start_time = TimeUtils.add_work_hours_with_calendar(
-                        self.assembly_date_start_time, start_hours, self.calendar_manager
-                    )
-                    block_end_time = TimeUtils.add_work_hours_with_calendar(
-                        self.assembly_date_start_time, end_hours, self.calendar_manager
-                    )
-                else:
-                    block_start_time = self.assembly_date_start_time + timedelta(seconds=bs['start_seconds'])
-                    block_end_time = self.assembly_date_start_time + timedelta(seconds=bs['end_seconds'])
+            if bs is None:
+                raise RuntimeError(f"선택 블록 스케줄을 찾지 못함: block_id={selected_block_id}")
+            start_hours = bs['start_seconds'] / 3600.0
+            end_hours = bs['end_seconds'] / 3600.0
+            if hasattr(self, "calendar_manager") and self.calendar_manager is not None:
+                # [AGENT-EDIT] 공장 휴무/중지 반영한 실제 시간 계산
+                block_start_time = TimeUtils.add_work_hours_with_calendar(
+                    self.assembly_date_start_time, start_hours, self.calendar_manager
+                )
+                block_end_time = TimeUtils.add_work_hours_with_calendar(
+                    self.assembly_date_start_time, end_hours, self.calendar_manager
+                )
+            else:
+                block_start_time = self.assembly_date_start_time + timedelta(seconds=bs['start_seconds'])
+                block_end_time = self.assembly_date_start_time + timedelta(seconds=bs['end_seconds'])
     
             ct_common = detailed['ct_tables']['ct_common']
             block_seq_idx = self.assembly_daily_sequence.index(selected_block_id)
@@ -312,30 +314,13 @@ class StepLogicMixin:
                 )
             else:
                 actual_machine_2_start_time = self.assembly_date_start_time + timedelta(seconds=machine_2_start_seconds)
-        except Exception:
-            # Fallback: 단순 계산
-            total_minutes = sum(selected_block.processing_times)
-            if self.assembly_daily_sequence:
-                prior_minutes = sum(sum(self.blocks_dict[bid].processing_times) for bid in self.assembly_daily_sequence[:-1])
-            else:
-                prior_minutes = 0.0
-            if hasattr(self, "calendar_manager") and self.calendar_manager is not None:
-                block_start_time = TimeUtils.add_work_hours_with_calendar(
-                    self.assembly_date_start_time, prior_minutes / 60.0, self.calendar_manager
-                )
-                block_end_time = TimeUtils.add_work_hours_with_calendar(
-                    self.assembly_date_start_time, (prior_minutes + total_minutes) / 60.0, self.calendar_manager
-                )
-                panel_end_time = TimeUtils.add_work_hours_with_calendar(
-                    self.assembly_date_start_time,
-                    (prior_minutes + selected_block.processing_times[0]) / 60.0,
-                    self.calendar_manager
-                )
-            else:
-                block_start_time = self.assembly_date_start_time + timedelta(minutes=prior_minutes)
-                block_end_time = block_start_time + timedelta(minutes=total_minutes)
-                panel_end_time = block_start_time + timedelta(minutes=selected_block.processing_times[0])
-            makespan_sec = (block_end_time - self.assembly_date_start_time).total_seconds()
+        except Exception as exc:
+            # [AGENT-EDIT] 핵심 makespan 실패를 단순 합산으로 숨기지 않고 즉시 드러낸다.
+            step_info["error"] = "makespan_calculation_failed"
+            step_info["error_block_id"] = selected_block_id
+            raise RuntimeError(
+                f"assembly makespan 계산 실패: block_id={selected_block_id}, date={self.assembly_current_date}"
+            ) from exc
     
         # 현재 시간 갱신 (판계 종료 시각 기준)
         if panel_end_time is not None:
@@ -350,46 +335,19 @@ class StepLogicMixin:
         # 제약 검증 (실제 시작 시간 기반)
         # [AGENT-EDIT] 용량/혹서기 판정은 계획일(assembly_current_date) 기준으로 통일
         capacity_time_override = self.assembly_date_start_time if hasattr(self, "assembly_date_start_time") else None
-        block_violations = self._validate_all_constraints_realtime_action(
+        block_violations = self._validate_and_commit_constraints_action(
             selected_block,
             assigned_bay,
             block_start_time if block_start_time is not None else self.assembly_current_datetime,
             actual_machine_2_start_time=actual_machine_2_start_time,
-            capacity_time_override=capacity_time_override
+            capacity_time_override=capacity_time_override,
+            processing_time_seconds=sum(selected_block.processing_times) * 60,
+            step_start_time=block_start_time if block_start_time else self.assembly_current_datetime,
+            step_end_time=block_end_time if block_end_time else (block_start_time if block_start_time else self.assembly_current_datetime),
+            current_in_history=False,
         )
-    
-        # [AGENT-EDIT] 후공정 착수 순서 제약은 기록 유지 (오탐 방지 로직은 action_masking 쪽에서 보정)
-    
+
         self.violation_history.extend(block_violations)
-    
-        # [AGENT-ADD] P/S 강제 실패 정보를 선택 시점에 INFO로 기록
-        try:
-            pending = getattr(self.constraint_checker, "ps_forced_pending_info", {})
-            pending_msg = pending.pop(selected_block_id, None) if isinstance(pending, dict) else None
-            if pending_msg:
-                block_violations.append(ConstraintViolation(
-                    constraint_id="PS_FORCED_BLOCKED",
-                    message=pending_msg,
-                    severity="INFO",
-                    block_id=selected_block_id
-                ))
-        except Exception:
-            pass
-    
-        # completed_steps에 기록 (validator 참고용) - 검증 후에 추가
-        try:
-            ps_step = ProcessStep(
-                block_id=selected_block.block_id,
-                process_num=1,
-                bay_type=assigned_bay,
-                start_time=block_start_time if block_start_time else self.assembly_current_datetime,
-                end_time=block_end_time if block_end_time else (block_start_time if block_start_time else self.assembly_current_datetime),
-                processing_time=sum(selected_block.processing_times) * 60,
-                completion_time=sum(selected_block.processing_times) * 60,
-            )
-            self.completed_steps.append(ps_step)
-        except Exception:
-            pass
     
         # 완료 여부
         if len(self.assembly_selected_blocks) >= len(self.original_blocks):

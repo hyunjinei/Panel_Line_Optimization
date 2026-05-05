@@ -1,18 +1,25 @@
 # action_sequence.py
 
 import random
+import copy
 import argparse
 from datetime import datetime, timedelta
 from typing import List, Tuple, Dict, Optional
 
 from enhanced_environment.common.utils_core import (
+    compute_schedule_span_hours,
+    compute_sum_daily_max_makespan_hours,
+    count_primary_cseam_violations,
+    count_expanded_block_units,
     DataConverter,
     expand_rows_with_subassembly,
     get_line_group_and_workshop_code,
     summarize_violations,  # [AGENT-ADD] 제약 카운트/상세/완화 통합 요약
+    sum_result_violation_counts,
 )
 # [AGENT-ADD] main.py config.yaml 연동
 from runtime_config import get_runtime_config
+from scheduling.common.independent_constraint_audit import sync_runtime_results_to_canonical_constraints
 from enhanced_environment.constraints import ConstraintConfig
 from enhanced_environment.pbs_env import EnhancedPanelBlockShop
 from enhanced_environment.models import BayType, ProcessStep, ConstraintViolation
@@ -20,6 +27,11 @@ from scheduling.common.process_schedule import (
     save_detailed_process_schedule as _save_detailed_process_schedule,
 )
 from scheduling.common.selection_rules import select_block_id  # [AGENT-ADD] 선택 규칙 공통화
+from scheduling.common.run_artifacts import (
+    maybe_load_runtime_config,
+    mirror_to_legacy_path,
+    resolve_output_path,
+)
 
 
 # [AGENT-ADD] dict 기반 위반 로그를 ConstraintViolation로 변환
@@ -72,6 +84,8 @@ def create_actionmasking_schedule(
     limit_days: Optional[int] = None,
     reset_bay_continuity: bool = False,
     reset_worktime_daily: bool = True,
+    selection_method_override: Optional[str] = None,
+    random_seed: Optional[int] = None,
 ):
     """
     Step-by-Step Action Masking 기반 스케줄 생성
@@ -89,15 +103,23 @@ def create_actionmasking_schedule(
     Returns:
         (all_schedule_data, bay_analysis_by_date, step_info_by_date)
     """
+    if random_seed is not None:
+        # [AGENT-EDIT] standalone 재현성을 위해 랜덤 시드를 명시적으로 고정한다.
+        random.seed(int(random_seed))
+
     blocks, metadata = DataConverter.excel_to_blocks_with_metadata(excel_path)
+    # [AGENT-ADD] independent audit/sync는 스케줄링 전 pristine 입력을 사용한다.
+    audit_blocks = copy.deepcopy(blocks)
+    audit_metadata = copy.deepcopy(metadata)
     constraint_config = ConstraintConfig()
     constraint_config.enable_emergency_mode = True
-    # 🔧 용량 제약조건 비활성화 (디버깅만, 실제 차단 없음)  
-    constraint_config.enable_p5_8_weekday_capacity = False
-    constraint_config.enable_p5_16_hot_season_capacity = False
-    constraint_config.enable_p5_15_holiday_shift = False       # P5#15: 명절 전날 야간 없음 - 구현하되 기본 OFF
-    constraint_config.enable_p5_9_block_count_check = False       # P5#9: 72심 초과시 17블록 체크 - 구현하되 기본 OFF
-    constraint_config.enable_p5_10_weekend_capacity = False       # P5#10: 주말 심수 용량 (45심) - 구현하되 기본 OFF
+    if constraint_config.enable_start_date_generation_capacity_override:
+        # [AGENT-EDIT] start_date 생성 단계의 용량/달력 우회도 더 이상 하드코딩하지 않고 config 토글로 제어한다.
+        constraint_config.enable_p5_8_weekday_capacity = False
+        constraint_config.enable_p5_16_hot_season_capacity = False
+        constraint_config.enable_p5_15_holiday_shift = False       # P5#15: 명절 전날 야간 없음 - 구현하되 기본 OFF
+        constraint_config.enable_p5_9_block_count_check = False       # P5#9: 72심 초과시 17블록 체크 - 구현하되 기본 OFF
+        constraint_config.enable_p5_10_weekend_capacity = False       # P5#10: 주말 심수 용량 (45심) - 구현하되 기본 OFF
 
     # ✅ 실제 데이터의 첫 번째 날짜를 환경 시작 시간으로 사용
     earliest_date = min(block.max_start_date for block in blocks)
@@ -201,11 +223,15 @@ def create_actionmasking_schedule(
             print(f"   🔍 Step-by-Step Action Masking 시작 (시작 시간: {current_time.strftime('%H:%M')})")
 
             # [AGENT-ADD] config.yaml heuristic.method를 착수일 경로에도 반영
-            runtime_cfg = get_runtime_config() or {}
-            heuristic_cfg = runtime_cfg.get("heuristic") or {}
-            method_raw = heuristic_cfg.get("method") if isinstance(heuristic_cfg, dict) else None
             selection_method = None
-            decoding_type = "random"
+            decoding_type = "selection_rules"
+
+            method_raw = selection_method_override
+            if method_raw is None:
+                runtime_cfg = get_runtime_config() or {}
+                heuristic_cfg = runtime_cfg.get("heuristic") or {}
+                method_raw = heuristic_cfg.get("method") if isinstance(heuristic_cfg, dict) else None
+
             if method_raw:
                 if isinstance(method_raw, str):
                     method_key = method_raw.strip().lower()
@@ -220,6 +246,10 @@ def create_actionmasking_schedule(
                 elif method_key in ("spt", "lpt", "seam_min", "seammin", "priority"):
                     selection_method = "seam_min" if method_key in ("seammin",) else method_key
                     decoding_type = "selection_rules"
+            else:
+                # [AGENT-EDIT] standalone 기본값을 deterministic priority로 고정한다.
+                selection_method = "priority"
+                decoding_type = "selection_rules"
 
             # ✅ 모든 블록이 선택될 때까지 반복
             while len(selected_blocks) < len(blocks_in_date):
@@ -294,16 +324,16 @@ def create_actionmasking_schedule(
                 current_bay_assignments[selected_id] = assigned_bay
                 
                 # 🔥 딥 카피로 객체 참조 공유 문제 해결
-                import copy
                 bay_analysis_copy = copy.deepcopy(bay_analysis)
                 bay_analysis_cache[selected_id] = bay_analysis_copy
                 
-                # 🔥 베이 할당 후 연속성 제약 위반 체크 (물리적 제약 강제 할당 시에도)
+                # [AGENT-EDIT] Respect P7#7 toggle instead of hardcoded manual consecutive warnings.
                 consecutive_violation_msg = None
-                if assigned_bay == BayType.BAY_35A and env.bay_tracker.bay_35a_consecutive_count > 1:
-                    consecutive_violation_msg = f"⚠️ P7#7 위반: A베이 {env.bay_tracker.bay_35a_consecutive_count}개 연속 (최대 1개까지)"
-                elif assigned_bay == BayType.BAY_36B and env.bay_tracker.bay_36b_consecutive_count > 2:
-                    consecutive_violation_msg = f"⚠️ P7#7 위반: B베이 {env.bay_tracker.bay_36b_consecutive_count}개 연속 (최대 2개까지)"
+                if constraint_config.is_constraint_enabled("P7#7"):
+                    if assigned_bay == BayType.BAY_35A and env.bay_tracker.bay_35a_consecutive_count > 1:
+                        consecutive_violation_msg = f"⚠️ P7#7 위반: A베이 {env.bay_tracker.bay_35a_consecutive_count}개 연속 (최대 1개까지)"
+                    elif assigned_bay == BayType.BAY_36B and env.bay_tracker.bay_36b_consecutive_count > 2:
+                        consecutive_violation_msg = f"⚠️ P7#7 위반: B베이 {env.bay_tracker.bay_36b_consecutive_count}개 연속 (최대 2개까지)"
                 
                 # 🔍 디버깅: 베이 할당 후 상태 출력
                 # print(f"      ➡️ 할당결과: {assigned_bay.value} 베이")
@@ -342,13 +372,14 @@ def create_actionmasking_schedule(
                         branch_assignments=current_bay_assignments
                     )
                     bs = next((b for b in detail['block_schedules'] if b['block_id'] == selected_id), None)
-                    if bs:
-                        current_time = date_start_time + timedelta(seconds=bs['start_seconds'])
-                    else:
-                        current_time += timedelta(minutes=sum(selected_block.processing_times))
+                    if bs is None:
+                        raise RuntimeError(f"CT block_schedule 누락: block_id={selected_id}")
+                    current_time = date_start_time + timedelta(seconds=bs['start_seconds'])
                 except Exception as ct_err:
-                    print(f"   ⚠️ CT 계산 실패: {ct_err}")
-                    current_time += timedelta(minutes=sum(selected_block.processing_times))
+                    # [AGENT-EDIT] 착수일 경로 CT 실패를 단순 시간 합산으로 대체하지 않는다.
+                    raise RuntimeError(
+                        f"착수일 휴리스틱 CT 계산 실패: block_id={selected_id}, date={date_key}"
+                    ) from ct_err
 
                 selected_blocks.append(selected_id)
                 final_sequence.append(selected_id)
@@ -460,8 +491,9 @@ def create_actionmasking_schedule(
             try:
                 y, m, d = int(date_key[:4]), int(date_key[4:6]), int(date_key[6:8])
                 date_start_time = datetime(y, m, d, 8, 0)
-            except:
-                date_start_time = env.start_time
+            except Exception as exc:
+                # [AGENT-EDIT] 날짜 키 해석 실패를 env.start_time으로 덮지 않는다.
+                raise RuntimeError(f"착수일 결과 날짜 키 파싱 실패: date_key={date_key}") from exc
             completion_time = date_start_time + timedelta(minutes=total_min)
             
             # 🆕 공정별 상세 스케줄링 CSV 생성
@@ -520,8 +552,10 @@ def create_actionmasking_schedule(
                                     print(f"      📅 날짜 전환: 22시 이후 → {actual_machine_2_start_time.strftime('%Y-%m-%d %H:%M:%S')}")
                                 
                             except Exception as calc_err:
-                                # 계산 실패 시 기본 시간 사용
-                                actual_machine_2_start_time = st
+                                # [AGENT-EDIT] P6는 hard 제약이므로 SAW 시작시간 계산 실패를 숨기지 않는다.
+                                raise RuntimeError(
+                                    f"착수일 경로 SAW 시작시간 계산 실패: block_id={rec['block_id']}, date={date_key}"
+                                ) from calc_err
                         
                         # 🔥 수정: 블록이 속한 원래 날짜 기준으로 제약조건 검증
                         # (실제 시작 시간이 다음날이어도 원래 날짜의 용량 한계 적용)
@@ -534,7 +568,16 @@ def create_actionmasking_schedule(
                             actual_machine_2_start_time,
                         )
 
-                        others = env._validate_all_constraints_realtime_action(block, bay, original_date, actual_machine_2_start_time)
+                        others = env._validate_and_commit_constraints_action(
+                            block,
+                            bay,
+                            original_date,
+                            actual_machine_2_start_time=actual_machine_2_start_time,
+                            processing_time_seconds=sum(block.processing_times) * 60,
+                            step_start_time=st,
+                            step_end_time=et,
+                            current_in_history=False,
+                        )
                         # P6 상세/3베이 중복 제외 (기존 로직 유지)
                         filtered = [v for v in others if not v.constraint_id.startswith('P6#') and v.constraint_id != 'P7#7']
                         combined = list(saw) + filtered
@@ -546,7 +589,7 @@ def create_actionmasking_schedule(
                             })
                         
                         # 연속성 위반 정보 추가
-                        if 'consecutive_violation' in bay_analysis_cache[rec['block_id']]:
+                        if constraint_config.is_constraint_enabled("P7#7") and 'consecutive_violation' in bay_analysis_cache[rec['block_id']]:
                             violations.append({
                                 'constraint_id': 'P7#7',
                                 'message': bay_analysis_cache[rec['block_id']]['consecutive_violation'],
@@ -560,7 +603,10 @@ def create_actionmasking_schedule(
                                 v['severity'] = 'INFO'
                             
                     except Exception as val_err:
-                        print(f"      ⚠️ 제약 검증 실패 (블록 {rec['block_id']}): {val_err}")
+                        # [AGENT-EDIT] 사후 검증 실패 시 결과 신뢰도가 깨지므로 즉시 중단한다.
+                        raise RuntimeError(
+                            f"착수일 경로 제약 검증 실패: block_id={rec['block_id']}, date={date_key}"
+                        ) from val_err
                     
                     ##################################################################
                     # [AGENT-ADD] 비상 선택(EMERGENCY_RELEASE) 시 어떤 제약을 위반했는지 사후 재검증
@@ -579,8 +625,11 @@ def create_actionmasking_schedule(
                         for cid, fn, args in check_specs:
                             try:
                                 ok, reason = fn(*args)
-                            except Exception as e:
-                                ok, reason = False, f"검증 오류: {e}"
+                            except Exception as exc:
+                                # [AGENT-EDIT] 비상 선택 사후 검증 실패도 숨기지 않는다.
+                                raise RuntimeError(
+                                    f"착수일 경로 비상 선택 재검증 실패: block_id={rec['block_id']}, constraint={cid}"
+                                ) from exc
                             if ok:
                                 continue
                             key = (cid, reason)
@@ -592,27 +641,7 @@ def create_actionmasking_schedule(
                                 'severity': 'ERROR'
                             })
                             existing_keys.add(key)
-                        # SAW 시간 제약 별도 검사
-                        try:
-                            ok, reason = cc._check_saw_time_constraint(
-                                block,
-                                st,  # 실제 시작 시간 기준
-                                previous_machine_state=None,
-                                current_bay_assignments=current_bay_assignments,
-                                current_day_selected_blocks=final_sequence
-                            )
-                        except Exception as e:
-                            ok, reason = False, f"검증 오류: {e}"
-                        if not ok:
-                            key = ("P6#1,2,3", reason)
-                            if key not in existing_keys:
-                                violations.append({
-                                    'constraint_id': "P6#1,2,3",
-                                    'message': reason,
-                                    'severity': 'ERROR'
-                                })
-                                existing_keys.add(key)
-                    
+
                     # [AGENT-EDIT] 제약 카운트/상세/완화 요약 통일
                     summary = summarize_violations(
                         _to_violation_objects(violations, block_id=rec['block_id']),
@@ -626,12 +655,24 @@ def create_actionmasking_schedule(
                     et = date_start_time + timedelta(minutes=rec['total_time_min'])
                     rec.update({
                         'violations': 0,
+                        'violations_raw_count': 0,
+                        'violations_primary_count': 0,
+                        'violations_meta_count': 0,
+                        'violations_info_count': 0,
                         'violation_details': [],
                         'violation_severity': [],
                         'constraint_ids': [],
+                        'constraint_families': [],
+                        'raw_constraint_ids': [],
+                        'raw_constraint_families': [],
+                        'meta_constraint_ids': [],
+                        'meta_constraint_families': [],
+                        'meta_details': [],
+                        'meta_severity': [],
                         'info_count': 0,
                         'info_details': [],
                         'info_constraint_ids': [],
+                        'info_constraint_families': [],
                         'info_severity': [],
                         'relax_constraint_count': 0,
                         'relax_constraint_ids': [],
@@ -639,6 +680,9 @@ def create_actionmasking_schedule(
                     })
                     
                 rec.update({
+                    'panel_start_time': st.strftime('%Y-%m-%d %H:%M'),
+                    'machine2_start_time': actual_machine_2_start_time.strftime('%Y-%m-%d %H:%M') if actual_machine_2_start_time else '',
+                    'final_end_time': et.strftime('%Y-%m-%d %H:%M'),
                     'start_time': st.strftime('%Y-%m-%d %H:%M'),
                     'end_time': et.strftime('%Y-%m-%d %H:%M'),
                     'date_start_time': date_start_time.strftime('%Y-%m-%d %H:%M'),
@@ -646,21 +690,6 @@ def create_actionmasking_schedule(
                     'makespan_minutes': round(total_min, 1),
                     'makespan_hours': round(total_hr, 2)
                 })
-
-                # ✅ 완료 스텝 기록: 이후 블록 라우팅/연속성 검증용 히스토리 반영
-                try:
-                    ps = ProcessStep(
-                        block_id=rec['block_id'],
-                        process_num=1,
-                        bay_type=bay,
-                        start_time=st,
-                        end_time=et,
-                        processing_time=sum(block.processing_times) * 60,
-                        completion_time=sum(block.processing_times) * 60,
-                    )
-                    env.completed_steps.append(ps)
-                except Exception:
-                    pass
             all_schedule_data.extend(schedule_data)
 
         except Exception as e:
@@ -672,8 +701,37 @@ def create_actionmasking_schedule(
 ################################################################################################################################################################################################
 # fix: 반환 전 별판 행 확장
 ################################################################################################################################################################################################
-    all_schedule_data = expand_rows_with_subassembly(all_schedule_data)
-    return all_schedule_data, bay_analysis_by_date, step_info_by_date
+    raw_schedule_data = list(all_schedule_data)
+    runtime_cfg = get_runtime_config() or {}
+    raw_schedule_data, audit_stats, _ = sync_runtime_results_to_canonical_constraints(
+        schedule_results=raw_schedule_data,
+        blocks=audit_blocks,
+        metadata=audit_metadata,
+        runtime_cfg=runtime_cfg,
+        case_label="start_date_runtime",
+    )
+    all_schedule_data = expand_rows_with_subassembly(raw_schedule_data)
+
+    statistics = {
+        "total_blocks_processed": len(all_schedule_data),
+        "total_blocks_expected": count_expanded_block_units(blocks),
+        "success_rate": (len(all_schedule_data) / count_expanded_block_units(blocks) * 100) if count_expanded_block_units(blocks) else 0.0,
+        "makespan_hours": compute_schedule_span_hours(raw_schedule_data),
+        "sum_daily_max_makespan_hours": compute_sum_daily_max_makespan_hours(raw_schedule_data),
+        "total_violations": int(audit_stats.get("total_violations_primary", 0)),
+        "total_violations_primary": int(audit_stats.get("total_violations_primary", 0)),
+        "total_violations_raw": int(audit_stats.get("total_violations_raw", 0)),
+        "total_violations_meta": int(audit_stats.get("total_violations_meta", 0)),
+        "total_violations_info": int(audit_stats.get("total_violations_info", 0)),
+        "total_cseam_violations": count_primary_cseam_violations(raw_schedule_data),
+        "selection_method": selection_method_override or "runtime_or_priority",
+        "random_seed": random_seed,
+        "audit_workshop_order_inversions": int(audit_stats.get("audit_workshop_order_inversions", 0)),
+        "audit_constraint_ids": list(audit_stats.get("audit_constraint_ids", [])),
+        "audit_constraint_families": list(audit_stats.get("audit_constraint_families", [])),
+    }
+
+    return all_schedule_data, bay_analysis_by_date, step_info_by_date, statistics
 
 
 # 독립 실행 로직
@@ -703,8 +761,43 @@ if __name__ == "__main__":
         action="store_true",
         help="True이면 하루 시작 시 베이 작업시간 리셋을 건너뜀",
     )
+    parser.add_argument(
+        "--config",
+        default="config.yaml",
+        help="standalone 실행 시 불러올 설정 파일 경로",
+    )
+    parser.add_argument(
+        "--method",
+        default=None,
+        help="선택 방식 강제 지정 (priority/random/spt/lpt/seam_min/excel)",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="random 선택 경로 재현용 시드",
+    )
+    parser.add_argument(
+        "--run-tag",
+        default=None,
+        help="결과 스냅샷을 저장할 run tag",
+    )
+    parser.add_argument(
+        "--output-dir",
+        default=None,
+        help="run tag 결과를 저장할 디렉터리",
+    )
+    parser.add_argument(
+        "--output-csv",
+        default=None,
+        help="메인 결과 CSV 저장 경로",
+    )
 
     args = parser.parse_args()
+
+    loaded_config = maybe_load_runtime_config(args.config)
+    if loaded_config:
+        print(f"✅ standalone config 로드: {loaded_config}")
 
     # 🆕 test.py 설정 가져오기 (circular import 방지, CLI가 우선)
     try:
@@ -733,23 +826,32 @@ if __name__ == "__main__":
         print(f"\n🎯 Action Masking 기반 스케줄링 실행 중...")
         
         # 1. Action Masking 스케줄링 실행
-        am_results, bay_analysis_by_date, step_info_by_date = create_actionmasking_schedule(
+        am_results, bay_analysis_by_date, step_info_by_date, am_stats = create_actionmasking_schedule(
             args.excel_path,
             limit_days=args.limit_days,
             reset_bay_continuity=args.reset_bay_continuity,
             reset_worktime_daily=not args.no_reset_worktime,
+            selection_method_override=args.method,
+            random_seed=args.seed,
         )
 
 ################################################################################################################################################################################################
-# fix: 별판 복수 행으로 확장 (CSV 기록 전에 적용)
+# [AGENT-EDIT] create_actionmasking_schedule()가 이미 별판 확장을 끝낸 상태로 반환한다.
+# 여기서 다시 expand_rows_with_subassembly()를 호출하면 CSV row와 통계가 어긋난다.
 ################################################################################################################################################################################################
-        am_results = expand_rows_with_subassembly(am_results)
 
         # 2. 메인 결과 CSV 저장 (test.py와 동일한 방식)
         import pandas as pd
         df = pd.DataFrame(am_results)
-        csv_filename = 'action_masking_standalone_results.csv'
-        df.to_csv(csv_filename, index=False, encoding='utf-8-sig')
+        csv_path = resolve_output_path(
+            default_filename='action_masking_standalone_results.csv',
+            mode='start_date',
+            output_csv=args.output_csv,
+            output_dir=args.output_dir,
+            run_tag=args.run_tag,
+        )
+        df.to_csv(csv_path, index=False, encoding='utf-8-sig')
+        legacy_path = mirror_to_legacy_path(csv_path, 'action_masking_standalone_results.csv')
         
         # 3. 상세 분석 CSV 저장 (test.py와 동일)
         from utils.csv_save import save_detailed_masking_info, save_detailed_bay_selection_info
@@ -768,25 +870,13 @@ if __name__ == "__main__":
         # 4. 통계 출력
         print(f"\n📊 Action Masking 방식 결과:")
         print(f"   처리된 블록: {len(am_results)}개")
-        
-        # Makespan 계산 (날짜별 최대 makespan 합산)
-        makespan_by_date = {}
-        for result in am_results:
-            date = result.get('date', 'N/A')
-            makespan = result.get('makespan_hours', 0)
-            if date not in makespan_by_date or makespan > makespan_by_date[date]:
-                makespan_by_date[date] = makespan
-        
-        total_makespan = sum(makespan_by_date.values())
-        total_violations = sum(r.get('violations', 0) for r in am_results)
-        
-        print(f"   총 makespan: {total_makespan:.2f}시간")
-        print(f"   총 위반: {total_violations}개")
-        
-        # 데이터 로딩해서 성공률 계산
-        from enhanced_environment.common.utils_core import DataConverter
-        blocks, metadata = DataConverter.excel_to_blocks_with_metadata(args.excel_path)
-        print(f"   성공률: {len(am_results) / len(blocks) * 100:.1f}%")
+        print(f"   총 makespan: {am_stats.get('makespan_hours', 0.0):.2f}시간")
+        # [AGENT-EDIT] primary / raw / meta / info를 함께 출력해 위반 집계 기준을 명확히 보여준다.
+        print(f"   총 primary 위반: {am_stats.get('total_violations_primary', am_stats.get('total_violations', 0))}개")
+        print(f"   총 raw 이벤트: {am_stats.get('total_violations_raw', 0)}개")
+        print(f"   메타/완화 이벤트: {am_stats.get('total_violations_meta', 0)}개")
+        print(f"   INFO 이벤트: {am_stats.get('total_violations_info', 0)}개")
+        print(f"   성공률: {am_stats.get('success_rate', 0.0):.1f}%")
         
         # 베이 분포
         bay_stats = {}
@@ -799,7 +889,9 @@ if __name__ == "__main__":
             percentage = count / len(am_results) * 100 if am_results else 0
             print(f"     {bay}: {count}개 ({percentage:.1f}%)")
         
-        print(f"\n📄 메인 결과: {csv_filename}")
+        print(f"\n📄 메인 결과: {csv_path}")
+        if csv_path.resolve() != legacy_path.resolve():
+            print(f"📄 레거시 복사본: {legacy_path}")
         print(f"📄 베이 분석: detailed_actionmasking_bayselect_info_YYYYMMDD.csv")
         print(f"✅ Action Masking 기반 스케줄링 완료!")
         

@@ -1,0 +1,13 @@
+﻿type,date,total_blocks,block_id,assembly_start_date,width_m,longi_count,seam_count,c_seam_count,has_curved_plate,assigned_bay,final_reason,material_type,P7#2_result,P7#3_4_result,P7#7_8_result,P7#10_result,P7#11_result,P7#1_result,bay_35a_worktime_before,bay_36b_worktime_before,bay_35a_worktime_after,bay_36b_worktime_after
+METADATA,20250928,11,,,,,,,,,Assembly Decoding 베이 선택 분석: 11개 블록,,,,,,,,,,,
+BLOCK_DETAIL,20250928,11,114.0,2025-10-04,19.9,27.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,61.92,64.61,61.92,70.3
+BLOCK_DETAIL,20250928,11,80.0,2025-10-04,15.0,10.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,61.92,75.98,65.97,75.98
+BLOCK_DETAIL,20250928,11,6.0,2025-10-02,20.0,22.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,70.02,75.98,70.02,86.97
+BLOCK_DETAIL,20250928,11,25.0,2025-10-01,7.4,8.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,70.02,97.96,73.64,97.96
+BLOCK_DETAIL,20250928,11,138.0,2025-10-06,18.9,12.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,77.25,97.96,77.25,101.91
+BLOCK_DETAIL,20250928,11,69.0,2025-09-27,15.4,18.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,77.25,105.86,83.81,105.86
+BLOCK_DETAIL,20250928,11,3.0,2025-10-04,14.7,11.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,90.37,105.86,90.37,109.6
+BLOCK_DETAIL,20250928,11,37.0,2025-10-01,5.4,3.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,90.37,113.34,96.61,113.34
+BLOCK_DETAIL,20250928,11,89.0,2025-09-27,14.5,5.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,102.84,113.34,102.84,116.49
+BLOCK_DETAIL,20250928,11,12.0,2025-10-04,15.6,14.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,102.84,119.65,109.5,119.65
+BLOCK_DETAIL,20250928,11,104.0,2025-10-04,14.5,12.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,116.17,119.65,116.17,123.8

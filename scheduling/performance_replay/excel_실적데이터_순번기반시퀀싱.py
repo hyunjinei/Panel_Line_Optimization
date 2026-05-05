@@ -1,5 +1,7 @@
 # excel_sequence.py
 
+import argparse
+import copy
 import os
 from collections import defaultdict
 from datetime import datetime, timedelta
@@ -10,14 +12,23 @@ from enhanced_environment.models import BayType, ConstraintViolation, AssemblyTy
 from enhanced_environment.constraints import get_all_enabled_config
 from enhanced_environment.pbs_env import EnhancedPanelBlockShop
 from enhanced_environment.common.utils_core import (
+    compute_schedule_span_hours,
+    count_expanded_block_units,
     DataConverter,
     get_line_group_and_workshop_code,
     expand_rows_with_subassembly,
     summarize_violations,  # [AGENT-ADD] 제약 카운트/상세/완화 통합 요약
+    sum_result_violation_counts,
 )
 from scheduling.common.defaults import DEFAULT_EXCEL_PATH  # [AGENT-ADD] 기본 경로 통합
+from scheduling.common.run_artifacts import (
+    maybe_load_runtime_config,
+    mirror_to_legacy_path,
+    resolve_output_path,
+)
 # [AGENT-ADD] main.py config.yaml 연동
 from runtime_config import get_runtime_config
+from scheduling.common.independent_constraint_audit import sync_runtime_results_to_canonical_constraints
 
 # ✅ 순번 시트 우선순위 (환경 변수 EXCEL_PLAN_SHEET_PRIORITY로 재정의 가능)
 _PLAN_PRIORITY_ENV = os.getenv("EXCEL_PLAN_SHEET_PRIORITY")
@@ -29,6 +40,53 @@ else:
     PLAN_SHEET_PRIORITY = ("수기계획", "CP")
 
 
+def _rebuild_result_violations(result: Dict, block_id: int) -> List[ConstraintViolation]:
+    """[AGENT-ADD] 저장된 summary 필드에서 raw violation 객체를 복원한다."""
+    rebuilt: List[ConstraintViolation] = []
+
+    primary_ids = list(result.get("constraint_ids") or [])
+    primary_details = list(result.get("violation_details") or [])
+    primary_severity = list(result.get("violation_severity") or [])
+    for idx, constraint_id in enumerate(primary_ids):
+        rebuilt.append(
+            ConstraintViolation(
+                constraint_id=constraint_id,
+                message=primary_details[idx] if idx < len(primary_details) else "",
+                severity=primary_severity[idx] if idx < len(primary_severity) else "INFO",
+                block_id=block_id,
+            )
+        )
+
+    meta_ids = list(result.get("meta_constraint_ids") or [])
+    meta_details = list(result.get("meta_details") or [])
+    meta_severity = list(result.get("meta_severity") or [])
+    for idx, constraint_id in enumerate(meta_ids):
+        rebuilt.append(
+            ConstraintViolation(
+                constraint_id=constraint_id,
+                message=meta_details[idx] if idx < len(meta_details) else "",
+                severity=meta_severity[idx] if idx < len(meta_severity) else "INFO",
+                block_id=block_id,
+            )
+        )
+
+    info_ids = list(result.get("info_constraint_ids") or [])
+    info_details = list(result.get("info_details") or [])
+    info_severity = list(result.get("info_severity") or [])
+    info_start_idx = len(meta_ids)
+    for idx in range(info_start_idx, len(info_ids)):
+        rebuilt.append(
+            ConstraintViolation(
+                constraint_id=info_ids[idx],
+                message=info_details[idx] if idx < len(info_details) else "",
+                severity=info_severity[idx] if idx < len(info_severity) else "INFO",
+                block_id=block_id,
+            )
+        )
+
+    return rebuilt
+
+
 def _normalise_plan_column(text: object) -> str:
     """간단한 문자열 정규화 (양 끝 공백 제거, NaN → 빈 문자열)."""
     if text is None:
@@ -36,6 +94,24 @@ def _normalise_plan_column(text: object) -> str:
     if isinstance(text, float) and pd.isna(text):
         return ""
     return str(text).strip()
+
+
+def _find_builtin_sequence_sheets(workbook: pd.ExcelFile) -> List[str]:
+    """[AGENT-ADD] 별도 계획 시트가 없을 때 원본 데이터 시트의 내장 순번 컬럼을 탐색."""
+    builtin_candidates: List[str] = []
+
+    for sheet_name in workbook.sheet_names:
+        try:
+            temp_df = workbook.parse(sheet_name, nrows=0)
+        except Exception:
+            continue
+
+        temp_df.columns = [str(col).strip() for col in temp_df.columns]
+        required_columns = {"블록번호", "순번"}
+        if required_columns.issubset(set(temp_df.columns)):
+            builtin_candidates.append(sheet_name)
+
+    return builtin_candidates
 
 
 #################################################################################################################################################
@@ -116,8 +192,17 @@ def apply_plan_sequence_from_excel(
     plan_mapping: Dict[Tuple[str, ...], List[Dict]] = defaultdict(list)
     sheet_stats: Dict[str, Dict[str, int]] = {}
     max_sequence_seen = 0
+    used_builtin_fallback = False
 
-    for sheet_index, sheet_name in enumerate(priority):
+    candidate_sheets = list(priority)
+    matched_named_sheet = any(sheet_name in workbook.sheet_names for sheet_name in priority)
+    if not matched_named_sheet:
+        for builtin_sheet in _find_builtin_sequence_sheets(workbook):
+            if builtin_sheet not in candidate_sheets:
+                candidate_sheets.append(builtin_sheet)
+                used_builtin_fallback = True
+
+    for sheet_index, sheet_name in enumerate(candidate_sheets):
         if sheet_name not in workbook.sheet_names:
             continue
 
@@ -169,11 +254,11 @@ def apply_plan_sequence_from_excel(
             sheet_stats[sheet_name]["total_rows"] += 1
 
     if not plan_mapping:
-        if not suppress_missing_message:
-            print("ℹ️ 적용 가능한 수기계획/CP 순번 시트를 찾지 못했습니다. 기존 순번을 사용합니다.")
-        return None
+        available_sheets = ", ".join(workbook.sheet_names) if workbook.sheet_names else "(없음)"
+        raise RuntimeError(
+            f"적용 가능한 순번 시트를 찾지 못했습니다. 현재 시트: {available_sheets}"
+        )
 
-    fallback_sequence = max_sequence_seen + 1 if max_sequence_seen > 0 else 1
     unmatched_blocks = []
     matched_count = 0
     used_sheets: List[str] = []
@@ -194,10 +279,9 @@ def apply_plan_sequence_from_excel(
                 info = entries.pop(0)
                 seq_val = info["sequence"]
                 if seq_val is None:
-                    seq_val = fallback_sequence
-                    fallback_sequence += 1
-                else:
-                    fallback_sequence = max(fallback_sequence, seq_val + 1)
+                    raise RuntimeError(
+                        f"엑셀 순번 누락: block={block_name}, sub={sub_number or '-'}"
+                    )
 
                 setattr(block, "sequence_number", int(seq_val))
 
@@ -205,16 +289,20 @@ def apply_plan_sequence_from_excel(
                 if longi in (1, 2):
                     try:
                         block.assigned_bay = BayType.BAY_35A if int(longi) == 1 else BayType.BAY_36B
-                    except Exception:
-                        pass
+                    except Exception as exc:
+                        raise RuntimeError(
+                            f"엑셀 론지 작업장 베이 변환 실패: block={block_name}, value={longi}"
+                        ) from exc
 
                 start_date = info.get("start_date")
                 if isinstance(start_date, datetime):
                     try:
                         setattr(block, "max_start_date", start_date)
                         setattr(block, "assembly_start_date", start_date)
-                    except Exception:
-                        pass
+                    except Exception as exc:
+                        raise RuntimeError(
+                            f"엑셀 시작일 반영 실패: block={block_name}, start_date={start_date}"
+                        ) from exc
 
                 sheet_name = info.get("sheet_name")
                 if sheet_name:
@@ -228,11 +316,9 @@ def apply_plan_sequence_from_excel(
                 break
 
         if not matched:
-            # 기존 sequence_number 유지, 없으면 fallback 부여
             current_seq = getattr(block, "sequence_number", None)
             if current_seq is None or current_seq == 0:
-                setattr(block, "sequence_number", fallback_sequence)
-                fallback_sequence += 1
+                raise RuntimeError(f"엑셀 순번 미매칭 블록: block={block_name}")
             unmatched_blocks.append(block_name)
 
     remaining_entries = sum(len(entries) for entries in plan_mapping.values())
@@ -240,7 +326,7 @@ def apply_plan_sequence_from_excel(
     if used_sheets:
         sheet_label = ", ".join(used_sheets)
     else:
-        sheet_label = "수기계획/CP"
+        sheet_label = "내장 순번"
 
     unused_summary_parts = []
     for sheet_name, stats in sheet_stats.items():
@@ -256,6 +342,8 @@ def apply_plan_sequence_from_excel(
         + (f", {remaining_entries}개 행 미사용" if remaining_entries else "")
         + unused_summary
     )
+    if used_builtin_fallback:
+        print("ℹ️ 별도 계획 시트가 없어 원본 데이터 시트의 '순번' 컬럼을 내장 계획으로 사용했습니다.")
     if unmatched_blocks:
         sample = ", ".join(unmatched_blocks[:5])
         suffix = " ..." if len(unmatched_blocks) > 5 else ""
@@ -415,6 +503,9 @@ def save_detailed_bay_info_excel(date_key: str, rows: List[Dict]):
 
 def create_makespan_schedule(blocks, metadata):
     """실제 makespan 계산 및 CSV 생성 - 날짜별 상세 분석"""
+    # [AGENT-ADD] independent audit/sync는 스케줄링 전 pristine 입력을 사용한다.
+    audit_blocks = copy.deepcopy(blocks)
+    audit_metadata = copy.deepcopy(metadata)
     print("\n⏱️ 날짜별 상세 makespan 계산 및 제약조건 분석")
     print("=" * 60)
     
@@ -430,12 +521,13 @@ def create_makespan_schedule(blocks, metadata):
     # 환경 초기화 (makespan 계산용)
     # [AGENT-EDIT] 엑셀 재현도 전체 제약을 검증 (C/Seam, 작업장 순서 등 포함)
     constraint_config = get_all_enabled_config()
-    # 🔧 용량 제약조건 비활성화 (디버깅만, 실제 차단 없음)
-    constraint_config.enable_p5_8_weekday_capacity = False
-    constraint_config.enable_p5_16_hot_season_capacity = False
-    constraint_config.enable_p5_15_holiday_shift = False       # P5#15: 명절 전날 야간 없음 - 구현하되 기본 OFF
-    constraint_config.enable_p5_9_block_count_check = False       # P5#9: 72심 초과시 17블록 체크 - 구현하되 기본 OFF
-    constraint_config.enable_p5_10_weekend_capacity = False       # P5#10: 주말 심수 용량 (45심) - 구현하되 기본 OFF
+    if constraint_config.enable_replay_generation_capacity_override:
+        # [AGENT-EDIT] replay 생성 단계의 용량/달력 우회도 config 토글로 제어한다.
+        constraint_config.enable_p5_8_weekday_capacity = False
+        constraint_config.enable_p5_16_hot_season_capacity = False
+        constraint_config.enable_p5_15_holiday_shift = False       # P5#15: 명절 전날 야간 없음 - 구현하되 기본 OFF
+        constraint_config.enable_p5_9_block_count_check = False       # P5#9: 72심 초과시 17블록 체크 - 구현하되 기본 OFF
+        constraint_config.enable_p5_10_weekend_capacity = False       # P5#10: 주말 심수 용량 (45심) - 구현하되 기본 OFF
 
 
     earliest_start_date = min(block.max_start_date for block in blocks)
@@ -535,10 +627,13 @@ def create_makespan_schedule(blocks, metadata):
             # ✅ 통합 실시간 검증 호출 (Action Masking과 동일한 전체 제약 세트)
             try:
                 # [AGENT-EDIT] 엑셀 재현 경로: 현재 블록이 히스토리에 없으므로 카운트 보정
-                all_violations = env._validate_all_constraints_realtime_action(
+                all_violations = env._validate_and_commit_constraints_action(
                     block,
                     assigned_bay,
                     current_date,
+                    processing_time_seconds=processing_time_seconds,
+                    step_start_time=current_date,
+                    step_end_time=current_date + timedelta(seconds=processing_time_seconds),
                     current_in_history=False,
                 )
                 violations.extend(all_violations)
@@ -546,26 +641,6 @@ def create_makespan_schedule(blocks, metadata):
                 print(f"      ⚠️ 블록 {block.block_id} 제약조건 검증 실패: {validation_error}")
                 print("      ❌ 알고리즘을 종료합니다.")
                 raise Exception(f"제약조건 검증 실패: {validation_error}")
-
-            # ✅ 엑셀 방식: 환경 개입 없이 상태 업데이트만 (makespan 계산용)
-            env.bay_tracker.assign_bay(block, assigned_bay, processing_time_seconds)
-            env.ps_manager.process_block(block, assigned_bay, env.current_time)
-
-            # ✅ 완료 스텝 기록: 라우팅/워크숍 순서·SAW 계산용 히스토리 유지
-            try:
-                step = ProcessStep(
-                    block_id=block.block_id,
-                    process_num=1,
-                    bay_type=assigned_bay,
-                    start_time=current_date,
-                    end_time=current_date + timedelta(seconds=processing_time_seconds),
-                    processing_time=processing_time_seconds,
-                    completion_time=processing_time_seconds,
-                )
-                env.completed_steps.append(step)
-            except Exception:
-                pass
-
             # [AGENT-EDIT] 제약 카운트/상세/완화 요약 통일
             violation_summary = summarize_violations(
                 violations,
@@ -700,8 +775,9 @@ def create_makespan_schedule(blocks, metadata):
             month = int(date_key[4:6])
             day = int(date_key[6:8])
             date_start_time = datetime(year, month, day, 8, 0)
-        except:
-            date_start_time = env.start_time
+        except Exception as exc:
+            # [AGENT-EDIT] replay 날짜 키 오류를 env.start_time으로 대체하지 않는다.
+            raise RuntimeError(f"Replay 날짜 키 파싱 실패: date_key={date_key}") from exc
         
         # 날짜별 재검증을 위해 상태 리셋 후 순차 재생
         env.bay_tracker.reset()
@@ -753,11 +829,14 @@ def create_makespan_schedule(blocks, metadata):
                     block_start_time = date_start_time + timedelta(seconds=block_schedule['start_seconds'])
                     block_end_time = date_start_time + timedelta(seconds=block_schedule['end_seconds'])
                 else:
-                    # 스케줄 정보를 찾지 못한 경우 fallback
-                    block_start_time = date_start_time
-                    block_end_time = date_start_time + timedelta(minutes=result['total_time_min'])
+                    raise RuntimeError(
+                        f"Replay block_schedule 누락: block_id={block_id}, date={date_key}"
+                    )
                 
                 enhanced_result.update({
+                    'panel_start_time': block_start_time.strftime('%Y-%m-%d %H:%M'),
+                    'machine2_start_time': '',
+                    'final_end_time': block_end_time.strftime('%Y-%m-%d %H:%M'),
                     'start_time': block_start_time.strftime('%Y-%m-%d %H:%M'),
                     'end_time': block_end_time.strftime('%Y-%m-%d %H:%M'),
                     'date_start_time': date_start_time.strftime('%Y-%m-%d %H:%M'),
@@ -832,20 +911,19 @@ def create_makespan_schedule(blocks, metadata):
                         
                         # 기존 위반들 중 SAW 관련 제거
                         existing_violations = []
-                        existing_details = result.get('violation_details', [])
-                        existing_severities = result.get('violation_severity', [])
-                        existing_constraint_ids = result.get('constraint_ids', [])
+                        existing_violation_objs = _rebuild_result_violations(result, block_id)
+                        existing_constraint_ids = [v.constraint_id for v in existing_violation_objs]
                         
                         # 디버깅: 기존 위반 확인
                         # print(f"      📋 기존 위반: {existing_constraint_ids}")
                         
                         # SAW 관련이 아닌 위반들만 유지
-                        for i, constraint_id in enumerate(existing_constraint_ids):
-                            if not constraint_id.startswith('P6#'):  # SAW 제약조건이 아닌 것만 유지
+                        for existing_violation in existing_violation_objs:
+                            if not str(existing_violation.constraint_id).startswith('P6#'):
                                 existing_violations.append({
-                                    'constraint_id': constraint_id,
-                                    'message': existing_details[i] if i < len(existing_details) else '',
-                                    'severity': existing_severities[i] if i < len(existing_severities) else 'INFO'
+                                    'constraint_id': existing_violation.constraint_id,
+                                    'message': existing_violation.message,
+                                    'severity': existing_violation.severity
                                 })
                         
                         # 디버깅: SAW 제외 후 남은 위반
@@ -888,12 +966,18 @@ def create_makespan_schedule(blocks, metadata):
                                         print(f"      📅 날짜 전환: 22시 이후 → {actual_machine_2_start_time.strftime('%Y-%m-%d %H:%M:%S')}")
                                     
                             except Exception as calc_err:
-                                # 계산 실패 시 기본 시간 사용
-                                actual_machine_2_start_time = block_start_time
+                                # [AGENT-EDIT] replay P6는 hard 제약이므로 SAW 시작시간 계산 실패를 숨기지 않는다.
+                                raise RuntimeError(
+                                    f"Replay SAW 시작시간 계산 실패: block_id={block_id}, date={date_key}"
+                                ) from calc_err
                         
                         # SAW 제약조건 검증 시 실제 머신 2번 시간 전달
                         saw_violations = env._validate_saw_constraints_realtime(
                             actual_block, block_start_time, actual_machine_2_start_time
+                        )
+                        enhanced_result['machine2_start_time'] = (
+                            actual_machine_2_start_time.strftime('%Y-%m-%d %H:%M')
+                            if actual_machine_2_start_time else ''
                         )
                         
                         # 디버깅: 새로운 SAW 위반 확인
@@ -950,12 +1034,6 @@ def create_makespan_schedule(blocks, metadata):
 
     # 별판 확장 행 생성 (통계 및 CSV 저장용)
     expanded_sequence_results = expand_rows_with_subassembly(sequence_results)
-    expanded_enhanced_results = expand_rows_with_subassembly(all_enhanced_results)
-
-    # 상세 CSV 저장
-    df_sequence = pd.DataFrame(expanded_enhanced_results)
-    csv_filename = "detailed_constraint_schedule.csv"
-    df_sequence.to_csv(csv_filename, index=False, encoding='utf-8-sig')
 
     # 최종 통계 출력
     print(f"\n📊 최종 분석 결과:")
@@ -964,12 +1042,14 @@ def create_makespan_schedule(blocks, metadata):
     expanded_block_count = len(expanded_sequence_results)
     print(f"총 처리 블록: {expanded_block_count}개 (통합 기준 {integrated_block_count}개)")
     
-    # ✅ 수정: ERROR, WARNING만 카운팅하는 실제 위반 건수 계산
-    actual_total_violations = sum(result.get('violations', 0) for result in all_enhanced_results)
+    # [AGENT-EDIT] 논문 비교용 canonical 통계는 실제 결과 row와 원본 위반 객체 기준으로 산출한다.
+    violation_summary = summarize_violations(total_violations, keep_info=True, include_guard=False)
+    actual_total_violations = int(violation_summary.get("violations_primary_count", 0))
+    canonical_total_makespan_hours = compute_schedule_span_hours(all_enhanced_results)
     violation_base = integrated_block_count if integrated_block_count else 1
-    print(f"총 제약조건 위반: {actual_total_violations}건 (위반률: {actual_total_violations/violation_base*100:.1f}% - 통합 기준)")
-    print(f"총 Makespan: {total_makespan_hours:.2f}시간 ({total_makespan_hours/24:.1f}일)")
-    print(f"일평균 처리시간: {total_makespan_hours/len(date_groups):.2f}시간")
+    print(f"총 제약조건 위반(raw runtime): {actual_total_violations}건 (위반률: {actual_total_violations/violation_base*100:.1f}% - 통합 기준)")
+    print(f"총 Makespan: {canonical_total_makespan_hours:.2f}시간 ({canonical_total_makespan_hours/24:.1f}일)")
+    print(f"일평균 처리시간: {canonical_total_makespan_hours/len(date_groups):.2f}시간")
     
     # 위반 종류별 통계
     if total_violations:
@@ -1001,47 +1081,124 @@ def create_makespan_schedule(blocks, metadata):
         percentage = count/total_bay_blocks*100
         print(f"  • {bay_name} 베이: {count}개 ({percentage:.1f}%)")
     
-    print(f"\n📄 상세 결과 저장: {csv_filename}")
     print(f"=" * 60)
+
+    runtime_cfg = get_runtime_config() or {}
+    all_enhanced_results, audit_stats, _ = sync_runtime_results_to_canonical_constraints(
+        schedule_results=all_enhanced_results,
+        blocks=audit_blocks,
+        metadata=audit_metadata,
+        runtime_cfg=runtime_cfg,
+        case_label="replay_runtime",
+    )
+    expanded_enhanced_results = expand_rows_with_subassembly(all_enhanced_results)
+
+    # ==== [AGENT-EDIT BEGIN: final canonical replay summary] ====
+    print(f"\n📊 [AGENT-EDIT] 최종 canonical replay 결과:")
+    print(f"=" * 60)
+    print(f"총 처리 블록: {expanded_block_count}개 (통합 기준 {integrated_block_count}개)")
+    print(f"총 primary 위반: {int(audit_stats.get('total_violations_primary', actual_total_violations))}건")
+    print(f"총 raw 이벤트: {int(audit_stats.get('total_violations_raw', violation_summary.get('violations_raw_count', 0)))}건")
+    print(f"메타/완화 이벤트: {int(audit_stats.get('total_violations_meta', violation_summary.get('violations_meta_count', 0)))}건")
+    print(f"INFO 이벤트: {int(audit_stats.get('total_violations_info', violation_summary.get('violations_info_count', 0)))}건")
+    print(f"총 Makespan: {canonical_total_makespan_hours:.2f}시간 ({canonical_total_makespan_hours/24:.1f}일)")
+    print(f"=" * 60)
+    # ==== [AGENT-EDIT END] ====
+
+    # ==== [AGENT-EDIT BEGIN: save audited replay rows] ====
+    # replay 상세 CSV도 독립 감사와 같은 위반 집계를 사용해야 한다.
+    df_sequence = pd.DataFrame(expanded_enhanced_results)
+    csv_filename = "detailed_constraint_schedule.csv"
+    df_sequence.to_csv(csv_filename, index=False, encoding='utf-8-sig')
+    print(f"\n📄 상세 결과 저장: {csv_filename}")
+    # ==== [AGENT-EDIT END] ====
 
     env.close()
     
-    return expanded_enhanced_results, total_violations
+    statistics = {
+        "total_blocks_processed": expanded_block_count,
+        "total_blocks_expected": count_expanded_block_units(blocks),
+        "success_rate": (expanded_block_count / count_expanded_block_units(blocks) * 100) if count_expanded_block_units(blocks) else 0.0,
+        "makespan_hours": canonical_total_makespan_hours,
+        "sum_daily_max_makespan_hours": total_makespan_hours,
+        "total_violations": int(audit_stats.get("total_violations_primary", actual_total_violations)),
+        "total_violations_primary": int(audit_stats.get("total_violations_primary", actual_total_violations)),
+        "total_violations_raw": int(audit_stats.get("total_violations_raw", violation_summary.get("violations_raw_count", 0))),
+        "total_violations_meta": int(audit_stats.get("total_violations_meta", violation_summary.get("violations_meta_count", 0))),
+        "total_violations_info": int(audit_stats.get("total_violations_info", violation_summary.get("violations_info_count", 0))),
+        "audit_workshop_order_inversions": int(audit_stats.get("audit_workshop_order_inversions", 0)),
+        "audit_constraint_ids": list(audit_stats.get("audit_constraint_ids", [])),
+        "audit_constraint_families": list(audit_stats.get("audit_constraint_families", [])),
+    }
+
+    return expanded_enhanced_results, int(audit_stats.get("total_violations_primary", actual_total_violations)), statistics
 
 
-# 독립 실행 로직
-if __name__ == "__main__":
-    print("Excel 순번 기반 스케줄링 독립 실행")
-    print("=" * 60)
-    
-    # 🆕 test.py 설정 가져오기 (circular import 방지)
+def _resolve_standalone_excel_path(explicit_excel_path: Optional[str] = None) -> str:
+    """[AGENT-ADD] standalone 실행용 엑셀 경로 해석."""
+    if explicit_excel_path:
+        return str(explicit_excel_path)
+
     try:
         import sys
         if 'test' in sys.modules:
             test_module = sys.modules['test']
             excel_path = getattr(test_module, 'EXCEL_PATH', DEFAULT_EXCEL_PATH)
             print(f"✅ test.py 설정 로드: {excel_path}")
-        else:
-            raise ImportError("test.py not loaded yet")
-    except (ImportError, AttributeError):
-        # [AGENT-EDIT] config.yaml data.excel_path가 있으면 기본값 덮어쓰기
-        runtime_cfg = get_runtime_config() or {}
-        if isinstance(runtime_cfg, dict):
-            data_cfg = runtime_cfg.get("data") or {}
-            cfg_path = data_cfg.get("excel_path")
-            if cfg_path:
-                excel_path = str(cfg_path)
-                print(f"✅ config.yaml data.excel_path 적용: {excel_path}")
-            else:
-                excel_path = 'environment/판넬 블록 데이터셋_250618_SNU.xlsx'
-                print(f"⚠️ test.py 설정 사용 불가, 기본값 사용: {excel_path}")
-        else:
-            excel_path = 'environment/판넬 블록 데이터셋_250618_SNU.xlsx'
-            print(f"⚠️ test.py 설정 사용 불가, 기본값 사용: {excel_path}")
-    
+            return str(excel_path)
+    except Exception:
+        pass
+
+    runtime_cfg = get_runtime_config() or {}
+    if isinstance(runtime_cfg, dict):
+        data_cfg = runtime_cfg.get("data") or {}
+        cfg_path = data_cfg.get("excel_path")
+        if cfg_path:
+            print(f"✅ config.yaml data.excel_path 적용: {cfg_path}")
+            return str(cfg_path)
+
+    fallback_path = 'environment/판넬 블록 데이터셋_250618_SNU.xlsx'
+    print(f"⚠️ test.py 설정 사용 불가, 기본값 사용: {fallback_path}")
+    return fallback_path
+
+
+def _parse_plan_priority_arg(raw: Optional[str]) -> Optional[Tuple[str, ...]]:
+    """[AGENT-ADD] 콤마 구분 시트 우선순위 파싱."""
+    if not raw:
+        return None
+    items = tuple(part.strip() for part in str(raw).split(",") if part.strip())
+    return items or None
+
+
+def main(argv: Optional[List[str]] = None) -> None:
+    """[AGENT-ADD] replay 경로 standalone CLI."""
+    parser = argparse.ArgumentParser(description="Excel 순번 기반 스케줄링 독립 실행")
+    parser.add_argument("--config", default="config.yaml", help="standalone 실행 시 불러올 설정 파일 경로")
+    parser.add_argument("--excel-path", help="입력 엑셀 경로")
+    parser.add_argument("--plan-sheet", help="명시적으로 사용할 순번 시트명")
+    parser.add_argument("--plan-priority", help="콤마 구분 순번 시트 우선순위")
+    parser.add_argument("--run-tag", default=None, help="결과 스냅샷을 저장할 run tag")
+    parser.add_argument("--output-dir", default=None, help="run tag 결과를 저장할 디렉터리")
+    parser.add_argument("--output-csv", default=None, help="메인 결과 CSV 저장 경로")
+    args = parser.parse_args(argv)
+
+    print("Excel 순번 기반 스케줄링 독립 실행")
+    print("=" * 60)
+
+    loaded_config = maybe_load_runtime_config(args.config)
+    if loaded_config:
+        print(f"✅ standalone config 로드: {loaded_config}")
+
+    excel_path = _resolve_standalone_excel_path(args.excel_path)
+    plan_priority = _parse_plan_priority_arg(args.plan_priority)
+
     try:
         # 1. 데이터 로딩
-        blocks, metadata, applied_sheet = load_excel_blocks_with_plan(excel_path)
+        blocks, metadata, applied_sheet = load_excel_blocks_with_plan(
+            excel_path,
+            plan_sheet=args.plan_sheet,
+            plan_priority=plan_priority,
+        )
         if applied_sheet:
             print(f"🗂️ 적용 순번 시트: {applied_sheet}")
         else:
@@ -1050,32 +1207,31 @@ if __name__ == "__main__":
         print(f"\n📊 Excel 순번 기반 스케줄링 실행 중...")
         
         # 2. Excel 순번 기반 스케줄링 실행
-        excel_results, excel_violations = create_makespan_schedule(blocks, metadata)
+        excel_results, excel_violations, excel_stats = create_makespan_schedule(blocks, metadata)
         
         # 3. 결과 저장 (test.py와 동일한 방식)
         import pandas as pd
         df = pd.DataFrame(excel_results)
-        csv_filename = 'excel_sequence_standalone_results.csv'
-        df.to_csv(csv_filename, index=False, encoding='utf-8-sig')
+        csv_path = resolve_output_path(
+            default_filename='excel_sequence_standalone_results.csv',
+            mode='replay',
+            output_csv=args.output_csv,
+            output_dir=args.output_dir,
+            run_tag=args.run_tag,
+        )
+        df.to_csv(csv_path, index=False, encoding='utf-8-sig')
+        legacy_path = mirror_to_legacy_path(csv_path, 'excel_sequence_standalone_results.csv')
         
         # 4. 통계 출력
         print(f"\n📊 Excel 순번 방식 결과:")
         print(f"   처리된 블록: {len(excel_results)}개")
         
-        # Makespan 계산 (날짜별 최대 makespan 합산)
-        makespan_by_date = {}
-        for result in excel_results:
-            date = result.get('date', 'N/A')
-            makespan = result.get('makespan_hours', 0)
-            if date not in makespan_by_date or makespan > makespan_by_date[date]:
-                makespan_by_date[date] = makespan
-        
-        total_makespan = sum(makespan_by_date.values())
-        total_violations = sum(r.get('violations', 0) for r in excel_results)
-        
-        print(f"   총 makespan: {total_makespan:.2f}시간")
-        print(f"   총 위반: {total_violations}개")
-        print(f"   성공률: {len(excel_results) / len(blocks) * 100:.1f}%")
+        print(f"   총 makespan: {excel_stats.get('makespan_hours', 0.0):.2f}시간")
+        print(f"   총 primary 위반: {excel_stats.get('total_violations_primary', excel_stats.get('total_violations', 0))}개")
+        print(f"   총 raw 이벤트: {excel_stats.get('total_violations_raw', 0)}개")
+        print(f"   메타/완화 이벤트: {excel_stats.get('total_violations_meta', 0)}개")
+        print(f"   INFO 이벤트: {excel_stats.get('total_violations_info', 0)}개")
+        print(f"   성공률: {excel_stats.get('success_rate', 0.0):.1f}%")
         
         # 베이 분포
         bay_stats = {}
@@ -1088,10 +1244,18 @@ if __name__ == "__main__":
             percentage = count / len(excel_results) * 100 if excel_results else 0
             print(f"     {bay}: {count}개 ({percentage:.1f}%)")
         
-        print(f"\n📄 결과 파일: {csv_filename}")
+        print(f"\n📄 결과 파일: {csv_path}")
+        if csv_path.resolve() != legacy_path.resolve():
+            print(f"📄 레거시 복사본: {legacy_path}")
         print(f"✅ Excel 순번 기반 스케줄링 완료!")
         
     except Exception as e:
         print(f"❌ Excel 순번 기반 스케줄링 실패: {e}")
         import traceback
         traceback.print_exc()
+        raise SystemExit(1) from e
+
+
+# 독립 실행 로직
+if __name__ == "__main__":
+    main()

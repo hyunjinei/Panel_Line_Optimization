@@ -9,15 +9,22 @@ import torch
 import os
 import sys
 import random
+import copy
 from pathlib import Path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# [AGENT-EDIT] Direct script execution needs the repository root for absolute
+# package imports such as `scheduling...`, `enhanced_environment...`, and `utils...`.
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 from scheduling.assembly_start.rl_assembly_scheduler import run_rl_assembly_decoding_sequence_with_blocks
 from scheduling.assembly_start.action_sequence_조립착수일기준휴리스틱 import run_assembly_decoding_sequence_with_blocks
 from enhanced_environment.common.utils_core import DataConverter
 from utils.optimized_block_generator import OptimizedBlockGenerator
+from PPO.train.rollout_metrics import get_violation_count
 # [AGENT-ADD] main.py config.yaml 연동
-from runtime_config import get_runtime_config
+from runtime_config import get_runtime_config, set_runtime_config
 
 
 def _resolve_excel_path(path_str: str = None) -> str:
@@ -29,6 +36,182 @@ def _resolve_excel_path(path_str: str = None) -> str:
     if not candidate.is_absolute():
         candidate = base_dir / candidate
     return str(candidate)
+
+
+def _as_positive_int(value, default: int) -> int:
+    """[AGENT-ADD] Parse a positive integer config value for evaluation loops."""
+    try:
+        parsed = int(value)
+    except Exception:
+        return int(default)
+    return parsed if parsed > 0 else int(default)
+
+
+def _as_bool(value, default: bool = False) -> bool:
+    """[AGENT-ADD] Parse bool-like config values without pulling in argparse."""
+    if value is None:
+        return bool(default)
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    text = str(value).strip().lower()
+    if text in ("1", "true", "yes", "y", "on"):
+        return True
+    if text in ("0", "false", "no", "n", "off"):
+        return False
+    return bool(default)
+
+
+def _get_section(runtime_cfg: dict, *names: str) -> dict:
+    """[AGENT-ADD] Return a nested config section if present."""
+    if not isinstance(runtime_cfg, dict):
+        return {}
+    for name in names:
+        section = runtime_cfg.get(name)
+        if isinstance(section, dict):
+            return section
+    return {}
+
+
+def _resolve_eval_sample_count(runtime_cfg: dict) -> int:
+    """[AGENT-ADD] Training-time evaluation uses config sampling instead of the old hard-coded 10."""
+    train_cfg = _get_section(runtime_cfg, "training", "train")
+    evaluation_cfg = _get_section(runtime_cfg, "evaluation")
+    eval_cfg = _get_section(runtime_cfg, "eval")
+    model_cfg = _get_section(runtime_cfg, "model")
+    for value in (
+        train_cfg.get("eval_sampling"),
+        train_cfg.get("evaluation_sampling"),
+        evaluation_cfg.get("sampling"),
+        eval_cfg.get("sampling"),
+        model_cfg.get("sampling"),
+    ):
+        if value is not None:
+            return _as_positive_int(value, 50)
+    return 50
+
+
+def _resolve_eval_profile_sampling(runtime_cfg: dict, trainer) -> bool:
+    """[AGENT-ADD] Match self-label candidate profile sampling during training eval by default."""
+    train_cfg = _get_section(runtime_cfg, "training", "train")
+    evaluation_cfg = _get_section(runtime_cfg, "evaluation")
+    eval_cfg = _get_section(runtime_cfg, "eval")
+    default = bool(getattr(trainer, "self_label_profile_expansion", False))
+    for value in (
+        train_cfg.get("eval_use_self_label_profiles"),
+        train_cfg.get("evaluation_use_self_label_profiles"),
+        evaluation_cfg.get("use_self_label_profiles"),
+        eval_cfg.get("use_self_label_profiles"),
+    ):
+        if value is not None:
+            return _as_bool(value, default)
+    return default
+
+
+def _sample_sort_key(stats: dict, selection_strategy: str):
+    """[AGENT-ADD] Use the same primary-first style objective as self-label teacher selection."""
+    stats = stats or {}
+    makespan = float(stats.get("makespan_hours", float("inf")) or float("inf"))
+    violations = int(get_violation_count(stats) or 0)
+    strategy = str(selection_strategy or "primary_first").strip().lower()
+    if strategy == "makespan_first":
+        return (makespan, violations)
+    if strategy == "feasible_first":
+        if violations == 0:
+            return (0, makespan)
+        return (1, violations, makespan)
+    return (violations, makespan)
+
+
+def _best_stats_index(stats_list, selection_strategy: str) -> int:
+    """[AGENT-ADD] Pick the best sample using the training selection objective."""
+    if not stats_list:
+        return 0
+    return min(range(len(stats_list)), key=lambda idx: _sample_sort_key(stats_list[idx], selection_strategy))
+
+
+def _build_eval_profile_pairs(trainer, kind: str, use_profiles: bool, sample_count: int):
+    """[AGENT-ADD] Build capped eval profile pairs from the self-label training profiles."""
+    if not use_profiles or not hasattr(trainer, "_bias_profile_specs") or not hasattr(trainer, "_hard_profile_specs"):
+        return [(None, None)]
+    try:
+        if kind == "rl":
+            bias_profiles = trainer._bias_profile_specs(
+                expanded=bool(getattr(trainer, "self_label_profile_expansion", False))
+            )
+            hard_profiles = trainer._hard_profile_specs(
+                expanded=bool(getattr(trainer, "self_label_profile_expansion", False))
+            )
+        else:
+            bias_profiles = trainer._bias_profile_specs(
+                expanded=bool(getattr(trainer, "self_label_heuristic_profile_expansion", False))
+            )
+            hard_profiles = trainer._hard_profile_specs(expanded=False)
+        pairs = [(bias, hard) for bias in bias_profiles for hard in hard_profiles]
+    except Exception:
+        return [(None, None)]
+
+    if not pairs:
+        return [(None, None)]
+    pairs = list(pairs)
+    random.shuffle(pairs)
+    if sample_count <= len(pairs):
+        return pairs[:sample_count]
+    return [pairs[idx % len(pairs)] for idx in range(sample_count)]
+
+
+def _run_with_eval_profile(trainer, bias_profile, hard_profile, callback):
+    """[AGENT-ADD] Temporarily apply the same runtime profile mechanism used by self-label sampling."""
+    if bias_profile is None and hard_profile is None:
+        return callback()
+    if not hasattr(trainer, "_build_profile_runtime_config"):
+        return callback()
+    original_runtime_cfg = copy.deepcopy(get_runtime_config() or {})
+    try:
+        runtime_cfg = trainer._build_profile_runtime_config(bias_profile or {"components": None}, hard_profile)
+        set_runtime_config(runtime_cfg)
+        return callback()
+    finally:
+        set_runtime_config(original_runtime_cfg)
+
+
+def _run_profiled_heuristic_samples(
+    trainer,
+    blocks,
+    metadata,
+    start_date: str,
+    method: str,
+    max_days: int,
+    sample_count: int,
+    use_profiles: bool,
+    selection_strategy: str,
+):
+    """[AGENT-ADD] Evaluate deterministic teachers across the same bias profiles used during training."""
+    profile_pairs = _build_eval_profile_pairs(trainer, "heuristic", use_profiles, sample_count)
+    stats_list = []
+    makespans = []
+    for bias_profile, hard_profile in profile_pairs:
+        _, sample_stats = _run_with_eval_profile(
+            trainer,
+            bias_profile,
+            hard_profile,
+            lambda: run_assembly_decoding_sequence_with_blocks(
+                blocks=blocks,
+                metadata=metadata,
+                decoding_type="assembly",
+                selection_method=method,
+                max_days=max_days,
+                start_date=start_date,
+                save_csv=False,
+                save_detailed=False,
+            ),
+        )
+        stats_list.append(sample_stats)
+        makespans.append(sample_stats.get("makespan_hours", float("inf")))
+    best_idx = _best_stats_index(stats_list, selection_strategy)
+    best_stats = stats_list[best_idx] if stats_list else {}
+    return best_stats.get("makespan_hours", float("inf")), best_stats, makespans
 
 def comprehensive_evaluation(trainer, device, generator, episode, csv_path=None, eval_dir=None):
     """
@@ -63,11 +246,21 @@ def comprehensive_evaluation(trainer, device, generator, episode, csv_path=None,
     spt_wins = 0
     lpt_wins = 0
     seam_wins = 0
+
+    # [AGENT-ADD] Keep training-time evaluation aligned with self-label sampling settings.
+    runtime_cfg = get_runtime_config() or {}
+    eval_sample_count = _resolve_eval_sample_count(runtime_cfg)
+    eval_use_profile_sampling = _resolve_eval_profile_sampling(runtime_cfg, trainer)
+    eval_selection_strategy = str(getattr(trainer, "self_label_selection_strategy", "primary_first"))
+    print(
+        f"   평가 샘플 수: {eval_sample_count}회, "
+        f"profile_sampling={eval_use_profile_sampling}, "
+        f"선택기준={eval_selection_strategy}"
+    )
     
     # 1. SNU 데이터 평가 (1개)
     print("📌 SNU 데이터셋 평가")
     # [AGENT-EDIT] main.py/config.yaml 연동: SNU 엑셀 경로/시트 우선 적용
-    runtime_cfg = get_runtime_config() or {}
     data_cfg = runtime_cfg.get("data", {}) if isinstance(runtime_cfg, dict) else {}
     sheet_name = data_cfg.get("sheet") if isinstance(data_cfg, dict) else None
     excel_path = _resolve_excel_path(
@@ -83,51 +276,61 @@ def comprehensive_evaluation(trainer, device, generator, episode, csv_path=None,
     snu_start_date = min_assembly_date.strftime("%Y-%m-%d")
     print(f"   📅 SNU 동적 시작일: {snu_start_date}")
     
-    # RL 평가 - Sampling 10번
+    # RL 평가 - training self-label sampling과 동일하게 N회/profile 후보 중 best 선택
     trainer.actor.eval()
     trainer.actor.default_decode_type = "sampling"  # Sampling 모드 설정
     
-    print("  🎲 RL Sampling (10회): ", end="", flush=True)
+    print(f"  🎲 RL Sampling ({eval_sample_count}회): ", end="", flush=True)
     rl_makespans = []
     rl_stats_list = []
-    for sample_idx in range(10):
+    rl_profile_pairs = _build_eval_profile_pairs(trainer, "rl", eval_use_profile_sampling, eval_sample_count)
+    for sample_idx in range(eval_sample_count):
+        bias_profile, hard_profile = rl_profile_pairs[sample_idx % len(rl_profile_pairs)]
         with torch.no_grad():
-            _, sample_stats, _, _ = run_rl_assembly_decoding_sequence_with_blocks(
-                blocks=snu_blocks,
-                metadata=snu_metadata,
-                rl_agent=trainer.actor,
-                device=device,
-                max_days=20,
-                start_date=snu_start_date,
-                training_mode=False,
-                save_csv=False
+            _, sample_stats, _, _ = _run_with_eval_profile(
+                trainer,
+                bias_profile,
+                hard_profile,
+                lambda: run_rl_assembly_decoding_sequence_with_blocks(
+                    blocks=snu_blocks,
+                    metadata=snu_metadata,
+                    rl_agent=trainer.actor,
+                    device=device,
+                    max_days=20,
+                    start_date=snu_start_date,
+                    training_mode=False,
+                    save_csv=False,
+                    collect_episode_data=False,
+                    enable_grad=False,
+                    collect_step_metrics=False,
+                ),
             )
         rl_makespans.append(sample_stats.get('makespan_hours', float('inf')))
         rl_stats_list.append(sample_stats)
         print(".", end="", flush=True)
     print(" 완료!")
 
-    # Best (Min) 선택
-    best_rl_idx = int(np.argmin(rl_makespans))
+    # Best 선택: self-label teacher와 같은 제약 우선 기준 사용
+    best_rl_idx = _best_stats_index(rl_stats_list, eval_selection_strategy)
     rl_makespan = rl_makespans[best_rl_idx]
     rl_best_stats = rl_stats_list[best_rl_idx]
-    rl_best_viol = rl_best_stats.get('total_violations_train', rl_best_stats.get('total_violations', 0))
+    rl_best_viol = get_violation_count(rl_best_stats)
     rl_stats = {
         'makespan_hours': rl_makespan,
         'samples': rl_makespans,
         'violation_samples': [s.get('total_violations', 0) for s in rl_stats_list],
-        'violation_train_samples': [s.get('total_violations_train', s.get('total_violations', 0)) for s in rl_stats_list],
+        'violation_train_samples': [get_violation_count(s) for s in rl_stats_list],
         'min_violations': rl_best_viol,
         'total_violations': rl_best_stats.get('total_violations', 0),
         'total_cseam_violations': rl_best_stats.get('total_cseam_violations', 0),
         'total_violations_train': rl_best_viol
     }
     
-    # Random 휴리스틱 - Sampling 10번
-    print("  🎲 Random Sampling (10회): ", end="", flush=True)
+    # Random 휴리스틱 - RL과 동일한 샘플 수
+    print(f"  🎲 Random Sampling ({eval_sample_count}회): ", end="", flush=True)
     random_makespans = []
     random_stats_list = []
-    for sample_idx in range(10):
+    for sample_idx in range(eval_sample_count):
         _, random_sample_stats = run_assembly_decoding_sequence_with_blocks(
             blocks=snu_blocks,
             metadata=snu_metadata,
@@ -143,63 +346,60 @@ def comprehensive_evaluation(trainer, device, generator, episode, csv_path=None,
         print(".", end="", flush=True)
     print(" 완료!")
     
-    # Best (Min) 선택
-    best_random_idx = int(np.argmin(random_makespans))
+    # Best 선택: RL과 같은 기준
+    best_random_idx = _best_stats_index(random_stats_list, eval_selection_strategy)
     random_makespan = random_makespans[best_random_idx]
     random_best_stats = random_stats_list[best_random_idx]
-    random_best_viol = random_best_stats.get('total_violations_train', random_best_stats.get('total_violations', 0))
+    random_best_viol = get_violation_count(random_best_stats)
     random_stats = {
         'makespan_hours': random_makespan,
         'samples': random_makespans,
         'violation_samples': [s.get('total_violations', 0) for s in random_stats_list],
-        'violation_train_samples': [s.get('total_violations_train', s.get('total_violations', 0)) for s in random_stats_list],
+        'violation_train_samples': [get_violation_count(s) for s in random_stats_list],
         'min_violations': random_best_viol,
         'total_violations': random_best_stats.get('total_violations', 0),
         'total_cseam_violations': random_best_stats.get('total_cseam_violations', 0),
         'total_violations_train': random_best_viol
     }
     
-    # SPT 휴리스틱 (deterministic)
-    _, spt_stats = run_assembly_decoding_sequence_with_blocks(
-        blocks=snu_blocks,
-        metadata=snu_metadata,
-        decoding_type="assembly",
-        selection_method="spt",
+    # SPT 휴리스틱도 평가 표본 수를 맞춘다.
+    spt_makespan, spt_stats, spt_makespans = _run_profiled_heuristic_samples(
+        trainer,
+        snu_blocks,
+        snu_metadata,
+        snu_start_date,
+        method="spt",
         max_days=20,
-        start_date=snu_start_date,
-        save_csv=False,
-        save_detailed=False
+        sample_count=eval_sample_count,
+        use_profiles=eval_use_profile_sampling,
+        selection_strategy=eval_selection_strategy,
     )
-    spt_makespan = spt_stats.get('makespan_hours', float('inf'))
-    spt_makespans = [spt_makespan]
 
-    # LPT 휴리스틱 (deterministic)
-    _, lpt_stats = run_assembly_decoding_sequence_with_blocks(
-        blocks=snu_blocks,
-        metadata=snu_metadata,
-        decoding_type="assembly",
-        selection_method="lpt",
+    # LPT 휴리스틱: self-label 학습 후보처럼 bias profile 후보를 평가한다.
+    lpt_makespan, lpt_stats, lpt_makespans = _run_profiled_heuristic_samples(
+        trainer,
+        snu_blocks,
+        snu_metadata,
+        snu_start_date,
+        method="lpt",
         max_days=20,
-        start_date=snu_start_date,
-        save_csv=False,
-        save_detailed=False
+        sample_count=eval_sample_count,
+        use_profiles=eval_use_profile_sampling,
+        selection_strategy=eval_selection_strategy,
     )
-    lpt_makespan = lpt_stats.get('makespan_hours', float('inf'))
-    lpt_makespans = [lpt_makespan]
 
-    # SEAM_MIN 휴리스틱 (deterministic)
-    _, seam_stats = run_assembly_decoding_sequence_with_blocks(
-        blocks=snu_blocks,
-        metadata=snu_metadata,
-        decoding_type="assembly",
-        selection_method="seam_min",
+    # SEAM_MIN 휴리스틱도 LPT와 같은 profile 후보 조건으로 맞춘다.
+    seam_makespan, seam_stats, seam_makespans = _run_profiled_heuristic_samples(
+        trainer,
+        snu_blocks,
+        snu_metadata,
+        snu_start_date,
+        method="seam_min",
         max_days=20,
-        start_date=snu_start_date,
-        save_csv=False,
-        save_detailed=False
+        sample_count=eval_sample_count,
+        use_profiles=eval_use_profile_sampling,
+        selection_strategy=eval_selection_strategy,
     )
-    seam_makespan = seam_stats.get('makespan_hours', float('inf'))
-    seam_makespans = [seam_makespan]
     
     # 샘플링 통계
     rl_avg = np.mean(rl_makespans)
@@ -251,11 +451,11 @@ def comprehensive_evaluation(trainer, device, generator, episode, csv_path=None,
     
     # [AGENT-EDIT] Winner 판정: makespan 동률이면 위반 적은 쪽 우선
     candidates = {
-        'RL': (rl_makespan, rl_stats.get('total_violations', 0)),
-        'Random': (random_makespan, random_stats.get('total_violations', 0)),
-        'SPT': (spt_makespan, spt_viols_stats.get('total_violations', 0)),
-        'LPT': (lpt_makespan, lpt_viols_stats.get('total_violations', 0)),
-        'SEAM': (seam_makespan, seam_viols_stats.get('total_violations', 0))
+        'RL': (rl_makespan, get_violation_count(rl_stats)),
+        'Random': (random_makespan, get_violation_count(random_stats)),
+        'SPT': (spt_makespan, get_violation_count(spt_viols_stats)),
+        'LPT': (lpt_makespan, get_violation_count(lpt_viols_stats)),
+        'SEAM': (seam_makespan, get_violation_count(seam_viols_stats))
     }
     # 정렬: makespan 오름차순, violations 오름차순
     sorted_candidates = sorted(candidates.items(), key=lambda x: (x[1][0], x[1][1]))
@@ -330,42 +530,57 @@ def comprehensive_evaluation(trainer, device, generator, episode, csv_path=None,
         test_min_assembly_date = min(block.max_start_date for block in test_blocks)
         test_start_date = test_min_assembly_date.strftime("%Y-%m-%d")
         
-        # RL 평가 - Sampling 10번
-        print(f"    [Test{i+1}] RL Sampling: ", end="", flush=True)
+        # RL 평가 - SNU 평가와 같은 샘플/profile 조건
+        print(f"    [Test{i+1}] RL Sampling({eval_sample_count}): ", end="", flush=True)
         rl_makespans_test = []
-        rl_violations_test = []
-        for sample_idx in range(10):
+        rl_stats_list_test = []
+        rl_profile_pairs = _build_eval_profile_pairs(trainer, "rl", eval_use_profile_sampling, eval_sample_count)
+        for sample_idx in range(eval_sample_count):
+            bias_profile, hard_profile = rl_profile_pairs[sample_idx % len(rl_profile_pairs)]
             with torch.no_grad():
-                _, sample_stats, _, _ = run_rl_assembly_decoding_sequence_with_blocks(
-                    blocks=test_blocks,
-                    metadata=test_metadata,
-                    rl_agent=trainer.actor,
-                    device=device,
-                    max_days=10,
-                    start_date=test_start_date,
-                    training_mode=False,
-                    save_csv=False
+                _, sample_stats, _, _ = _run_with_eval_profile(
+                    trainer,
+                    bias_profile,
+                    hard_profile,
+                    lambda: run_rl_assembly_decoding_sequence_with_blocks(
+                        blocks=test_blocks,
+                        metadata=test_metadata,
+                        rl_agent=trainer.actor,
+                        device=device,
+                        max_days=10,
+                        start_date=test_start_date,
+                        training_mode=False,
+                        save_csv=False,
+                        collect_episode_data=False,
+                        enable_grad=False,
+                        collect_step_metrics=False,
+                    ),
                 )
             rl_makespans_test.append(sample_stats.get('makespan_hours', float('inf')))
-            rl_violations_test.append(sample_stats.get('total_violations', 0))
+            rl_stats_list_test.append(sample_stats)
             print(".", end="", flush=True)
         print(" ", end="")
         
-        # Best (Min) 선택
-        best_rl_idx = int(np.argmin(rl_makespans_test))
+        # Best 선택: self-label teacher와 같은 기준
+        best_rl_idx = _best_stats_index(rl_stats_list_test, eval_selection_strategy)
         rl_makespan = rl_makespans_test[best_rl_idx]
-        rl_viols_best = rl_violations_test[best_rl_idx]
+        rl_best_stats = rl_stats_list_test[best_rl_idx]
+        rl_viols_best = get_violation_count(rl_best_stats)
         rl_stats = {
             'makespan_hours': rl_makespan,
             'samples': rl_makespans_test,
-            'violation_samples': rl_violations_test,
-            'min_violations': rl_viols_best
+            'violation_samples': [s.get('total_violations', 0) for s in rl_stats_list_test],
+            'violation_train_samples': [get_violation_count(s) for s in rl_stats_list_test],
+            'min_violations': rl_viols_best,
+            'total_violations': rl_best_stats.get('total_violations', 0),
+            'total_cseam_violations': rl_best_stats.get('total_cseam_violations', 0),
+            'total_violations_train': rl_viols_best
         }
         
-        # Random 휴리스틱 (10번 샘플링으로 공정하게)
+        # Random 휴리스틱 (RL과 같은 샘플 수)
         random_makespans_test = []
-        random_violations_test = []
-        for sample_idx in range(10):
+        random_stats_list_test = []
+        for sample_idx in range(eval_sample_count):
             _, random_sample_stats = run_assembly_decoding_sequence_with_blocks(
                 blocks=test_blocks,
                 metadata=test_metadata,
@@ -377,72 +592,77 @@ def comprehensive_evaluation(trainer, device, generator, episode, csv_path=None,
                 save_detailed=False
             )
             random_makespans_test.append(random_sample_stats.get('makespan_hours', float('inf')))
-            random_violations_test.append(random_sample_stats.get('total_violations', 0))
+            random_stats_list_test.append(random_sample_stats)
         
-        # Best (Min) 선택 - RL과 동일한 조건
-        best_rand_idx = int(np.argmin(random_makespans_test))
+        # Best 선택 - RL과 동일한 조건
+        best_rand_idx = _best_stats_index(random_stats_list_test, eval_selection_strategy)
         random_makespan = random_makespans_test[best_rand_idx]
-        random_viols_best = random_violations_test[best_rand_idx]
+        random_best_stats = random_stats_list_test[best_rand_idx]
+        random_viols_best = get_violation_count(random_best_stats)
         random_stats = {
             'makespan_hours': random_makespan,
             'samples': random_makespans_test,
-            'violation_samples': random_violations_test,
-            'min_violations': random_viols_best
+            'violation_samples': [s.get('total_violations', 0) for s in random_stats_list_test],
+            'violation_train_samples': [get_violation_count(s) for s in random_stats_list_test],
+            'min_violations': random_viols_best,
+            'total_violations': random_best_stats.get('total_violations', 0),
+            'total_cseam_violations': random_best_stats.get('total_cseam_violations', 0),
+            'total_violations_train': random_viols_best
         }
         
-        # SPT 휴리스틱 (deterministic이지만 동일한 start_date 사용)
-        _, spt_stats = run_assembly_decoding_sequence_with_blocks(
-            blocks=test_blocks,
-            metadata=test_metadata,
-            decoding_type="assembly",
-            selection_method="spt",
+        # SPT 휴리스틱도 평가 표본 수/profile 조건을 맞춘다.
+        spt_makespan, spt_stats, _ = _run_profiled_heuristic_samples(
+            trainer,
+            test_blocks,
+            test_metadata,
+            test_start_date,
+            method="spt",
             max_days=10,
-            start_date=test_start_date,  # 🔥 RL과 동일한 start_date 사용
-            save_csv=False,
-            save_detailed=False
+            sample_count=eval_sample_count,
+            use_profiles=eval_use_profile_sampling,
+            selection_strategy=eval_selection_strategy,
         )
-        spt_makespan = spt_stats.get('makespan_hours', float('inf'))
 
-        # LPT 휴리스틱
-        _, lpt_stats = run_assembly_decoding_sequence_with_blocks(
-            blocks=test_blocks,
-            metadata=test_metadata,
-            decoding_type="assembly",
-            selection_method="lpt",
+        # LPT 휴리스틱 - self-label 학습 후보와 같은 bias profile 조건
+        lpt_makespan, lpt_stats, _ = _run_profiled_heuristic_samples(
+            trainer,
+            test_blocks,
+            test_metadata,
+            test_start_date,
+            method="lpt",
             max_days=10,
-            start_date=test_start_date,
-            save_csv=False,
-            save_detailed=False
+            sample_count=eval_sample_count,
+            use_profiles=eval_use_profile_sampling,
+            selection_strategy=eval_selection_strategy,
         )
-        lpt_makespan = lpt_stats.get('makespan_hours', float('inf'))
 
-        # SEAM_MIN 휴리스틱
-        _, seam_stats = run_assembly_decoding_sequence_with_blocks(
-            blocks=test_blocks,
-            metadata=test_metadata,
-            decoding_type="assembly",
-            selection_method="seam_min",
+        # SEAM_MIN 휴리스틱 - self-label 학습 후보와 같은 bias profile 조건
+        seam_makespan, seam_stats, _ = _run_profiled_heuristic_samples(
+            trainer,
+            test_blocks,
+            test_metadata,
+            test_start_date,
+            method="seam_min",
             max_days=10,
-            start_date=test_start_date,
-            save_csv=False,
-            save_detailed=False
+            sample_count=eval_sample_count,
+            use_profiles=eval_use_profile_sampling,
+            selection_strategy=eval_selection_strategy,
         )
-        seam_makespan = seam_stats.get('makespan_hours', float('inf'))
         
         # 샘플링 통계 (Random도 포함)
         rl_test_avg = np.mean(rl_makespans_test)
         rl_test_std = np.std(rl_makespans_test)
         random_test_avg = np.mean(random_makespans_test)
         random_test_std = np.std(random_makespans_test)
-        spt_viols = spt_stats.get('total_violations', 0)
-        lpt_viols = lpt_stats.get('total_violations', 0)
-        seam_viols = seam_stats.get('total_violations', 0)
+        spt_viols = get_violation_count(spt_stats)
+        lpt_viols = get_violation_count(lpt_stats)
+        seam_viols = get_violation_count(seam_stats)
         print(
-            f"RL={format_result(rl_makespan, rl_viols_best)} (avg:{rl_test_avg:.1f}±{rl_test_std:.1f}), "
-            f"Random={format_result(random_makespan, random_viols_best)} (avg:{random_test_avg:.1f}±{random_test_std:.1f}), "
-            f"SPT={format_result(spt_makespan, spt_viols)}, "
-            f"LPT={format_result(lpt_makespan, lpt_viols)}, "
-            f"SEAM={format_result(seam_makespan, seam_viols)}",
+            f"RL={format_result(rl_makespan, rl_stats)} (avg:{rl_test_avg:.1f}±{rl_test_std:.1f}), "
+            f"Random={format_result(random_makespan, random_stats)} (avg:{random_test_avg:.1f}±{random_test_std:.1f}), "
+            f"SPT={format_result(spt_makespan, spt_stats)}, "
+            f"LPT={format_result(lpt_makespan, lpt_stats)}, "
+            f"SEAM={format_result(seam_makespan, seam_stats)}",
             end=""
         )
         
@@ -528,8 +748,9 @@ def comprehensive_evaluation(trainer, device, generator, episode, csv_path=None,
     avg_lpt = np.mean(lpt_makespans)
     avg_seam = np.mean(seam_makespans)
     
+    total_problems = 1 + num_random_problems
     print("\n" + "="*60)
-    print(f"📈 평가 요약 (10개 문제)")
+    print(f"📈 평가 요약 ({total_problems}개 문제)")
     print(f"  평균 Makespan:")
     print(f"    - RL:     {avg_rl:.2f}h (±{np.std(rl_makespans):.2f})")
     print(f"    - Random: {avg_random:.2f}h (±{np.std(random_makespans):.2f})")
@@ -537,7 +758,6 @@ def comprehensive_evaluation(trainer, device, generator, episode, csv_path=None,
     print(f"    - LPT:    {avg_lpt:.2f}h (±{np.std(lpt_makespans):.2f})")
     print(f"    - SEAM:   {avg_seam:.2f}h (±{np.std(seam_makespans):.2f})")
     print(f"\n  🏆 Win Count:")
-    total_problems = 1 + num_random_problems
     print(f"    - RL:     {rl_wins}/{total_problems}")
     print(f"    - Random: {random_wins}/{total_problems}")
     print(f"    - SPT:    {spt_wins}/{total_problems}")
@@ -562,7 +782,7 @@ def comprehensive_evaluation(trainer, device, generator, episode, csv_path=None,
         with open(summary_path, 'w') as f:
             json.dump({
                 'episode': episode,
-                'total_problems': 10,
+                'total_problems': total_problems,
                 'average_makespans': {
                     'rl': avg_rl,
                     'random': avg_random,
@@ -604,7 +824,7 @@ def comprehensive_evaluation(trainer, device, generator, episode, csv_path=None,
         write_header = not os.path.exists(snu_detail_csv_path)
         
         import csv
-        def _pad_samples(values, target_len=10):
+        def _pad_samples(values, target_len=eval_sample_count):
             padded = list(values)[:target_len]
             if len(padded) < target_len:
                 padded += ["" for _ in range(target_len - len(padded))]
@@ -613,11 +833,10 @@ def comprehensive_evaluation(trainer, device, generator, episode, csv_path=None,
             writer = csv.writer(f)
             
             if write_header:
+                # [AGENT-EDIT] sample columns follow eval sampling count (default 50), not the old fixed 10.
                 writer.writerow([
                     'episode', 'algorithm', 'min_makespan', 'max_makespan', 'mean_makespan', 'std_makespan',
-                    'sample_1', 'sample_2', 'sample_3', 'sample_4', 'sample_5',
-                    'sample_6', 'sample_7', 'sample_8', 'sample_9', 'sample_10'
-                ])
+                ] + [f'sample_{idx}' for idx in range(1, eval_sample_count + 1)])
             
             # RL 데이터
             writer.writerow([

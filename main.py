@@ -116,7 +116,8 @@ def validate_config(mode: str, config: dict) -> tuple[list, list, dict]:
         warnings.append("evaluation.mode는 1 또는 2만 가능합니다. (현재 값 무시)")
         eval_mode = None
 
-    selected_methods = _get_selected_methods(config)
+    # [AGENT-EDIT] evaluation methods는 eval/compare 모드에서만 headline 검증 대상으로 본다.
+    selected_methods = _get_selected_methods(config) if mode in ("eval", "compare") else []
     method_set = set(selected_methods)
 
     summary["mode"] = mode
@@ -149,7 +150,7 @@ def validate_config(mode: str, config: dict) -> tuple[list, list, dict]:
             errors.append(f"data.excel_path 파일이 없습니다: {excel_path}")
 
     # RL 모델 경로 검증
-    if "RL" in method_set or mode in ("eval", "compare"):
+    if mode in ("eval", "compare"):
         model_cfg = config.get("model", {}) if isinstance(config, dict) else {}
         model_path = model_cfg.get("path")
         summary["model_path"] = model_path or ""
@@ -217,9 +218,9 @@ def print_summary(summary: dict) -> None:
         print(f"- 평가 모드: {summary.get('eval_mode')}")
     if summary.get("excel_path"):
         print(f"- 데이터 경로: {summary.get('excel_path')} (시트: {summary.get('sheet') or '기본'})")
-    if summary.get("methods"):
+    if summary.get("mode") in ("eval", "compare") and summary.get("methods"):
         print(f"- 평가 방법: {_summarize_list(summary.get('methods') or [])}")
-    if summary.get("model_path"):
+    if summary.get("mode") in ("eval", "compare") and summary.get("model_path"):
         print(f"- 모델 경로: {summary.get('model_path')}")
     if summary.get("gantt_search_dir"):
         print(f"- 간트차트 검색 경로: {summary.get('gantt_search_dir')}")
@@ -284,7 +285,7 @@ def main() -> None:
     parser.add_argument(
         "mode",
         nargs="?",
-        choices=["train", "eval", "compare", "heuristic", "replay", "replay_start_date", "gantt"],
+        choices=["train", "eval", "compare", "heuristic", "replay", "replay_start_date", "gantt", "llm"],
         help="실행 모드",
     )
     parser.add_argument("--config", required=True, help="설정 파일 경로 (yaml/json)")
@@ -297,6 +298,54 @@ def main() -> None:
 
     # 1) 설정 파일 로드 (yaml/json)
     config = load_runtime_config(args.config)
+    # [AGENT-ADD] eval/replay quick-test overrides passed after "--" should appear in
+    # validation/summary as well as in the downstream runner.
+    def _unknown_value(*flags: str) -> str:
+        for flag in flags:
+            if flag in unknown:
+                try:
+                    return str(unknown[unknown.index(flag) + 1])
+                except Exception:
+                    return ""
+        return ""
+
+    if isinstance(config, dict):
+        model_override = _unknown_value("--model_path", "--rl_model_path")
+        if model_override:
+            model_cfg = config.setdefault("model", {})
+            if isinstance(model_cfg, dict):
+                model_cfg["path"] = model_override
+        data_override = _unknown_value("--excel_path")
+        if data_override:
+            data_cfg = config.setdefault("data", {})
+            if isinstance(data_cfg, dict):
+                data_cfg["excel_path"] = data_override
+        sheet_override = _unknown_value("--sheet")
+        if sheet_override:
+            data_cfg = config.setdefault("data", {})
+            if isinstance(data_cfg, dict):
+                data_cfg["sheet"] = sheet_override
+        methods_override = _unknown_value("--methods")
+        if methods_override:
+            eval_cfg = config.setdefault("evaluation", {})
+            if isinstance(eval_cfg, dict):
+                eval_cfg["methods"] = [m.strip() for m in methods_override.replace("/", ",").split(",") if m.strip()]
+        sampling_override = _unknown_value("--sampling")
+        if sampling_override:
+            eval_cfg = config.setdefault("evaluation", {})
+            if isinstance(eval_cfg, dict):
+                try:
+                    eval_cfg["sampling"] = int(sampling_override)
+                except Exception:
+                    eval_cfg["sampling"] = sampling_override
+        mode_override = _unknown_value("--mode")
+        if mode_override:
+            eval_cfg = config.setdefault("evaluation", {})
+            if isinstance(eval_cfg, dict):
+                try:
+                    eval_cfg["mode"] = int(mode_override)
+                except Exception:
+                    eval_cfg["mode"] = mode_override
     # 2) 런타임 설정 전역 저장 (Calendar/Relax 등 공통 옵션 반영)
     set_runtime_config(config)
     # [AGENT-ADD] config.yaml의 env 섹션을 환경변수로 반영
@@ -319,7 +368,11 @@ def main() -> None:
     def _get_cli_args(section: str) -> List[str]:
         if not isinstance(config, dict):
             return []
-        return [str(x) for x in (config.get(section, {}) or {}).get("cli_args", [])]
+        cli_args = [str(x) for x in (config.get(section, {}) or {}).get("cli_args", [])]
+        # [AGENT-EDIT] 하위 모듈이 runtime cache에만 의존하지 않도록 config 경로를 항상 전달한다.
+        if args.config and "--config" not in cli_args:
+            cli_args = ["--config", str(args.config), *cli_args]
+        return cli_args
 
     # 4) 설정 검증 + 요약 출력 + 사용자 확인
     errors, warnings, summary = validate_config(mode, config if isinstance(config, dict) else {})
@@ -345,8 +398,14 @@ def main() -> None:
             print("실행을 중단합니다.")
             return
 
+    if mode == "llm":
+        # [AGENT-ADD] Side-car LLM Connect entrypoint. It parses/explains requests only;
+        # scheduler reruns remain in experiments/interactive_llm_reschedule.py.
+        _run_module("llm_interface.cli", unknown)
+        return
+
     if mode == "train":
-        # PPO 학습 실행
+        # [AGENT-EDIT] 계층형 다중 에이전트 경로를 제거하고 single-agent PPO 학습만 유지한다.
         _run_module("PPO.train.runner", _get_cli_args("train") + unknown)
         return
 

@@ -1,0 +1,231 @@
+# [AGENT-ADD] Experimental config variant for assembly-start bias comparison only (constraints remain on).
+# [AGENT-ADD] enable_workshop_head_masking = false
+mode: eval
+confirm: true
+seed: 42
+device: cuda
+env:
+  PBS_RL_STEP_LOG: '0'
+  PBS_FORCE_DEBUG: '0'
+  PBS_DEBUG_VERBOSE: '0'
+data:
+  excel_path: environment/판넬 블록 데이터셋_250618_SNU.xlsx
+  sheet: Sheet1
+model:
+  path: PPO/train/result/models/0128_17_10_ranger_adabelief_envTrue/best_ppo_rollout_ep1700.pth
+  sampling: 100
+gantt:
+  search_dir: null
+heuristic:
+  entry: assembly_start
+  method: lpt
+  cli_args: []
+calendar:
+  enable_lunch_break: false
+  lunch_break: 12:00-13:00
+  enable_holidays_off: false
+  enable_half_day_off: false
+  enable_morning_shutdown: false
+  holidays_off: null
+  half_day_off: null
+  morning_shutdown: 08:00-12:00
+  morning_shutdown_dates: null
+  morning_shutdown_schedule: null
+  afternoon_shutdown: 15:00-08:00
+  afternoon_shutdown_schedule: null
+constraints:
+  enable_workshop_head_masking: false
+  enable_assembly_start_leadtime_layers: false
+  enable_assembly_start_window_filter: false
+  # [AGENT-EDIT] workshop head masking과 중복되는 runtime workshop-order 제약은 실험 기본값에서 비활성화
+  enable_routing_workshop_order: false
+  allow_capacity_relaxation: false
+  # [AGENT-ADD] start_date 생성 단계에서 용량/달력 제약을 임시 해제할지 여부
+  enable_start_date_generation_capacity_override: true
+  # [AGENT-ADD] replay 생성 단계에서 용량/달력 제약을 임시 해제할지 여부
+  enable_replay_generation_capacity_override: true
+  # [AGENT-ADD] assembly 환경이 긴급 블록 때문에 용량 우회를 허용할지 여부
+  enable_assembly_urgent_capacity_bypass: true
+  # [AGENT-ADD] RL/self-label decoding 경로가 긴급 블록 때문에 용량 우회를 허용할지 여부
+  enable_rl_urgent_capacity_bypass: true
+  enabled_constraints_start_date:
+  - PS연속
+  - 라인고정간격
+  - 라인혼합
+  - 용량
+  - P6#4
+  - P5#15
+  - C-Seam
+  - 곡판
+  - 고심수
+  - 고론지연속금지
+  - P5#1
+  - P5#6
+  - P5#13
+  - P5#17
+  - P7#1
+  - P7#2
+  - P7#3
+  - P7#4
+  - P7#7
+  - P7#8
+  - P7#10
+  - P7#11
+  - P7#12
+  enabled_constraints_assembly:
+  - PS연속
+  - 라인고정간격
+  - 라인혼합
+  - 용량
+  - P6#4
+  - P5#15
+  - C-Seam
+  - 곡판
+  - 고심수
+  - 고론지연속금지
+  - P5#1
+  - P5#6
+  - P5#13
+  - P5#17
+  - P7#1
+  - P7#2
+  - P7#3
+  - P7#4
+  - P7#7
+  - P7#8
+  - P7#10
+  - P7#11
+  - P7#12
+  hard_constraints_start_date:
+  - PS연속
+  hard_constraints_assembly:
+  - PS연속
+  relax_order_start_date:
+  - 라인고정간격
+  - 라인혼합
+  - C-Seam
+  - 곡판
+  - 고심수
+  - P6#4
+  relax_order_assembly:
+  - 라인고정간격
+  - 라인혼합
+  - 용량
+  - P6#4
+  - P5#15
+  - C-Seam
+  - 곡판
+  - 고심수
+  strict_rules:
+  enable_daily_block_cap_overrides: false
+  enable_daily_seam_cap_overrides: false
+  enable_daily_seam_cap_scales: false
+  daily_block_cap_overrides: null
+  daily_seam_cap_overrides: null
+  daily_seam_cap_scales: null
+training:
+  episodes: 150001
+  lr: 0.0001
+  epsilon: 0.2
+  ppo_iterations: 2
+  grad_clip: 1.0
+  embedding_dim: 256
+  hidden_dim: 256
+  n_layers: 1
+  n_heads: 4
+  dropout: 0.1
+  temperature: 1.0
+  optimizer: ranger_adabelief
+  baseline_update_interval: 10
+  statistical_alpha: 0.7
+  entropy_coeff: 0.02
+  entropy_decay: 0.995
+  min_entropy_coeff: 0.0005
+  entropy_decay_interval: 50
+  initial_entropy_coeff: 0.03
+  entropy_warmup_episodes: 50
+  train_distribution: eval_like
+  num_blocks_min: 50
+  num_blocks_max: 90
+  max_daily_blocks: 17
+  min_spread_days: 5
+  use_snu: false
+  use_env_state: true
+  feature_mode: full
+  use_positional_encoding: false
+  masking_debug: false
+  masking_debug_verbose: false
+  fixed_norm_stats: 0
+  fixed_norm_warmup_episodes: 5
+  mode: self_label
+  agent_architecture: single_agent
+  self_label_samples: 4
+  self_label_mode: 2
+  # [AGENT-ADD] legacy_score(기존), primary_first(제약 우선), feasible_first(위반 0 우선), makespan_first
+  self_label_selection_strategy: primary_first
+  # [AGENT-EDIT] candidate_only(후보군 경쟁만), legacy, warmup_only, disabled
+  self_label_lpt_teacher_policy: candidate_only
+  # [AGENT-ADD] warmup_only일 때 LPT teacher 허용 에피소드 수
+  self_label_lpt_warmup_episodes: 0
+  # [AGENT-ADD] teacher LPT만 bias on override 적용 여부 (1/0)
+  self_label_lpt_teacher_bias_on: 0
+  violation_penalty_weight: 1.0
+  longi_balance_weight: 0.1
+  start_date_offset: 3
+  log_interval: 1
+  eval_interval: 100
+  save_interval: 100
+  violation_print_limit: 0
+  seed: 42
+eval:
+  cli_args: []
+  methods:
+  - SPT
+  - LPT
+  - SEAM_MIN
+  - RL
+  - 엑셀
+  - 착수일
+evaluation:
+  mode: 2
+  num_gen: 50
+  block_count_range:
+  - 50
+  - 200
+  ps_ratio_range:
+  - 0.0
+  - 0.1
+  sub_ratio_range:
+  - 0.0
+  - 0.1
+  seam_scale_range:
+  - 1.0
+  - 1.2
+  tact_scale_range:
+  - 1.0
+  - 1.2
+  length_scale_range:
+  - 0.9
+  - 1.1
+  width_scale_range:
+  - 0.9
+  - 1.1
+  thickness_scale_range:
+  - 0.9
+  - 1.2
+  max_daily_blocks: 17
+  min_spread_days: 3
+  sampling: 50
+  use_fixed_seed: true
+  default_seed: 42
+  seeds:
+  - 42
+  - 142
+  - 242
+  - 342
+  - 442
+replay:
+  cli_args: []
+replay_start_date:
+  excel_cli_args: []
+  start_date_cli_args: []

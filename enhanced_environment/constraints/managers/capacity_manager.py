@@ -224,9 +224,21 @@ class CapacityTracker:
         used_seam = self.get_capacity_used(is_weekend)
         block_load = self._seam_load(block)
         predicted_seam = used_seam + block_load
+        weekday_capacity_enabled = bool(
+            self.constraint_config and self.constraint_config.is_constraint_enabled("P5#8")
+        )
+        weekend_capacity_enabled = bool(
+            self.constraint_config and self.constraint_config.is_constraint_enabled("P5#10")
+        )
+        holiday_capacity_enabled = bool(
+            self.constraint_config and self.constraint_config.is_constraint_enabled("P5#15")
+        )
+        hot_season_capacity_enabled = bool(
+            self.constraint_config and self.constraint_config.is_constraint_enabled("P5#16")
+        )
         
         # ✅ 명절전날 심수 제한 체크
-        if self.holiday_eve_enabled and is_holiday_eve:
+        if self.holiday_eve_enabled and is_holiday_eve and holiday_capacity_enabled:
             if predicted_seam > seam_limit:
                 return False, f"명절전날 심수 제한: {predicted_seam}/{seam_limit}심 (하이퍼파라미터 기반)"
         
@@ -244,10 +256,23 @@ class CapacityTracker:
         
         # 일반 심수 용량 체크
         if predicted_seam > seam_limit:
+            if is_holiday_eve and self.holiday_eve_enabled and not holiday_capacity_enabled:
+                return True, f"P5#15 비활성: {predicted_seam}/{seam_limit}심"
+            if is_hot_season and not hot_season_capacity_enabled:
+                if (is_weekend and not weekend_capacity_enabled) or ((not is_weekend) and not weekday_capacity_enabled):
+                    return True, f"용량 제약 비활성: {predicted_seam}/{seam_limit}심"
+            if is_weekend and not weekend_capacity_enabled:
+                return True, f"P5#10 비활성: {predicted_seam}/{seam_limit}심"
+            if (not is_weekend) and not weekday_capacity_enabled:
+                return True, f"P5#8 비활성: {predicted_seam}/{seam_limit}심"
             constraint_type = ""
             if is_holiday_eve and self.holiday_eve_enabled:
                 constraint_type = " (명절전날)"
-            elif is_hot_season:
+            elif (
+                is_hot_season and
+                self.constraint_config and
+                self.constraint_config.is_constraint_enabled("P5#16")
+            ):
                 constraint_type = f" (혹서기-{self.hot_season_reduction_type})"
             elif is_weekend:
                 constraint_type = " (주말)"
@@ -280,6 +305,18 @@ class CapacityTracker:
         """
         violations = []
         block_load = self._seam_load(block)
+        weekday_capacity_enabled = bool(
+            self.constraint_config and self.constraint_config.is_constraint_enabled("P5#8")
+        )
+        weekend_capacity_enabled = bool(
+            self.constraint_config and self.constraint_config.is_constraint_enabled("P5#10")
+        )
+        holiday_capacity_enabled = bool(
+            self.constraint_config and self.constraint_config.is_constraint_enabled("P5#15")
+        )
+        hot_season_capacity_enabled = bool(
+            self.constraint_config and self.constraint_config.is_constraint_enabled("P5#16")
+        )
         
         # ✅ P5#8,10,15,16: 용량 초과 검증 (하이퍼파라미터 기반)
         can_add, reason = self.can_add_block(
@@ -290,19 +327,25 @@ class CapacityTracker:
             constraint_id = "P5#8"  # 기본값 (평일)
             if reason.startswith("P5#9"):
                 constraint_id = "P5#9"
-            elif is_holiday_eve and self.holiday_eve_enabled:
+            elif is_holiday_eve and self.holiday_eve_enabled and holiday_capacity_enabled:
                 constraint_id = "P5#15"  # 명절전날
-            elif is_hot_season:
+            elif (
+                is_hot_season and
+                hot_season_capacity_enabled
+            ):
                 constraint_id = "P5#16"  # 혹서기
-            elif is_weekend:
+            elif is_weekend and weekend_capacity_enabled:
                 constraint_id = "P5#10"  # 주말
-            
-            violations.append(ConstraintViolation(
-                constraint_id=constraint_id,
-                message=f"{reason}" if constraint_id == "P5#9" else f"용량 초과: {reason}",
-                severity="ERROR",
-                block_id=block.block_id
-            ))
+            elif (not is_weekend) and not weekday_capacity_enabled:
+                constraint_id = ""
+
+            if constraint_id:
+                violations.append(ConstraintViolation(
+                    constraint_id=constraint_id,
+                    message=f"{reason}" if constraint_id == "P5#9" else f"용량 초과: {reason}",
+                    severity="ERROR",
+                    block_id=block.block_id
+                ))
         
         # ✅ P5#9: 72심 초과 시 블록 수 17개 이상 필수 (평일만)
         if not is_weekend and self.constraint_config and self.constraint_config.is_constraint_enabled("P5#9"):

@@ -169,16 +169,17 @@ class PSMixingMixin:
         """P5#3,4: P/S 순서 제약 체크"""
         if not self.constraint_config.is_constraint_enabled("P5#3"):
             return True, "P5#3,4 제약조건 비활성화"
-    
-        # S 블록인 경우에만 체크
+
+        # [AGENT-EDIT] runtime validator와 동일하게 "선택"이 아니라 "완료" 기준으로 P/S 순서를 맞춘다.
         if block.port_starboard == PortStarboard.STARBOARD and block.pair_block_id:
-            # 같은 쌍의 P 블록이 이미 선택되었는지 확인
             pair_p_id = block.pair_block_id
+            completed_blocks = getattr(getattr(self, 'ps_manager', None), 'completed_blocks', set()) or set()
+            if pair_p_id in completed_blocks:
+                return True, f"P5#3,4 적용: S블록 {block.block_id}의 P블록 {pair_p_id} 완료됨"
             if pair_p_id in selected_blocks:
-                return True, f"P5#3,4 적용: S블록 {block.block_id}의 P블록 {pair_p_id} 이미 선택됨"
-            else:
-                return False, f"P5#3,4 적용: S블록 {block.block_id}의 P블록 {pair_p_id} 미선택 (P→S 순서 필수)"
-    
+                return False, f"P5#3,4 적용: S블록 {block.block_id}의 P블록 {pair_p_id} 선택됐지만 아직 미완료"
+            return False, f"P5#3,4 적용: S블록 {block.block_id}의 P블록 {pair_p_id} 미선택 (P 완료 후 S 허용)"
+
         return True, "P/S 제약 해당없음 (P블록 또는 일반블록)"
     
     ################################################################################################################################################################################################
@@ -233,82 +234,13 @@ class PSMixingMixin:
         """
         if not self.constraint_config.is_constraint_enabled("P5#3"):
             return []  # P5#3이 비활성화되면 P/S 쌍 마스킹 없음
-    
-        # 1단계: P 선택 후 S 강제 선택 로직 (최우선)
-        if len(selected_blocks) > 0:
-            last_selected_id = selected_blocks[-1]
-    
-            # PSBlockManager를 통해 마지막 선택 블록이 P 블록인지 확인
-            if self.ps_manager.is_port_block(last_selected_id):
-                starboard_id = self.ps_manager.get_starboard_for_port(last_selected_id)
-    
-                if starboard_id and starboard_id not in selected_blocks:
-                    # S 블록이 available_blocks에 있으면 우선 선택
-                    for block in available_blocks:
-                        if block.block_id == starboard_id:
-                            ################################################################################################################################################################################################
-                            # fix: Routing 상위 제약 (곡판/고심수 간격 & 후공정 착수 순서)
-                            ################################################################################################################################################################################################
-                            curved_pass, curved_reason = self._check_curved_plate_spacing(block, selected_blocks)
-                            high_seam_pass, high_seam_reason = self._check_high_seam_spacing(block, selected_blocks)
-    
-                            if not curved_pass or not high_seam_pass:
-                                priority_reason = curved_reason if not curved_pass else high_seam_reason
-                                violations.append(ConstraintViolation(
-                                    constraint_id='ROUTING_CURVED_SPACING' if not curved_pass else 'ROUTING_HIGH_SEAM_SPACING',
-                                    message=priority_reason,
-                                    block_id=starboard_id,
-                                    severity='ERROR'
-                                ))
-                                return []
-    
-                            # print(f"P/S 강제 연속성: P{last_selected_id} 후 S{starboard_id} 강제 선택")
-                            return [block]
-    
-                    # S 블록이 available_blocks에 없어도 전체 블록에서 찾아서 강제 선택
-                    # 이 경우는 제약조건을 무시하고 S 블록을 선택해야 함
-                    for s_block in all_blocks:
-                        if s_block.block_id == starboard_id:
-                            ################################################################################################################################################################################################
-                            # fix: Routing 상위 제약 (곡판/고심수 간격 & 후공정 착수 순서)
-                            ################################################################################################################################################################################################
-                            curved_pass, curved_reason = self._check_curved_plate_spacing(s_block, selected_blocks)
-                            high_seam_pass, high_seam_reason = self._check_high_seam_spacing(s_block, selected_blocks)
-    
-                            if not curved_pass or not high_seam_pass:
-                                priority_reason = curved_reason if not curved_pass else high_seam_reason
-                                violations.append(ConstraintViolation(
-                                    constraint_id='ROUTING_CURVED_SPACING' if not curved_pass else 'ROUTING_HIGH_SEAM_SPACING',
-                                    message=priority_reason,
-                                    block_id=starboard_id,
-                                    severity='ERROR'
-                                ))
-                                return []
-    
-                            # print(f"P/S 강제 연속성: P{last_selected_id} 후 S{starboard_id} 제약조건 무시하고 강제 선택")
-                            violations.append(ConstraintViolation(
-                                constraint_id="P5#3_FORCE",
-                                message=f"P/S 연속성을 위해 S 블록 {starboard_id} 강제 선택 (다른 제약조건 무시)",
-                                severity="INFO",
-                                block_id=starboard_id
-                            ))
-                            return [s_block]
-    
-        # 2단계: 기존 로직 - S 블록이 P 블록보다 먼저 선택되지 않도록 필터링
-        next_required_block_id = self.ps_manager.get_next_required_block()
-    
-        if next_required_block_id:
-            # 강제 선택해야 할 블록이 available_blocks에 있는지 확인
-            required_block = next((b for b in available_blocks if b.block_id == next_required_block_id), None)
-    
-            if required_block:
-                # print(f"P/S 쌍 강제 선택: P 완료 후 S 블록 {next_required_block_id} 즉시 선택")
-                return [required_block]
-            else:
-                # print(f"P/S 쌍 강제 선택 실패: S 블록 {next_required_block_id}가 선택 가능 목록에 없음")
-                pass
-    
-        # 3단계: S 블록이 P 블록보다 먼저 선택되지 않도록 필터링
+
+        # [AGENT-EDIT] 논문 실험 기준으로 "P 이후 S 즉시 추종" 강제는 제거한다.
+        # P/S 순서 자체는 _check_ps_order_constraint()가 계속 담당하므로
+        # 여기서는 후보를 강제로 좁히거나 즉시 반환하지 않는다.
+        return []
+
+        # [AGENT-EDIT] legacy path below retained only for reference.
         ps_filtered_blocks = []
         current_position = len(selected_blocks)  # 현재 선택 위치
     

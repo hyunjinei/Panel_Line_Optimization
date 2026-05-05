@@ -1,0 +1,167 @@
+﻿type,date,total_blocks,total_steps,step,block_id,assembly_start_date,assembly_type,port_starboard,status,reason,assembly_masking_stage,three_bay_check,ps_forced,selected_block,available_count,excluded_count,emergency_mode,relax_level,relax_stage,relax_constraints,relax_target_count,relax_targets,relaxed_block_count,relax_target_total,final_choice_flag,final_violation_count,final_violation_list,seam_count,c_seam_count,has_curved_plate
+METADATA,20250714,136,17,,,,,,,,,,,,,,,,,,,,,,,,,,,
+STEP_SUMMARY,20250714,136,17,11,선택: 55,2025-07-14,fixed,C,"가용: 3, 제외: 0",Assembly Decoding 스텝 11 선택,,,False,55,3,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250714,136,17,11,29,2025-07-13,line,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,11,33,2025-07-13,line,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,11,84,2025-07-13,fixed,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250714,136,17,12,선택: 10,2025-07-15,line,S,"가용: 3, 제외: 0",Assembly Decoding 스텝 12 선택,,,False,10,3,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250714,136,17,12,29,2025-07-13,line,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,12,33,2025-07-13,line,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,12,84,2025-07-13,fixed,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250714,136,17,13,선택: 33,2025-07-13,line,C,"가용: 3, 제외: 0",Assembly Decoding 스텝 13 선택,,,False,33,3,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250714,136,17,13,29,2025-07-13,line,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,13,33,2025-07-13,line,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,13,84,2025-07-13,fixed,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250714,136,17,14,선택: 7,2025-07-16,line,P,"가용: 2, 제외: 0",Assembly Decoding 스텝 14 선택,,,False,7,2,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250714,136,17,14,29,2025-07-13,line,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,14,84,2025-07-13,fixed,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250714,136,17,15,선택: 29,2025-07-13,line,S,"가용: 2, 제외: 0",Assembly Decoding 스텝 15 선택,,,False,29,2,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250714,136,17,15,29,2025-07-13,line,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,15,84,2025-07-13,fixed,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250714,136,17,16,선택: 65,2025-07-14,fixed,P,"가용: 1, 제외: 0",Assembly Decoding 스텝 16 선택,,,False,65,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250714,136,17,16,84,2025-07-13,fixed,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250714,136,17,17,선택: 84,2025-07-13,fixed,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 17 선택,,,False,84,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250714,136,17,17,84,2025-07-13,fixed,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250714,136,17,18,선택: 13,2025-07-16,line,P,"가용: 3, 제외: 0",Assembly Decoding 스텝 18 선택,,,False,13,3,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250714,136,17,18,74,2025-07-14,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,18,94,2025-07-14,fixed,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,18,114,2025-07-14,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250714,136,17,19,선택: 15,2025-07-16,line,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 19 선택,,,False,15,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250714,136,17,19,114,2025-07-14,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250714,136,17,20,선택: 17,2025-07-16,line,P,"가용: 3, 제외: 0",Assembly Decoding 스텝 20 선택,,,False,17,3,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250714,136,17,20,74,2025-07-14,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,20,94,2025-07-14,fixed,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,20,114,2025-07-14,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250714,136,17,21,선택: 18,2025-07-16,line,C,"가용: 3, 제외: 0",Assembly Decoding 스텝 21 선택,,,False,18,3,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250714,136,17,21,74,2025-07-14,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,21,94,2025-07-14,fixed,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,21,114,2025-07-14,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250714,136,17,22,선택: 41,2025-07-16,line,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 22 선택,,,False,41,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250714,136,17,22,114,2025-07-14,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250714,136,17,23,선택: 45,2025-07-16,line,S,"가용: 3, 제외: 0",Assembly Decoding 스텝 23 선택,,,False,45,3,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250714,136,17,23,74,2025-07-14,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,23,94,2025-07-14,fixed,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,23,114,2025-07-14,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250714,136,17,24,선택: 57,2025-07-16,fixed,C,"가용: 3, 제외: 0",Assembly Decoding 스텝 24 선택,,,False,57,3,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250714,136,17,24,74,2025-07-14,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,24,94,2025-07-14,fixed,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,24,114,2025-07-14,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250714,136,17,25,선택: 67,2025-07-16,fixed,P,"가용: 3, 제외: 0",Assembly Decoding 스텝 25 선택,,,False,67,3,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250714,136,17,25,74,2025-07-14,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,25,94,2025-07-14,fixed,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,25,114,2025-07-14,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250714,136,17,26,선택: 70,2025-07-18,fixed,C,"가용: 3, 제외: 0",Assembly Decoding 스텝 26 선택,,,False,70,3,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250714,136,17,26,74,2025-07-14,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,26,94,2025-07-14,fixed,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,26,114,2025-07-14,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250714,136,17,27,선택: 94,2025-07-14,fixed,S,"가용: 1, 제외: 109",Assembly Decoding 스텝 27 선택,,,False,94,1,109,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250714,136,17,27,74,2025-07-14,fixed,P,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 71/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,94,2025-07-14,fixed,S,EXCLUDED,용량 제약 위반: P5#9: 72심 초과 시 17블록 이상 필요 (블록수: 1),,,False,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,114,2025-07-14,fixed,P,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 71/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,14,2025-07-16,line,C,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 70/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,22,2025-07-16,line,P,EXCLUDED,용량 제약 위반: P5#9: 72심 초과 시 17블록 이상 필요 (블록수: 1),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,77,2025-07-16,fixed,P,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 71/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,97,2025-07-16,fixed,S,EXCLUDED,용량 제약 위반: P5#9: 72심 초과 시 17블록 이상 필요 (블록수: 1),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,104,2025-07-16,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,107,2025-07-16,fixed,S,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 72/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,124,2025-07-16,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,19,2025-07-17,line,P,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 70/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,21,2025-07-17,line,C,EXCLUDED,용량 제약 위반: P5#9: 72심 초과 시 17블록 이상 필요 (블록수: 1),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,23,2025-07-17,line,P,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 72/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,27,2025-07-17,line,P,EXCLUDED,용량 제약 위반: P5#9: 72심 초과 시 17블록 이상 필요 (블록수: 1),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,31,2025-07-17,line,C,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 70/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,35,2025-07-17,line,P,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 71/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,56,2025-07-17,fixed,C,AVAILABLE,모든 제약조건 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,61,2025-07-17,fixed,C,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 71/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,66,2025-07-17,fixed,C,EXCLUDED,용량 제약 위반: P5#9: 72심 초과 시 17블록 이상 필요 (블록수: 1),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,71,2025-07-17,fixed,S,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 70/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,75,2025-07-17,fixed,C,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 72/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,85,2025-07-17,fixed,C,EXCLUDED,용량 제약 위반: P5#9: 72심 초과 시 17블록 이상 필요 (블록수: 1),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,91,2025-07-17,fixed,P,EXCLUDED,용량 제약 위반: P5#9: 72심 초과 시 17블록 이상 필요 (블록수: 1),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,96,2025-07-17,fixed,C,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 72/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,101,2025-07-17,fixed,P,EXCLUDED,용량 제약 위반: P5#9: 72심 초과 시 17블록 이상 필요 (블록수: 1),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,115,2025-07-17,fixed,S,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 72/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,4,2025-07-18,line,C,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 71/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,8,2025-07-18,line,S,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 72/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,12,2025-07-18,line,P,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 70/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,20,2025-07-18,line,P,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 72/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,32,2025-07-18,line,S,EXCLUDED,용량 제약 위반: P5#9: 72심 초과 시 17블록 이상 필요 (블록수: 1),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,60,2025-07-18,fixed,C,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 70/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,63,2025-07-18,fixed,C,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 71/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,73,2025-07-18,fixed,S,EXCLUDED,용량 제약 위반: P5#9: 72심 초과 시 17블록 이상 필요 (블록수: 1),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,81,2025-07-18,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,83,2025-07-18,fixed,P,EXCLUDED,용량 제약 위반: P5#9: 72심 초과 시 17블록 이상 필요 (블록수: 1),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,87,2025-07-18,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,111,2025-07-18,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,117,2025-07-18,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,121,2025-07-18,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,127,2025-07-18,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,16,2025-07-19,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,24,2025-07-19,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,25,2025-07-19,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,26,2025-07-19,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,28,2025-07-19,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,30,2025-07-19,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,34,2025-07-19,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,36,2025-07-19,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,37,2025-07-19,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,38,2025-07-19,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,39,2025-07-19,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,40,2025-07-19,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,42,2025-07-19,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,43,2025-07-19,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,44,2025-07-19,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,46,2025-07-19,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,47,2025-07-19,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,48,2025-07-19,line,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,49,2025-07-19,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,50,2025-07-19,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,51,2025-07-19,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,52,2025-07-19,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,53,2025-07-19,line,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,58,2025-07-19,fixed,C,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 72/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,59,2025-07-19,fixed,C,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 71/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,62,2025-07-19,fixed,C,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 72/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,68,2025-07-19,fixed,C,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 72/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,69,2025-07-19,fixed,S,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 72/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,72,2025-07-19,fixed,P,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 71/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,76,2025-07-19,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,78,2025-07-19,fixed,C,EXCLUDED,용량 제약 위반: P5#9: 72심 초과 시 17블록 이상 필요 (블록수: 1),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,79,2025-07-19,fixed,S,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 70/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,80,2025-07-19,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,82,2025-07-19,fixed,C,EXCLUDED,용량 제약 위반: P5#9: 72심 초과 시 17블록 이상 필요 (블록수: 1),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,86,2025-07-19,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,88,2025-07-19,fixed,C,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 71/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,89,2025-07-19,fixed,S,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 70/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,90,2025-07-19,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,92,2025-07-19,fixed,C,EXCLUDED,용량 제약 위반: P5#9: 72심 초과 시 17블록 이상 필요 (블록수: 1),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,93,2025-07-19,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,95,2025-07-19,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,98,2025-07-19,fixed,S,EXCLUDED,용량 제약 위반: P5#9: 72심 초과 시 17블록 이상 필요 (블록수: 1),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,99,2025-07-19,fixed,P,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 72/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,100,2025-07-19,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,102,2025-07-19,fixed,S,EXCLUDED,용량 제약 위반: P5#9: 72심 초과 시 17블록 이상 필요 (블록수: 1),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,103,2025-07-19,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,106,2025-07-19,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,108,2025-07-19,fixed,C,EXCLUDED,용량 제약 위반: P5#9: 72심 초과 시 17블록 이상 필요 (블록수: 1),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,109,2025-07-19,fixed,S,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 71/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,110,2025-07-19,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,112,2025-07-19,fixed,S,EXCLUDED,용량 제약 위반: P5#9: 72심 초과 시 17블록 이상 필요 (블록수: 1),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,113,2025-07-19,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,116,2025-07-19,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,118,2025-07-19,fixed,P,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 71/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,119,2025-07-19,fixed,P,EXCLUDED,용량 제약 위반: P5#9: 72심 초과 시 17블록 이상 필요 (블록수: 1),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,120,2025-07-19,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,122,2025-07-19,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,123,2025-07-19,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,125,2025-07-19,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,126,2025-07-19,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,128,2025-07-19,fixed,P,EXCLUDED,용량 제약 위반: P5#9: 72심 초과 시 17블록 이상 필요 (블록수: 1),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,129,2025-07-19,fixed,P,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 72/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,130,2025-07-19,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,131,2025-07-19,fixed,P,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,132,2025-07-19,fixed,C,EXCLUDED,용량 제약 위반: P5#8+P5#16: 용량 초과 71/69심 (혹서기 평일),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,133,2025-07-19,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,134,2025-07-19,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,135,2025-07-19,fixed,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250714,136,17,27,136,2025-07-19,fixed,S,EXCLUDED,용량 제약 위반: P5#9: 72심 초과 시 17블록 이상 필요 (블록수: 1),,,False,,,,,0,,,0,,,,False,0,,,,False

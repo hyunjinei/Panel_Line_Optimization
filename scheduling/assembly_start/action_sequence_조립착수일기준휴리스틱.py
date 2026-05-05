@@ -1,17 +1,24 @@
 # action_sequence.py
 
 import os  # [AGENT-EDIT] PBS_FORCE_DEBUG 기반 디버그 출력 제어
+import copy
 import random
+import argparse
 import pandas as pd
 from datetime import datetime, timedelta
 from typing import List, Tuple, Dict, Optional, Set
 from collections import defaultdict
 
 from enhanced_environment.common.utils_core import (
+    compute_schedule_span_hours,
+    compute_sum_daily_max_makespan_hours,
+    count_primary_cseam_violations,
     DataConverter,
+    count_expanded_block_units,
     expand_rows_with_subassembly,
     resolve_line_group_for_block,
     get_line_group_and_workshop_code,
+    sum_result_violation_counts,
 )
 from enhanced_environment.constraints import ConstraintConfig
 from enhanced_environment.pbs_env import EnhancedPanelBlockShop
@@ -24,13 +31,25 @@ from scheduling.common.result_builders import (
     create_block_result as _create_block_result,
 )
 from scheduling.common.selection_rules import select_block_id  # [AGENT-ADD] 공통 선택 규칙
+from scheduling.common.interactive_override import (
+    apply_manual_bay_override_if_requested,
+    filter_available_ids_by_precedence,
+    prime_forced_override_cache,
+    resolve_forced_prefix_block,
+)
 from scheduling.common.defaults import (
     DEFAULT_EXCEL_PATH,
     DEFAULT_ASSEMBLY_DATE_OFFSET,
     DEFAULT_SELECTION_METHODS,
 )
+from scheduling.common.run_artifacts import (
+    maybe_load_runtime_config,
+    mirror_to_legacy_path,
+    resolve_output_path,
+)
 # [AGENT-ADD] main.py config.yaml 연동
 from runtime_config import get_runtime_config
+from scheduling.common.independent_constraint_audit import sync_runtime_results_to_canonical_constraints
 
 
 def _get_capacity_load(block) -> int:
@@ -166,7 +185,12 @@ def run_assembly_decoding_sequence_with_blocks(
     save_csv: bool = True,        # 🆕 추가: 결과 CSV 저장 여부
     save_detailed: bool = True,   # 🆕 추가: 상세 CSV 저장 여부
     forced_sequence: List[int] = None,  # 🆕 추가: 강화학습용 강제 시퀀스
-    expand_rows: bool = True            # [AGENT-ADD] 별판 확장 여부
+    expand_rows: bool = True,           # [AGENT-ADD] 별판 확장 여부
+    forced_prefix_block_ids: Optional[List[int]] = None,  # [AGENT-ADD] user prefix-resume
+    allow_forced_prefix_override: bool = False,  # [AGENT-ADD] masking 밖 강제 선택 허용
+    precedence_rules: Optional[List[Tuple[int, int]]] = None,  # [AGENT-ADD] interactive precedence
+    manual_bay_assignments: Optional[Dict[int, str]] = None,  # [AGENT-ADD] interactive bay override
+    return_step_info: bool = False,  # [AGENT-ADD] interactive analysis trace export
 ) -> Tuple[List[Dict], Dict]:
     """
     Assembly Decoding (메모리 데이터 직접 사용)
@@ -179,8 +203,21 @@ def run_assembly_decoding_sequence_with_blocks(
         if DEBUG_ASSEMBLY:
             print(f"🎯 강화학습 시퀀스 강제 적용 모드 (시퀀스 길이: {len(forced_sequence)})")
         # 강화학습 시퀀스 평가 모드
-        return _evaluate_forced_sequence(blocks, metadata, forced_sequence, decoding_type, 
-                                       max_days, start_date, date_offset, save_csv, save_detailed)
+        forced_results = _evaluate_forced_sequence(
+            blocks,
+            metadata,
+            forced_sequence,
+            decoding_type,
+            max_days,
+            start_date,
+            date_offset,
+            save_csv,
+            save_detailed,
+        )
+        if return_step_info:
+            schedule_results, statistics = forced_results
+            return schedule_results, statistics, []
+        return forced_results
     else:
         if VERBOSE_ASSEMBLY:
             print(f"🚀 Assembly Decoding 시퀀싱 시작 (메모리 데이터)")
@@ -199,7 +236,12 @@ def run_assembly_decoding_sequence_with_blocks(
             save_csv,
             save_detailed,
             expand_rows=expand_rows,
-            use_env_step=True  # [AGENT-ADD] 기본: env.step 기반
+            use_env_step=True,  # [AGENT-ADD] 기본: env.step 기반
+            forced_prefix_block_ids=forced_prefix_block_ids,
+            allow_forced_prefix_override=allow_forced_prefix_override,
+            precedence_rules=precedence_rules,
+            manual_bay_assignments=manual_bay_assignments,
+            return_step_info=return_step_info,
         )
 
 
@@ -216,7 +258,12 @@ def _run_assembly_decoding_core(
     save_csv: bool = True,        # 🆕 추가: 결과 CSV 저장 여부
     save_detailed: bool = True,   # 🆕 추가: 상세 CSV 저장 여부
     use_env_step: bool = True,    # [AGENT-ADD] env.step 기반 실행 여부
-    expand_rows: bool = True      # [AGENT-ADD] 별판 확장 여부
+    expand_rows: bool = True,     # [AGENT-ADD] 별판 확장 여부
+    forced_prefix_block_ids: Optional[List[int]] = None,  # [AGENT-ADD] user prefix-resume
+    allow_forced_prefix_override: bool = False,  # [AGENT-ADD] masking 밖 강제 선택 허용
+    precedence_rules: Optional[List[Tuple[int, int]]] = None,  # [AGENT-ADD] interactive precedence
+    manual_bay_assignments: Optional[Dict[int, str]] = None,  # [AGENT-ADD] interactive bay override
+    return_step_info: bool = False,  # [AGENT-ADD] interactive analysis trace export
 ) -> Tuple[List[Dict], Dict]:
     """
     Assembly Decoding 시퀀싱의 핵심 로직을 분리하여 재사용
@@ -229,6 +276,10 @@ def _run_assembly_decoding_core(
     # blocks, metadata = DataConverter.excel_to_blocks_with_metadata(excel_path) # 이 부분은 호출하는 함수에서 처리
     # constraint_config = ConstraintConfig() # 이 부분은 호출하는 함수에서 처리
     
+    # [AGENT-ADD] independent audit/sync는 스케줄링으로 오염되기 전 pristine 입력을 사용한다.
+    audit_blocks = copy.deepcopy(blocks)
+    audit_metadata = copy.deepcopy(metadata)
+
     # 2. 시작 날짜 설정
     start_datetime = datetime.strptime(start_date, "%Y-%m-%d")
     
@@ -289,13 +340,14 @@ def _run_assembly_decoding_core(
     # ==== [AGENT-ADD] env.step 경로: 일자별 공정 CSV 생성을 위한 누적 버퍼 ====
     daily_sequences_by_date: Dict[str, List[int]] = defaultdict(list)
     daily_bay_assignments_by_date: Dict[str, Dict[int, BayType]] = defaultdict(dict)
+    # [AGENT-EDIT] legacy no-op: P6 시간제약 제거 이후에도 calculate_makespan 인터페이스 호환을 위해 유지
     daily_guard_blocks_by_date: Dict[str, Set[int]] = defaultdict(set)
     
     # 🆕 머신 상태 추적 (날짜간 연결용)
     previous_machine_state = {} # 이전 날의 머신 완료 시간 상태
-    afternoon_guard_blocks_day: Set[int] = set()  # [AGENT-ADD] 리드타임 강제+P6 대상 추적
-    afternoon_guard_blocks_all: Set[int] = set()
-    daily_sequence: List[int] = []  # [AGENT-ADD] 당일 선택 시퀀스 (P6 시간계산용)
+    afternoon_guard_blocks_day: Set[int] = set()  # [AGENT-EDIT] legacy no-op
+    afternoon_guard_blocks_all: Set[int] = set()  # [AGENT-EDIT] legacy no-op
+    daily_sequence: List[int] = []  # [AGENT-EDIT] 당일 선택 시퀀스
     
     
     # print(f"📅 Day {day_counter}: {current_date.strftime('%Y-%m-%d')}")
@@ -303,20 +355,74 @@ def _run_assembly_decoding_core(
     # [AGENT-ADD] env.step 기반 루트 (정석)
     legacy_loop_enabled = not use_env_step
     if use_env_step:
+        forced_prefix_idx = 0
         while not env.is_done and len(env.assembly_selected_blocks) < len(blocks):
             available_ids, violations, block_analysis = env.get_available_actions_assembly()
-            if env.is_done or not available_ids:
+            if env.is_done:
+                break
+
+            forced_block_id, forced_prefix_idx = resolve_forced_prefix_block(
+                forced_prefix_block_ids,
+                forced_prefix_idx,
+                env.assembly_selected_blocks,
+            )
+            filtered_available_ids, precedence_blocked_ids, precedence_override_block_id = filter_available_ids_by_precedence(
+                available_ids=available_ids,
+                selected_block_ids=env.assembly_selected_blocks,
+                precedence_rules=precedence_rules,
+            )
+            forced_override_active = False
+
+            if not filtered_available_ids and forced_block_id is None and precedence_override_block_id is None:
                 break
 
             # 블록 선택 방식
             # [AGENT-EDIT] 공통 선택 규칙 사용
-            selected_block_id, selection_reason = select_block_id(
-                available_ids=available_ids,
-                blocks_dict=blocks_dict,
-                selection_method=selection_method,
+            if forced_block_id is not None and forced_block_id in available_ids:
+                selected_block_id = forced_block_id
+                selection_reason = "FORCED_PREFIX_AVAILABLE"
+                action_idx = available_ids.index(selected_block_id)
+            elif forced_block_id is not None and allow_forced_prefix_override:
+                selected_block_id = forced_block_id
+                selection_reason = "FORCED_PREFIX_OVERRIDE"
+                forced_override_active = True
+                prime_forced_override_cache(
+                    env=env,
+                    forced_block_id=forced_block_id,
+                    masking_violations=violations,
+                    block_analysis=block_analysis,
+                    blocks_dict=blocks_dict,
+                    note="interactive prefix override",
+                )
+                action_idx = 0
+            elif precedence_override_block_id is not None and allow_forced_prefix_override:
+                selected_block_id = precedence_override_block_id
+                selection_reason = "PRECEDENCE_OVERRIDE"
+                forced_override_active = True
+                prime_forced_override_cache(
+                    env=env,
+                    forced_block_id=precedence_override_block_id,
+                    masking_violations=violations,
+                    block_analysis=block_analysis,
+                    blocks_dict=blocks_dict,
+                    note="interactive precedence override",
+                )
+                action_idx = 0
+            else:
+                selected_block_id, selection_reason = select_block_id(
+                    available_ids=filtered_available_ids,
+                    blocks_dict=blocks_dict,
+                    selection_method=selection_method,
+                )
+                action_idx = available_ids.index(selected_block_id)
+
+            manual_bay_override = apply_manual_bay_override_if_requested(
+                env=env,
+                selected_block_id=selected_block_id,
+                manual_bay_assignments=manual_bay_assignments,
+                final_reason="INTERACTIVE_USER_FIXED_BAY",
             )
 
-            action_idx = available_ids.index(selected_block_id)
             _, step_reward, done, step_info = env.step(action_idx)
 
             selected_block = blocks_dict[selected_block_id]
@@ -367,8 +473,11 @@ def _run_assembly_decoding_core(
                 'selection_summary': f"Assembly Decoding 스텝 {len(env.assembly_selected_blocks)} 선택",
                 'selection_method': selection_method,
                 'selection_reason': selection_reason,
+                'forced_override': forced_override_active,
+                'precedence_blocked_ids': ','.join(str(block_id) for block_id in precedence_blocked_ids),
+                'manual_bay_override': manual_bay_override or '',
                 'emergency_mode': any(getattr(v, 'constraint_id', '') in {'EMERGENCY_MODE', 'EMERGENCY_PS_ONLY', 'EMERGENCY_RELEASE', 'MIN_VIOLATION_CHOICE'} for v in block_violations),
-                'ps_forced': bool(selected_analysis.get('ps_forced')) if selected_analysis else False,
+                'ps_forced': False,
                 'masking_stage_used': selected_analysis.get('masking_stage', '') if selected_analysis else ''
             })
 
@@ -389,6 +498,8 @@ def _run_assembly_decoding_core(
                 actual_machine_2_start_time=step_info.get('actual_machine_2_start_time')
             )
             result['line_group'] = getattr(selected_block, 'line_group', '')
+            result['interactive_precedence_blocked_ids'] = ','.join(str(block_id) for block_id in precedence_blocked_ids)
+            result['interactive_manual_bay_override'] = manual_bay_override or ''
 
             schedule_results.append(result)
             assembly_sequence += 1
@@ -400,11 +511,14 @@ def _run_assembly_decoding_core(
             daily_bay_assignments_by_date[date_key][selected_block_id] = (
                 BayType(assigned_bay) if isinstance(assigned_bay, str) else assigned_bay
             )
-            # 당일 P6/리드타임 대상 기록
+            # [AGENT-EDIT] legacy no-op guard 기록 유지
             try:
                 daily_guard_blocks_by_date[date_key] = set(env.assembly_afternoon_guard_blocks_day)
-            except Exception:
-                pass
+            except Exception as exc:
+                # [AGENT-EDIT] legacy guard 상태 동기화 실패도 결과 재현성을 해치므로 즉시 중단한다.
+                raise RuntimeError(
+                    f"Assembly heuristic legacy guard 추적 실패: date={date_key}"
+                ) from exc
 
             # 베이 선택 상세 분석 수집
             date_key = env.assembly_current_date.strftime('%Y%m%d')
@@ -640,13 +754,7 @@ def _run_assembly_decoding_core(
         )
 
         selected_block = blocks_dict[selected_block_id]
-        # [AGENT-ADD] 리드타임 강제+P6 대상이면 즉시 플래그 기록 (makespan 전에)
         selected_analysis = next((analysis for analysis in block_analysis if analysis.get('block_id') == selected_block_id), None)
-        if selected_analysis:
-            inc = (selected_analysis.get('inclusion_reason') or '').strip()
-            if inc.startswith('[LEADTIME-GUARD]') and selected_block.needs_afternoon_start():
-                afternoon_guard_blocks_day.add(selected_block_id)
-                afternoon_guard_blocks_all.add(selected_block_id)
         
         # 🔥 추가 안전장치: 선택된 블록이 용량을 초과하는지 재확인
         # (이미 위에서 체크했지만, 혹시 모를 상황을 대비)
@@ -751,6 +859,8 @@ def _run_assembly_decoding_core(
         
         # 🆕 Action Masking 방식으로 makespan 계산
         final_sequence.append(selected_block_id)
+        bs = None
+        detailed = None
         try:
             # 🆕 이전 날의 머신 상태 포함하여 makespan 계산
             makespan_sec, detailed = env.calculate_makespan(
@@ -758,33 +868,24 @@ def _run_assembly_decoding_core(
                 afternoon_guard_blocks=afternoon_guard_blocks_day
             )
             bs = next((b for b in detailed['block_schedules'] if b['block_id'] == selected_block_id), None)
-            if bs:
-                block_start_time = date_start_time + timedelta(seconds=bs['start_seconds'])
-                block_end_time = date_start_time + timedelta(seconds=bs['end_seconds'])
-                # 🆕 전체 makespan 기준으로 계산
-                total_completion_time = date_start_time + timedelta(seconds=makespan_sec)
-                makespan_minutes = makespan_sec / 60.0
-                makespan_hours = makespan_minutes / 60.0
-            else:
-                # Fallback: 단순 시간 계산
-                block_total_time = sum(selected_block.processing_times)
-                block_start_time = date_start_time + timedelta(minutes=sum(sum(blocks_dict[bid].processing_times) for bid in final_sequence[:-1]))
-                block_end_time = block_start_time + timedelta(minutes=block_total_time)
-                makespan_minutes = (block_end_time - date_start_time).total_seconds() / 60.0
-                makespan_hours = makespan_minutes / 60.0
-        except Exception as makespan_err:
-            print(f"   ⚠️ Makespan 계산 실패: {makespan_err}")
-            # Fallback: 단순 시간 계산
-            block_total_time = sum(selected_block.processing_times)
-            block_start_time = date_start_time + timedelta(minutes=sum(sum(blocks_dict[bid].processing_times) for bid in final_sequence[:-1]))
-            block_end_time = block_start_time + timedelta(minutes=block_total_time)
-            makespan_minutes = (block_end_time - date_start_time).total_seconds() / 60.0
+            if bs is None:
+                raise RuntimeError(f"선택 블록 스케줄을 찾지 못함: block_id={selected_block_id}")
+            block_start_time = date_start_time + timedelta(seconds=bs['start_seconds'])
+            block_end_time = date_start_time + timedelta(seconds=bs['end_seconds'])
+            # 🆕 전체 makespan 기준으로 계산
+            total_completion_time = date_start_time + timedelta(seconds=makespan_sec)
+            makespan_minutes = makespan_sec / 60.0
             makespan_hours = makespan_minutes / 60.0
+        except Exception as makespan_err:
+            # [AGENT-EDIT] 핵심 makespan 실패를 단순 합산으로 숨기지 않는다.
+            raise RuntimeError(
+                f"Assembly heuristic makespan 계산 실패: block_id={selected_block_id}, date={current_date}"
+            ) from makespan_err
         
         # 🆕 실제 시작 시간으로 제약 검증 (실제 처리된 블록이므로 모든 제약조건 검사)
         # 🆕 실제 머신 2번(전면SAW) 시작 시간 계산 (makespan 계산 결과에서 추출)
         actual_machine_2_start_time = None
-        if bs and 'detailed' in locals():
+        if bs is not None and detailed is not None:
             # CT 테이블에서 머신 2번(전면SAW) 시작 시간 직접 계산
             ct_common = detailed['ct_tables']['ct_common']
             block_seq_idx = final_sequence.index(selected_block_id)
@@ -804,11 +905,15 @@ def _run_assembly_decoding_core(
             if DEBUG_ASSEMBLY:
                 print(f"   🔧 BLK_{selected_block.block_id}: 머신2번 시작 시간 = {actual_machine_2_start_time.strftime('%Y-%m-%d %H:%M:%S')}")
 
-        block_violations = env._validate_all_constraints_realtime_action(
+        block_violations = env._validate_and_commit_constraints_action(
             selected_block,
             assigned_bay,
             block_start_time if block_start_time is not None else current_datetime,
             actual_machine_2_start_time=actual_machine_2_start_time,
+            processing_time_seconds=sum(selected_block.processing_times) * 60,
+            step_start_time=block_start_time,
+            step_end_time=block_end_time,
+            current_in_history=False,
         )
 
         # [AGENT-EDIT] 후공정 착수 순서 제약은 기록 유지 (오탐 방지 로직은 action_masking 쪽에서 보정)
@@ -908,10 +1013,6 @@ def _run_assembly_decoding_core(
         )
         if selected_analysis:
             inclusion_reason = (selected_analysis.get('inclusion_reason') or '').strip()
-            # [AGENT-ADD] 리드타임 강제+P6 대상 트래킹 → 15시 이후로 강제 지연
-            if inclusion_reason.startswith('[LEADTIME-GUARD]') and selected_block.needs_afternoon_start():
-                afternoon_guard_blocks_day.add(selected_block_id)
-                afternoon_guard_blocks_all.add(selected_block_id)
             if inclusion_reason:
                 if inclusion_reason.startswith('[RELAX]'):
                     block_violations.append(
@@ -956,7 +1057,7 @@ def _run_assembly_decoding_core(
             'selection_method': selection_method,  # 🆕 추가
             'selection_reason': selection_reason,  # 🆕 추가
             'emergency_mode': any('비상 모드' in str(v) for v in violations),
-            'ps_forced': any('P/S 강제' in str(v) for v in violations),
+            'ps_forced': False,
             'masking_stage_used': next((str(v) for v in violations if '마스킹 해제' in str(v)), '')
         })
         
@@ -975,21 +1076,6 @@ def _run_assembly_decoding_core(
 
         result['line_group'] = getattr(selected_block, 'line_group', '')
         
-        # ✅ 완료 스텝 기록: 라우팅/연속성 검증 히스토리에 반영
-        try:
-            ps = ProcessStep(
-                block_id=selected_block.block_id,
-                process_num=1,
-                bay_type=assigned_bay,
-                start_time=block_start_time,
-                end_time=block_end_time,
-                processing_time=sum(selected_block.processing_times) * 60,
-                completion_time=sum(selected_block.processing_times) * 60,
-            )
-            env.completed_steps.append(ps)
-        except Exception:
-            pass
-
         schedule_results.append(result)
         selected_blocks.append(selected_block_id)
         
@@ -1026,23 +1112,12 @@ def _run_assembly_decoding_core(
             if DEBUG_ASSEMBLY:
                 print(f"   ⚠️ Assembly 최종 공정별 상세 스케줄 생성 실패 ({final_date_key}): {process_err}")
     
-    import pandas as pd
     # 6. 결과 저장
 ################################################################################################################################################################################################
 # fix: 별판 복수 행 확장 (Assembly 결과)
 ################################################################################################################################################################################################
-    # [AGENT-EDIT] 별판 확장 옵션 적용
-    if expand_rows:
-        expanded_schedule_results = expand_rows_with_subassembly(schedule_results)
-        schedule_results = expanded_schedule_results
+    raw_schedule_results = list(schedule_results)
 
-    if save_csv:
-        df = pd.DataFrame(expanded_schedule_results)
-        df.to_csv(output_csv, index=False, encoding='utf-8-sig')
-        if VERBOSE_ASSEMBLY:
-            # print(f"📄 결과 저장 완료: {output_csv}")
-            pass
-    
     # 7. 🆕 상세 분석 CSV 저장
     if save_detailed:
         if VERBOSE_ASSEMBLY:
@@ -1071,8 +1146,33 @@ def _run_assembly_decoding_core(
             save_assembly_decoding_bay_info(bay_analyses, date_key)
             # print(f"📄 Assembly 베이 분석 저장: detailed_assembly_bayselect_info_{date_key}.csv")
     
+    # ==== [AGENT-EDIT BEGIN: canonical runtime replay sync] ====
+    runtime_cfg = get_runtime_config() or {}
+    raw_schedule_results, audit_stats, _ = sync_runtime_results_to_canonical_constraints(
+        schedule_results=raw_schedule_results,
+        blocks=audit_blocks,
+        metadata=audit_metadata,
+        runtime_cfg=runtime_cfg,
+        case_label="assembly_runtime",
+    )
+    if expand_rows:
+        schedule_results = expand_rows_with_subassembly(raw_schedule_results)
+    else:
+        schedule_results = raw_schedule_results
+    # ==== [AGENT-EDIT END] ====
+
+    # ==== [AGENT-EDIT BEGIN: save audited runtime rows] ====
+    # runtime CSV도 독립 감사와 동일한 행 단위 위반 집계를 저장해야 한다.
+    if save_csv:
+        df = pd.DataFrame(schedule_results)
+        df.to_csv(output_csv, index=False, encoding='utf-8-sig')
+        if VERBOSE_ASSEMBLY:
+            pass
+    # ==== [AGENT-EDIT END] ====
+
     # 8. 통계 계산
     total_blocks_processed = len(schedule_results)
+    total_blocks_expected = count_expanded_block_units(blocks)
     total_time_hours = sum(r['total_time_min'] for r in schedule_results) / 60.0
     
     # P/S 연속성 분석
@@ -1094,85 +1194,39 @@ def _run_assembly_decoding_core(
     
     # 9. 통계 생성
     
-    # 🔧 실제 makespan 계산 (간트차트와 동일한 방식: 실제 시작~끝 시간 차이)
-    try:
-        # 🔥 간트차트와 동일한 방식: 실제 시작~끝 시간 차이 계산
-        start_times = []
-        end_times = []
-        
-        for result in schedule_results:
-            if 'start_time' in result and result['start_time']:
-                try:
-                    start_dt = pd.to_datetime(result['start_time'])
-                    start_times.append(start_dt)
-                except:
-                    pass
-            if 'end_time' in result and result['end_time']:
-                try:
-                    end_dt = pd.to_datetime(result['end_time'])
-                    end_times.append(end_dt)
-                except:
-                    pass
-        
-        if start_times and end_times:
-            # 🔥 전체 기간의 실제 시작~끝 시간 차이 (간트차트 방식)
-            min_start_time = min(start_times)
-            max_end_time = max(end_times)
-            actual_makespan_hours = (max_end_time - min_start_time).total_seconds() / 3600.0
-            
-            # print(f"📈 Makespan 계산 검증:")
-            # print(f"  - 실제 시작 시간: {min_start_time}")
-            # print(f"  - 실제 종료 시간: {max_end_time}")
-            # print(f"  - 전체 시퀀스 계산: {actual_makespan_hours:.2f}h")
-        else:
-            # Fallback: 기존 환경 계산 방식
-            bay_assignments = {}
-            for r in schedule_results:
-                bay_assignments[r['block_id']] = BayType(r['assigned_bay'])
-            
-            final_makespan_sec, final_detailed = env.calculate_makespan(
-                [r['block_id'] for r in schedule_results], 
-                bay_assignments, 
-                {},
-                afternoon_guard_blocks=afternoon_guard_blocks_all
-            )
-            actual_makespan_hours = final_makespan_sec / 3600.0
-            # print(f"📈 Makespan 계산 검증:")
-            # print(f"  - 전체 시퀀스 계산: {actual_makespan_hours:.2f}h")
-            
-    except Exception as e:
-        print(f"⚠️ Makespan 계산 실패: {e}, 기본값 사용")
-        # 대안: 기존 방식 사용
-        actual_makespan_hours = total_time_hours
-    
-    # [AGENT-EDIT] C/Seam 위반 카운트 추가 (RL과 동일 기준)
-    cseam_ids = {"ROUTING_C_SEAM_SPACING", "C_SEAM_SPACING"}
-    total_cseam_violations = 0
-    for result in schedule_results:
-        constraint_ids = result.get('constraint_ids', []) or []
-        severities = result.get('violation_severity', []) or []
-        for idx, constraint_id in enumerate(constraint_ids):
-            if constraint_id not in cseam_ids:
-                continue
-            severity = severities[idx] if idx < len(severities) else "INFO"
-            if str(severity).upper() in {"ERROR", "WARNING"}:
-                total_cseam_violations += 1
+    # [AGENT-EDIT] 논문 비교용 canonical makespan은 결과 row의 실제 달력 시간 축으로 계산한다.
+    actual_makespan_hours = compute_schedule_span_hours(raw_schedule_results)
+    total_primary_violations = int(audit_stats.get('total_violations_primary', 0))
+    total_raw_violations = int(audit_stats.get('total_violations_raw', 0))
+    total_meta_violations = int(audit_stats.get('total_violations_meta', 0))
+    total_info_violations = int(audit_stats.get('total_violations_info', 0))
+    total_cseam_violations = count_primary_cseam_violations(raw_schedule_results)
 
     statistics = {
         'total_blocks_processed': total_blocks_processed,
-        'total_blocks_expected': len(blocks),
-        'success_rate': (total_blocks_processed / len(blocks)) * 100,
+        'total_blocks_expected': total_blocks_expected,
+        'success_rate': (total_blocks_processed / total_blocks_expected) * 100 if total_blocks_expected else 0.0,
         'total_time_hours': total_time_hours,
-        'makespan_hours': actual_makespan_hours,  # 🔧 실제 makespan 사용
-        'total_violations': sum(r['violations'] for r in schedule_results),
+        'makespan_hours': actual_makespan_hours,
+        'sum_daily_max_makespan_hours': compute_sum_daily_max_makespan_hours(raw_schedule_results),
+        'total_violations': total_primary_violations,
+        'total_violations_primary': total_primary_violations,
+        'total_violations_raw': total_raw_violations,
+        'total_violations_meta': total_meta_violations,
+        'total_violations_info': total_info_violations,
         'total_cseam_violations': total_cseam_violations,
         'ps_success_rate': ps_success_rate,
         'ps_pairs_total': ps_pairs_found,
         'ps_pairs_successful': ps_success_count,
         'daily_analyses_generated': len(assembly_bay_analyses_by_date),
-        'step_analyses_generated': len(assembly_step_info)
+        'step_analyses_generated': len(assembly_step_info),
+        'audit_workshop_order_inversions': int(audit_stats.get('audit_workshop_order_inversions', 0)),
+        'audit_constraint_ids': list(audit_stats.get('audit_constraint_ids', [])),
+        'audit_constraint_families': list(audit_stats.get('audit_constraint_families', [])),
     }
     
+    if return_step_info:
+        return schedule_results, statistics, assembly_step_info
     return schedule_results, statistics
 
 
@@ -1258,6 +1312,8 @@ def _evaluate_forced_sequence(
     # 베이 할당 및 makespan 계산을 위한 준비
     bay_assignments = {}
     final_sequence = []
+    # [AGENT-ADD] 강제 시퀀스 평가도 동일한 afternoon guard 인자를 안정적으로 사용한다.
+    afternoon_guard_blocks_day: Set[int] = set()
     
     for i, block_id in enumerate(block_id_sequence):
         if block_id not in blocks_dict:
@@ -1315,9 +1371,8 @@ def _evaluate_forced_sequence(
             print(f"   🎯 강제 시퀀스 평가 완료: makespan = {makespan_sec/3600:.2f}시간")
         
     except Exception as e:
-        if DEBUG_ASSEMBLY:
-            print(f"   ⚠️ Makespan 계산 실패: {e}")
-        makespan_sec = sum(sum(blocks_dict[bid].processing_times) for bid in final_sequence) * 60  # fallback
+        # [AGENT-EDIT] 강제 시퀀스 평가에서도 makespan 실패를 숨기지 않는다.
+        raise RuntimeError("강제 시퀀스 makespan 계산 실패") from e
 
 ################################################################################################################################################################################################
 # fix: 별판 복수 행 확장 (강제 시퀀스 평가 결과)
@@ -1327,8 +1382,8 @@ def _evaluate_forced_sequence(
     # 통계 생성
     statistics = {
         'total_blocks_processed': len(schedule_results),
-        'total_blocks_expected': len(blocks),
-        'success_rate': (len(schedule_results) / len(blocks)) * 100,
+        'total_blocks_expected': count_expanded_block_units(blocks),
+        'success_rate': (len(schedule_results) / count_expanded_block_units(blocks)) * 100 if count_expanded_block_units(blocks) else 0.0,
         'total_time_hours': makespan_sec / 3600.0,
         'makespan_hours': makespan_sec / 3600.0,
         'total_violations': 0,  # 강제 시퀀스에서는 위반 체크 안함
@@ -1341,6 +1396,8 @@ def _evaluate_forced_sequence(
         'forced_sequence_mode': True  # 🆕 강제 모드 표시
     }
     
+    if return_step_info:
+        return schedule_results, statistics, assembly_step_info
     return schedule_results, statistics
 
 
@@ -1354,7 +1411,6 @@ def save_assembly_results(results: List[Dict], statistics: Dict, output_path: st
         return
     
     try:
-        import pandas as pd
         
         # DataFrame 생성
         df = pd.DataFrame(results)
@@ -1394,9 +1450,26 @@ def save_assembly_results(results: List[Dict], statistics: Dict, output_path: st
 # 사용 예시
 if __name__ == "__main__":
     print("Assembly Decoding Standalone Execution")
+
+    parser = argparse.ArgumentParser(description="Assembly start heuristic standalone 실행")
+    parser.add_argument("--config", default="config.yaml", help="standalone 실행 시 불러올 설정 파일 경로")
+    parser.add_argument("--excel-path", default=None, help="입력 엑셀 경로")
+    parser.add_argument("--method", default=None, help="실행할 heuristic method (comma-separated 가능)")
+    parser.add_argument("--run-tag", default=None, help="결과 스냅샷을 저장할 run tag")
+    parser.add_argument("--output-dir", default=None, help="run tag 결과를 저장할 디렉터리")
+    parser.add_argument("--output-csv", default=None, help="단일 method 실행 시 메인 결과 CSV 저장 경로")
+    parser.add_argument("--seed", type=int, default=42, help="random heuristic 재현용 시드")
+    args = parser.parse_args()
+
+    loaded_config = maybe_load_runtime_config(args.config)
+    if loaded_config:
+        print(f"✅ standalone config 로드: {loaded_config}")
+    random.seed(args.seed)
     
     # 🆕 동적으로 조립착수일 계산
     excel_path, offset = get_test_settings()
+    if args.excel_path:
+        excel_path = args.excel_path
     blocks, metadata = DataConverter.excel_to_blocks_with_metadata(excel_path)
     min_assembly_date = min(block.max_start_date for block in blocks)
     start_datetime = min_assembly_date + timedelta(days=offset)
@@ -1408,6 +1481,8 @@ if __name__ == "__main__":
         runtime_cfg = get_runtime_config() or {}
         heuristic_cfg = runtime_cfg.get("heuristic") or {}
         method_raw = heuristic_cfg.get("method") if isinstance(heuristic_cfg, dict) else None
+        if args.method:
+            method_raw = args.method
         if method_raw:
             if isinstance(method_raw, str):
                 requested = [m.strip().lower() for m in method_raw.split(",") if m.strip()]
@@ -1425,6 +1500,14 @@ if __name__ == "__main__":
         print(f"\n{'='*60}")
         print(f"🔍 Selection Method: {method.upper()}")
         print(f"{'='*60}")
+
+        output_csv_path = resolve_output_path(
+            default_filename=f"assembly_decoding_{method}_results.csv",
+            mode="assembly_start_heuristic",
+            output_csv=args.output_csv if len(selection_methods) == 1 else None,
+            output_dir=args.output_dir,
+            run_tag=args.run_tag,
+        )
         
         # Assembly Decoding 실행
         results, stats = run_assembly_decoding_sequence(
@@ -1434,24 +1517,26 @@ if __name__ == "__main__":
             max_days=10,
             start_date=start_datetime.strftime("%Y-%m-%d"), # 🔧 SNU 데이터셋 날짜로 수정
             date_offset=offset, # 오프셋 0으로 설정
-            output_csv=f"assembly_decoding_{method}_results.csv",
+            output_csv=str(output_csv_path),
             save_csv=True,
             save_detailed=True
         )
+        legacy_path = mirror_to_legacy_path(output_csv_path, f"assembly_decoding_{method}_results.csv")
         
         print(f"📊 {method.upper()} 방식 결과:")
         print(f"   처리된 블록: {len(results)}개")
         print(f"   성공률: {stats['success_rate']:.1f}%")
-        print(f"   총 위반: {stats['total_violations']}개")
+        print(f"   총 primary 위반: {stats['total_violations']}개")
+        print(f"   총 raw 이벤트: {stats.get('total_violations_raw', 0)}개")
+        print(f"   메타/완화 이벤트: {stats.get('total_violations_meta', 0)}개")
+        print(f"   INFO 이벤트: {stats.get('total_violations_info', 0)}개")
         print(f"   P/S 성공률: {stats['ps_success_rate']:.1f}%")
-        
-        # 🆕 선택 방식별 분석
-        if len(results) > 0:
-            avg_makespan = sum(r['makespan_hours'] for r in results) / len(results)
-            print(f"   평균 makespan: {avg_makespan:.2f}시간")
+        print(f"   총 makespan: {stats['makespan_hours']:.2f}시간")
             
-        print(f"   결과 파일: assembly_decoding_{method}_results.csv")
+        print(f"   결과 파일: {output_csv_path}")
+        if output_csv_path.resolve() != legacy_path.resolve():
+            print(f"   레거시 복사본: {legacy_path}")
     
-    print(f"\n✅ 두 가지 선택 방식 비교 완료!")
-    print(f"   📄 우선순위 방식: assembly_decoding_priority_results.csv")
-    print(f"   🎲 랜덤 방식: assembly_decoding_random_results.csv")
+    print(f"\n✅ 선택 방식 실행 완료!")
+    for method in selection_methods:
+        print(f"   📄 {method.upper()} 방식: assembly_decoding_{method}_results.csv")

@@ -1,0 +1,13 @@
+﻿type,date,total_blocks,block_id,assembly_start_date,width_m,longi_count,seam_count,c_seam_count,has_curved_plate,assigned_bay,final_reason,material_type,P7#2_result,P7#3_4_result,P7#7_8_result,P7#10_result,P7#11_result,P7#1_result,bay_35a_worktime_before,bay_36b_worktime_before,bay_35a_worktime_after,bay_36b_worktime_after
+METADATA,20250823,11,,,,,,,,,Assembly Decoding 베이 선택 분석: 11개 블록,,,,,,,,,,,
+BLOCK_DETAIL,20250823,11,1.0,2025-08-23,15.7,13.0,,,False,35A,P7#1 부하균등(론지): 35A(0ea) ≤ 36B(0ea) → A베이 선택,NORMAL,PASS,PASS,PASS,PASS,PASS,BALANCE_DECISION,0.0,0.0,8.4,0.0
+BLOCK_DETAIL,20250823,11,5.0,2025-08-23,5.4,4.0,,,False,36B,"P7#3,#4 P/S small 쌍 동일베이 강제 → 36B",NORMAL,,FORCE_PAIR,,,,,16.8,0.0,16.8,5.1
+BLOCK_DETAIL,20250823,11,91.0,2025-08-23,14.7,18.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,16.8,10.19,22.29,10.19
+BLOCK_DETAIL,20250823,11,71.0,2025-08-23,15.0,22.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,27.77,10.19,27.77,16.02
+BLOCK_DETAIL,20250823,11,81.0,2025-08-23,12.3,14.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,27.77,21.85,37.02,21.85
+BLOCK_DETAIL,20250823,11,9.0,2025-08-23,13.6,15.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,46.27,21.85,46.27,26.6
+BLOCK_DETAIL,20250823,11,176.0,2025-08-23,5.4,4.0,,,False,36B,"P7#3,#4 P/S small 쌍 동일베이 강제 → 36B",NORMAL,,FORCE_PAIR,,,,,46.27,31.34,46.27,36.44
+BLOCK_DETAIL,20250823,11,6.0,2025-08-24,9.9,11.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,46.27,41.54,50.16,41.54
+BLOCK_DETAIL,20250823,11,10.0,2025-08-24,12.5,11.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,54.05,41.54,54.05,49.14
+BLOCK_DETAIL,20250823,11,13.0,2025-08-24,17.0,13.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,54.05,56.74,58.59,56.74
+BLOCK_DETAIL,20250823,11,131.0,2025-08-24,12.6,13.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,63.13,56.74,63.13,64.82

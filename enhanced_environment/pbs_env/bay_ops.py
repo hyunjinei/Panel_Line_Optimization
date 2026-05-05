@@ -27,12 +27,40 @@ from enhanced_environment.constraints.managers import (
 from enhanced_environment.masking import ConstraintChecker
 
 # 분리된 모듈 임포트
-from enhanced_environment.bay.assigner import auto_assign_bay, preview_assign_bay
+from enhanced_environment.bay.assigner import auto_assign_bay, assign_fixed_bay, preview_assign_bay
 from enhanced_environment.bay.makespan import calculate_makespan
 from enhanced_environment.bay.validator import ConstraintValidator
 
 class BayOpsMixin:
+    def _set_manual_bay_override(self, block_id: int, assigned_bay: BayType, analysis: Optional[Dict] = None):
+        """# [AGENT-EDIT] interactive/manual path용 1회성 베이 override 등록."""
+        self._manual_bay_override = {
+            "block_id": int(block_id),
+            "assigned_bay": assigned_bay,
+            "analysis": analysis or {},
+        }
+
+    def _clear_manual_bay_override(self):
+        """# [AGENT-EDIT] interactive/manual path용 1회성 베이 override 해제."""
+        self._manual_bay_override = None
+
     def _auto_assign_bay(self, block: EnhancedBlock, return_analysis: bool = False):
+        manual_override = getattr(self, "_manual_bay_override", None)
+        if manual_override and int(manual_override.get("block_id")) == int(block.block_id):
+            assigned_bay = manual_override.get("assigned_bay", BayType.BAY_35A)
+            final_reason = manual_override.get("analysis", {}).get("final_reason", "MANUAL_FIXED_BAY")
+            result = assign_fixed_bay(
+                block,
+                assigned_bay,
+                self.bay_tracker,
+                self.blocks_dict,
+                self.logger,
+                return_analysis=return_analysis,
+                update_tracker=True,
+                final_reason=final_reason,
+            )
+            self._clear_manual_bay_override()
+            return result
         # 분리된 모듈의 함수를 호출
         return auto_assign_bay(
             block,

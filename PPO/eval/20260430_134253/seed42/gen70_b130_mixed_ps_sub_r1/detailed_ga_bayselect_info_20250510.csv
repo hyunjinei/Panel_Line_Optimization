@@ -1,0 +1,13 @@
+﻿type,date,total_blocks,block_id,assembly_start_date,width_m,longi_count,seam_count,c_seam_count,has_curved_plate,assigned_bay,final_reason,material_type,P7#2_result,P7#3_4_result,P7#7_8_result,P7#10_result,P7#11_result,P7#1_result,bay_35a_worktime_before,bay_36b_worktime_before,bay_35a_worktime_after,bay_36b_worktime_after
+METADATA,20250510,11,,,,,,,,,Assembly Decoding 베이 선택 분석: 11개 블록,,,,,,,,,,,
+BLOCK_DETAIL,20250510,11,87.0,2025-05-15,18.9,17.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,180.7,216.96,180.7,222.01
+BLOCK_DETAIL,20250510,11,90.0,2025-05-12,19.9,15.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,180.7,227.05,185.7,227.05
+BLOCK_DETAIL,20250510,11,60.0,2025-05-12,16.7,21.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,190.7,227.05,190.7,232.27
+BLOCK_DETAIL,20250510,11,3.0,2025-05-13,18.1,14.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,190.7,237.48,195.01,237.48
+BLOCK_DETAIL,20250510,11,7.0,2025-05-13,15.5,14.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,199.31,237.48,199.31,247.25
+BLOCK_DETAIL,20250510,11,21.0,2025-05-11,14.5,17.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,199.31,257.02,203.67,257.02
+BLOCK_DETAIL,20250510,11,18.0,2025-05-13,8.5,15.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,208.04,257.02,208.04,263.08
+BLOCK_DETAIL,20250510,11,19.0,2025-05-13,10.3,12.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,208.04,269.14,211.81,269.14
+BLOCK_DETAIL,20250510,11,22.0,2025-05-13,19.9,28.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,215.59,269.14,215.59,278.07
+BLOCK_DETAIL,20250510,11,23.0,2025-05-13,21.7,22.0,,,False,36B,P7#2 물리적 제약: 폭 21.7m > 21m → B베이 강제,NORMAL,FORCE_B,PASS,,,,,215.59,287.0,215.59,292.24
+BLOCK_DETAIL,20250510,11,77.0,2025-05-15,9.5,9.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,215.59,297.48,219.89,297.48

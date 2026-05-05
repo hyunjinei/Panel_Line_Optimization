@@ -61,12 +61,12 @@ class EnhancedBlock:
     min_thickness: Optional[float] = None
     max_thickness: Optional[float] = None
 
-    # P6#1,2,3: afternoon start
+    # [AGENT-EDIT] P6#1,2,3 metadata only: 시간 제약은 논문 실험 기준 제거
     is_draft: bool = False
     is_cross_seam: bool = False
     main_plate_count: int = 0
 
-    # P6#4: mixed placement
+    # [AGENT-EDIT] P6#4는 pure cross seam 혼합 규칙으로 재정의
     requires_mixed_placement: bool = False
 
     # P7#2: width
@@ -105,12 +105,8 @@ class EnhancedBlock:
         return self.port_starboard != PortStarboard.NONE and self.pair_block_id is not None
 
     def needs_afternoon_start(self) -> bool:
-        """P6#1,2,3: 오후 3시 착수 필요 여부."""
-        return (
-            self.is_draft
-            or self.is_cross_seam
-            or (self.main_plate_count > 10)
-        )
+        """[AGENT-EDIT] P6#1,2,3 시간 제약 제거: legacy 호출 호환용으로 항상 False."""
+        return False
 
     def get_bay_constraint(self) -> BayType:
         """Physical constraints are relaxed; keep AUTO."""

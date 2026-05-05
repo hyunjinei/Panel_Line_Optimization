@@ -1,0 +1,13 @@
+﻿type,date,total_blocks,block_id,assembly_start_date,width_m,longi_count,seam_count,c_seam_count,has_curved_plate,assigned_bay,final_reason,material_type,P7#2_result,P7#3_4_result,P7#7_8_result,P7#10_result,P7#11_result,P7#1_result,bay_35a_worktime_before,bay_36b_worktime_before,bay_35a_worktime_after,bay_36b_worktime_after
+METADATA,20250511,11,,,,,,,,,Assembly Decoding 베이 선택 분석: 11개 블록,,,,,,,,,,,
+BLOCK_DETAIL,20250511,11,97.0,2025-05-12,18.0,21.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,74.12,48.4,74.12,53.39
+BLOCK_DETAIL,20250511,11,117.0,2025-05-12,28.9,26.0,,,False,36B,P7#2 물리적 제약: 폭 28.9m > 21m → B베이 강제,NORMAL,FORCE_B,PASS,,,,,74.12,58.39,74.12,64.81
+BLOCK_DETAIL,20250511,11,126.0,2025-05-12,5.4,13.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,74.12,71.24,80.73,71.24
+BLOCK_DETAIL,20250511,11,136.0,2025-05-12,14.5,14.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,87.33,71.24,87.33,75.53
+BLOCK_DETAIL,20250511,11,146.0,2025-05-12,14.0,18.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,87.33,79.83,92.19,79.83
+BLOCK_DETAIL,20250511,11,162.0,2025-05-18,16.7,16.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,97.04,79.83,97.04,87.46
+BLOCK_DETAIL,20250511,11,1.0,2025-05-13,19.9,11.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,97.04,95.09,102.9,95.09
+BLOCK_DETAIL,20250511,11,2.0,2025-05-13,9.9,8.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,108.77,95.09,108.77,100.27
+BLOCK_DETAIL,20250511,11,5.0,2025-05-13,5.4,9.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,108.77,105.45,111.99,105.45
+BLOCK_DETAIL,20250511,11,6.0,2025-05-13,16.6,20.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,115.22,105.45,115.22,112.6
+BLOCK_DETAIL,20250511,11,9.0,2025-05-13,18.1,18.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,115.22,119.75,119.88,119.75

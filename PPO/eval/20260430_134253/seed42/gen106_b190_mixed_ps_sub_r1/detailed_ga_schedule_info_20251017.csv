@@ -1,0 +1,50 @@
+﻿type,date,total_blocks,total_steps,step,block_id,assembly_start_date,assembly_type,port_starboard,status,reason,assembly_masking_stage,three_bay_check,ps_forced,selected_block,available_count,excluded_count,emergency_mode,relax_level,relax_stage,relax_constraints,relax_target_count,relax_targets,relaxed_block_count,relax_target_total,final_choice_flag,final_violation_count,final_violation_list,seam_count,c_seam_count,has_curved_plate
+METADATA,20251017,180,24,,,,,,,,,,,,,,,,,,,,,,,,,,,
+STEP_SUMMARY,20251017,180,24,89,선택: 51,2025-10-19,line,P,"가용: 1, 제외: 0",Assembly Decoding 스텝 89 선택,,,False,51,1,0,False,,,,,,1,1,0,,,,,
+BLOCK_DETAIL,20251017,180,24,89,61,2025-10-17,line,C,AVAILABLE,[EMERGENCY] C/Seam 완화,,,False,,,,,0,EMERGENCY-C/Seam 완화,ROUTING_C_SEAM_SPACING,1,ROUTING_C_SEAM_SPACING,,,False,0,,,,False
+STEP_SUMMARY,20251017,180,24,90,선택: 52,2025-10-19,line,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 90 선택,,,False,52,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251017,180,24,90,61,2025-10-17,line,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251017,180,24,91,선택: 90,2025-10-19,fixed,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 91 선택,,,False,90,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251017,180,24,91,61,2025-10-17,line,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251017,180,24,92,선택: 92,2025-10-19,fixed,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 92 선택,,,False,92,1,0,False,,,,,,1,1,0,,,,,
+BLOCK_DETAIL,20251017,180,24,92,61,2025-10-17,line,C,AVAILABLE,[EMERGENCY] C/Seam 완화,,,False,,,,,0,EMERGENCY-C/Seam 완화,ROUTING_C_SEAM_SPACING,1,ROUTING_C_SEAM_SPACING,,,False,0,,,,False
+STEP_SUMMARY,20251017,180,24,93,선택: 8,2025-10-19,line,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 93 선택,,,False,8,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251017,180,24,93,61,2025-10-17,line,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251017,180,24,94,선택: 129,2025-10-19,fixed,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 94 선택,,,False,129,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251017,180,24,94,61,2025-10-17,line,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251017,180,24,95,선택: 56,2025-10-19,line,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 95 선택,,,False,56,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251017,180,24,95,61,2025-10-17,line,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251017,180,24,96,선택: 58,2025-10-19,line,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 96 선택,,,False,58,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251017,180,24,96,61,2025-10-17,line,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251017,180,24,97,선택: 59,2025-10-19,line,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 97 선택,,,False,59,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251017,180,24,97,61,2025-10-17,line,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251017,180,24,98,선택: 60,2025-10-19,line,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 98 선택,,,False,60,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251017,180,24,98,61,2025-10-17,line,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251017,180,24,99,선택: 62,2025-10-19,line,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 99 선택,,,False,62,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251017,180,24,99,61,2025-10-17,line,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251017,180,24,100,선택: 40,2025-10-19,line,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 100 선택,,,False,40,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251017,180,24,100,61,2025-10-17,line,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251017,180,24,101,선택: 162,2025-10-19,fixed,P,"가용: 1, 제외: 0",Assembly Decoding 스텝 101 선택,,,False,162,1,0,False,,,,,,1,1,0,,,,,
+BLOCK_DETAIL,20251017,180,24,101,61,2025-10-17,line,C,AVAILABLE,[EMERGENCY] C/Seam 완화,,,False,,,,,0,EMERGENCY-C/Seam 완화,ROUTING_C_SEAM_SPACING,1,ROUTING_C_SEAM_SPACING,,,False,0,,,,False
+STEP_SUMMARY,20251017,180,24,102,선택: 64,2025-10-19,line,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 102 선택,,,False,64,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251017,180,24,102,61,2025-10-17,line,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251017,180,24,103,선택: 168,2025-10-19,fixed,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 103 선택,,,False,168,1,0,False,,,,,,1,1,0,,,,,
+BLOCK_DETAIL,20251017,180,24,103,61,2025-10-17,line,C,AVAILABLE,[EMERGENCY] C/Seam 완화,,,False,,,,,0,EMERGENCY-C/Seam 완화,ROUTING_C_SEAM_SPACING,1,ROUTING_C_SEAM_SPACING,,,False,0,,,,False
+STEP_SUMMARY,20251017,180,24,104,선택: 67,2025-10-19,line,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 104 선택,,,False,67,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251017,180,24,104,61,2025-10-17,line,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251017,180,24,105,선택: 68,2025-10-19,line,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 105 선택,,,False,68,1,0,False,,,,,,1,1,0,,,,,
+BLOCK_DETAIL,20251017,180,24,105,61,2025-10-17,line,C,AVAILABLE,[EMERGENCY] C/Seam 완화,,,False,,,,,0,EMERGENCY-C/Seam 완화,ROUTING_C_SEAM_SPACING,1,ROUTING_C_SEAM_SPACING,,,False,0,,,,False
+STEP_SUMMARY,20251017,180,24,106,선택: 63,2025-10-19,line,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 106 선택,,,False,63,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251017,180,24,106,61,2025-10-17,line,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251017,180,24,107,선택: 70,2025-10-19,fixed,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 107 선택,,,False,70,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251017,180,24,107,61,2025-10-17,line,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251017,180,24,108,선택: 104,2025-10-19,fixed,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 108 선택,,,False,104,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251017,180,24,108,61,2025-10-17,line,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251017,180,24,109,선택: 161,2025-10-19,fixed,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 109 선택,,,False,161,1,0,False,,,,,,1,1,0,,,,,
+BLOCK_DETAIL,20251017,180,24,109,61,2025-10-17,line,C,AVAILABLE,[EMERGENCY] C/Seam 완화,,,False,,,,,0,EMERGENCY-C/Seam 완화,ROUTING_C_SEAM_SPACING,1,ROUTING_C_SEAM_SPACING,,,False,0,,,,False
+STEP_SUMMARY,20251017,180,24,110,선택: 73,2025-10-19,fixed,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 110 선택,,,False,73,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251017,180,24,110,61,2025-10-17,line,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251017,180,24,111,선택: 164,2025-10-19,fixed,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 111 선택,,,False,164,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251017,180,24,111,61,2025-10-17,line,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251017,180,24,112,선택: 61,2025-10-17,line,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 112 선택,,,False,61,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251017,180,24,112,61,2025-10-17,line,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False

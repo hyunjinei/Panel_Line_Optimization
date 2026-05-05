@@ -1,9 +1,11 @@
 # rl_assembly_scheduler.py
+import json  # [AGENT-ADD] decision trace JSON cells
 import os  # [AGENT-EDIT] PBS_FORCE_DEBUG 기반 디버그 출력 제어
 import math  # [AGENT-EDIT] env_state 자동 스케일링에 사용
 import torch
 import random
 import numpy as np
+import pandas as pd  # [AGENT-EDIT] 결과 시각 파싱과 completed_steps 복원에 사용
 from collections import defaultdict
 from typing import List, Dict, Tuple, Optional, Set
 from datetime import datetime, timedelta
@@ -13,7 +15,20 @@ from scheduling.assembly_start.action_sequence_조립착수일기준휴리스틱
     get_line_group_and_workshop_code,
     create_block_result,
 )  # [AGENT-EDIT] scheduling 경로로 직접 참조 (shim의 _ 접두어 노출 문제 회피)
-from enhanced_environment.common.utils_core import dedup_violations
+from scheduling.common.interactive_override import (
+    apply_manual_bay_override_if_requested,
+    filter_available_ids_by_precedence,
+    prime_forced_override_cache,
+    resolve_forced_prefix_block,
+)
+from enhanced_environment.common.utils_core import (
+    dedup_violations,
+    summarize_violations,
+    count_expanded_block_units,
+    compute_schedule_span_hours,
+)
+from scheduling.common.independent_constraint_audit import sync_runtime_results_to_canonical_constraints
+from runtime_config import get_runtime_config
 from enhanced_environment.pbs_env import EnhancedPanelBlockShop
 from enhanced_environment.constraints import ConstraintConfig
 from enhanced_environment.models import ConstraintViolation, BayType, PortStarboard, ProcessStep
@@ -22,7 +37,8 @@ from PPO.models.single_step_actor import (
     extract_block_features_single,
     ENV_STATE_DIM,
     REDUCED_ENV_STATE_DIM,
-    CONSTRAINT_ENV_STATE_DIM
+    CONSTRAINT_ENV_STATE_DIM,
+    DIFF_ENV_STATE_DIM,
 )
 
 
@@ -33,12 +49,15 @@ class RLAssemblyScheduler:
         self.rl_agent = rl_agent
         self.device = device
         self.episode_data = []  # 전체 에피소드 데이터 저장
+        self.last_decision_snapshot = None  # [AGENT-ADD] evaluation/test decision trace export
         self.use_env_state = getattr(rl_agent, 'use_env_state', False)  # 🆕 env_state 사용 여부
         self.feature_mode = getattr(rl_agent, 'feature_mode', 'full')
         if self.feature_mode == "reduced":
             default_env_dim = REDUCED_ENV_STATE_DIM
         elif self.feature_mode == "constraint":
             default_env_dim = CONSTRAINT_ENV_STATE_DIM
+        elif self.feature_mode == "diff":
+            default_env_dim = DIFF_ENV_STATE_DIM
         else:
             default_env_dim = ENV_STATE_DIM
         self.env_state_dim = getattr(rl_agent, 'env_state_dim', default_env_dim)
@@ -46,6 +65,11 @@ class RLAssemblyScheduler:
         # [FIX] 베이별 누적 블록 수 추적 (35A/36B 정확히 관리)
         ########################################################################
         self.branch_usage_counts = {'35A': 0, '36B': 0}
+        # [AGENT-ADD] diff state: 베이별 누적 부하(심수/론지/작업시간)를 추적한다.
+        self.branch_loads = {
+            '35A': {'seam': 0.0, 'longi': 0.0, 'processing': 0.0},
+            '36B': {'seam': 0.0, 'longi': 0.0, 'processing': 0.0},
+        }
         self._env_state_debug_prints = 0
         self._masking_stage_lookup: Dict[str, int] = {}
         self._masking_stage_bucket = 32.0
@@ -59,7 +83,6 @@ class RLAssemblyScheduler:
             ("ROUTING_CURVED", ["ROUTING_CURVED_SPACING"]),
             ("ROUTING_HIGH_SEAM", ["ROUTING_HIGH_SEAM_SPACING"]),
             ("ROUTING_WORKSHOP_ORDER", ["ROUTING_WORKSHOP_ORDER"]),
-            ("P6#1_2_3", ["P6#1_2_3_saw_time"]),
             ("CONSECUTIVE_3BAY", ["CONSECUTIVE_3BAY"])
         ]
         # ==== [AGENT-ADD BEGIN: Constraint-focused scaling constants] ====
@@ -68,6 +91,17 @@ class RLAssemblyScheduler:
         # [AGENT-ADD] env_state 자동 스케일링 (에피소드/학습 분포 변화 대응)
         self.env_state_max_total_blocks = 1
         self.env_state_max_abs_slack = 1.0
+        self.env_state_max_seam_remaining = 1.0
+        self.env_state_max_block_slots = 1.0
+        # [AGENT-ADD] diff state: 남은 난이도/미래 용량 자동 스케일링 기준.
+        self.env_state_max_seam_value = 1.0
+        self.env_state_max_longi_value = 1.0
+        self.env_state_max_future_seam_capacity = 1.0
+        # [AGENT-EDIT] consecutive_bay_count를 러닝 max 기반 auto-scale로 통일
+        self.env_state_max_consecutive_bay = 1.0
+        self.last_assigned_bay: Optional[BayType] = None
+        self.last_block_flags = {'c_seam': 0.0, 'curved': 0.0, 'high_seam': 0.0}
+        self.consecutive_bay_streak = 0
         # ==== [AGENT-ADD END] ====
 
     ############
@@ -106,6 +140,137 @@ class RLAssemblyScheduler:
         if base <= 0:
             return 0.0
         return max(0.0, min(1.0, value / base))
+
+    @staticmethod
+    def _signed_delta_ratio(left: float, right: float) -> float:
+        total = max(1.0, abs(left) + abs(right))
+        return max(-1.0, min(1.0, (left - right) / total))
+
+    @staticmethod
+    def _processing_total(block) -> float:
+        processing_times = getattr(block, 'processing_times', None)
+        return float(sum(processing_times)) if processing_times else 0.0
+
+    @staticmethod
+    def _capacity_consumption_ratio(amount: float, remaining: float) -> float:
+        amount = max(0.0, float(amount or 0.0))
+        remaining = float(remaining or 0.0)
+        if amount <= 0.0:
+            return 0.0
+        if remaining <= 0.0:
+            return 1.0
+        return max(0.0, min(1.0, amount / remaining))
+
+    def _compute_last_pattern_distances(self, selected_blocks: List[int], blocks_dict: Dict[int, object]) -> Tuple[float, float, float]:
+        # [AGENT-ADD] diff state: 직전 여부 대신 마지막 등장 이후 거리로 간격 제약 상태를 표현한다.
+        total = max(1, len(blocks_dict))
+        def distance_for(attr_name: str) -> float:
+            if not selected_blocks:
+                return 1.0
+            for distance, block_id in enumerate(reversed(selected_blocks)):
+                block = blocks_dict.get(block_id)
+                if block is not None and bool(getattr(block, attr_name, False)):
+                    return max(0.0, min(1.0, float(distance) / total))
+            return 1.0
+        return (
+            distance_for('is_cross_seam'),
+            distance_for('has_curved_plate'),
+            distance_for('is_high_seam_block'),
+        )
+
+    def _compute_remaining_difficulty(self, remaining_blocks: List[object]) -> Tuple[float, float, float, float, float]:
+        # [AGENT-ADD] diff state: 남은 블록의 심수/론지/대형 폭 분포를 요약한다.
+        if not remaining_blocks:
+            return 0.0, 0.0, 0.0, 0.0, 0.0
+        seam_values = [float(getattr(block, 'seam_count', 0.0) or 0.0) for block in remaining_blocks]
+        longi_values = [float(getattr(block, 'longi_count', 0.0) or 0.0) for block in remaining_blocks]
+        avg_seam = sum(seam_values) / len(seam_values)
+        max_seam = max(seam_values) if seam_values else 0.0
+        avg_longi = sum(longi_values) / len(longi_values)
+        max_longi = max(longi_values) if longi_values else 0.0
+        self.env_state_max_seam_value = max(self.env_state_max_seam_value, avg_seam, max_seam)
+        self.env_state_max_longi_value = max(self.env_state_max_longi_value, avg_longi, max_longi)
+        wide_count = sum(1 for block in remaining_blocks if float(getattr(block, 'width', 0.0) or 0.0) > 21.0)
+        return (
+            self._safe_ratio(avg_seam, self.env_state_max_seam_value),
+            self._safe_ratio(max_seam, self.env_state_max_seam_value),
+            self._safe_ratio(avg_longi, self.env_state_max_longi_value),
+            self._safe_ratio(max_longi, self.env_state_max_longi_value),
+            self._safe_ratio(wide_count, len(remaining_blocks)),
+        )
+
+    def _compute_bay_load_deltas(self) -> Tuple[float, float, float]:
+        # [AGENT-ADD] diff state: 베이별 누적 부하 평준화 정보를 count가 아니라 실제 부하로 표현한다.
+        load_35 = self.branch_loads.get('35A', {})
+        load_36 = self.branch_loads.get('36B', {})
+        return (
+            self._signed_delta_ratio(float(load_35.get('seam', 0.0)), float(load_36.get('seam', 0.0))),
+            self._signed_delta_ratio(float(load_35.get('longi', 0.0)), float(load_36.get('longi', 0.0))),
+            self._signed_delta_ratio(float(load_35.get('processing', 0.0)), float(load_36.get('processing', 0.0))),
+        )
+
+    def _compute_future_capacity_structure(self, env, current_time: datetime, horizon_days: int = 3) -> Tuple[float, float, float]:
+        # [AGENT-ADD] diff state: 오늘 이후 며칠의 가동 가능성과 용량 구조를 요약한다.
+        workday_count = 0
+        seam_caps: List[float] = []
+        block_caps: List[float] = []
+        for offset in range(1, horizon_days + 1):
+            target_dt = datetime.combine((current_time + timedelta(days=offset)).date(), datetime.min.time().replace(hour=8))
+            is_closed = bool(getattr(env.calendar_manager, 'is_closed_day', lambda _: False)(target_dt))
+            if is_closed:
+                seam_caps.append(0.0)
+                block_caps.append(0.0)
+                continue
+            workday_count += 1
+            is_weekend = env.calendar_manager.is_weekend(target_dt)
+            is_hot = env.calendar_manager.is_hot_season(target_dt)
+            is_holiday_eve = env.calendar_manager.is_holiday_eve(target_dt)
+            seam_cap = float(env.capacity_tracker.get_capacity_limits(is_weekend, is_hot, is_holiday_eve))
+            date_key = target_dt.strftime('%Y%m%d')
+            override_limit = float((getattr(env.constraint_config, 'daily_block_cap_overrides', {}) or {}).get(date_key, 0) or 0)
+            block_cap = override_limit if override_limit > 0 else self.daily_block_reference
+            seam_caps.append(seam_cap)
+            block_caps.append(block_cap)
+        avg_seam_cap = sum(seam_caps) / max(1, len(seam_caps))
+        self.env_state_max_future_seam_capacity = max(self.env_state_max_future_seam_capacity, avg_seam_cap, *(seam_caps or [0.0]))
+        min_block_cap = min(block_caps) if block_caps else 0.0
+        return (
+            self._safe_ratio(workday_count, horizon_days),
+            self._safe_ratio(avg_seam_cap, self.env_state_max_future_seam_capacity),
+            self._safe_ratio(min_block_cap, self.daily_block_reference),
+        )
+
+    def _compute_workshop_order_features(self, blocks_dict: Dict[int, object], selected_block_ids: List[int]) -> Dict[int, Tuple[float, float]]:
+        # [AGENT-ADD] diff block feature: 작업장 내 상대 순위와 head와의 조립착수일 차이를 제공한다.
+        selected_set = set(selected_block_ids)
+        buckets: Dict[str, List[Tuple[int, datetime]]] = defaultdict(list)
+        for block_id, block in blocks_dict.items():
+            if block_id in selected_set:
+                continue
+            start_dt = getattr(block, 'assembly_start_date', None)
+            if not isinstance(start_dt, datetime):
+                continue
+            workshop_key = self._normalize_workshop_key(getattr(block, 'assembly_workshop_code', None))
+            buckets[workshop_key].append((block_id, start_dt))
+
+        features: Dict[int, Tuple[float, float]] = {}
+        for items in buckets.values():
+            items.sort(key=lambda item: (item[1], item[0]))
+            denom = max(1, len(items) - 1)
+            head_dt = items[0][1]
+            for rank, (block_id, start_dt) in enumerate(items):
+                rank_norm = float(rank / denom) if denom > 0 else 0.0
+                gap_days = max(0.0, (start_dt - head_dt).total_seconds() / 86400.0)
+                features[block_id] = (rank_norm, gap_days)
+        return features
+
+    def _compute_slack_rank_map(self, slack_values_by_block: Dict[int, float]) -> Dict[int, float]:
+        # [AGENT-ADD] diff block feature: 현재 후보 중 deadline/slack이 얼마나 급한지 상대 순위로 제공한다.
+        if not slack_values_by_block:
+            return {}
+        ranked = sorted(slack_values_by_block.items(), key=lambda item: (float(item[1]), item[0]))
+        denom = max(1, len(ranked) - 1)
+        return {block_id: float(rank / denom) for rank, (block_id, _) in enumerate(ranked)}
 
     def _compute_ps_pair_ratio(self, blocks_dict: Dict[int, object], selected_block_ids: List[int]) -> float:
         remaining = [
@@ -235,34 +400,269 @@ class RLAssemblyScheduler:
         stage_id = self._masking_stage_lookup[key]
         return min(stage_id / self._masking_stage_bucket, 1.0)
 
+    def _compute_effective_block_limit(self, env, current_time: datetime, capacity_snapshot: Dict[str, float]) -> float:
+        is_weekend = current_time.weekday() >= 5
+        block_count = float(env.capacity_tracker.get_block_count(is_weekend))
+        date_key = current_time.strftime('%Y%m%d')
+        override_limit = float((getattr(env.constraint_config, 'daily_block_cap_overrides', {}) or {}).get(date_key, 0) or 0)
+        if override_limit > 0:
+            return override_limit
+        if not is_weekend and capacity_snapshot['used_seam'] > 72.0 and block_count < 17.0:
+            return 17.0
+        return float(self.daily_block_reference)
+
+    def _compute_diff_bay_feasibility(self, block, blocks_dict: Dict[int, object]) -> Tuple[float, float]:
+        width = float(getattr(block, 'width', 0.0) or 0.0)
+        try:
+            is_small_ps_pair = bool(getattr(block, 'is_ps_small_pair')(blocks_dict))
+        except Exception as exc:
+            raise RuntimeError(
+                f"diff bay feasibility 계산 실패: block_id={getattr(block, 'block_id', 'unknown')}"
+            ) from exc
+        if width > 21.0 or is_small_ps_pair:
+            return 0.0, 1.0
+        return 1.0, 1.0
+
+    def _compute_workshop_head_flags(self, available_block_ids: List[int], blocks_dict: Dict[int, object]) -> Dict[int, float]:
+        groups: Dict[str, List[Tuple[int, datetime]]] = defaultdict(list)
+        for block_id in available_block_ids:
+            block = blocks_dict.get(block_id)
+            if block is None:
+                continue
+            workshop_code = self._normalize_workshop_key(getattr(block, 'assembly_workshop_code', None))
+            start_dt = getattr(block, 'assembly_start_date', None)
+            if not isinstance(start_dt, datetime):
+                continue
+            groups[workshop_code].append((block_id, start_dt))
+
+        flags = {block_id: 0.0 for block_id in available_block_ids}
+        for items in groups.values():
+            if not items:
+                continue
+            min_start = min(start_dt for _, start_dt in items)
+            for block_id, start_dt in items:
+                if start_dt == min_start:
+                    flags[block_id] = 1.0
+        return flags
+
+    def _compute_desc_rank_map(self, values_by_block: Dict[int, float]) -> Dict[int, float]:
+        if not values_by_block:
+            return {}
+        ranked = sorted(values_by_block.items(), key=lambda item: (-float(item[1]), item[0]))
+        denom = max(1, len(ranked) - 1)
+        return {block_id: float(rank / denom) for rank, (block_id, _) in enumerate(ranked)}
+
+    def _reset_state_tracking(self):
+        self.branch_usage_counts = {'35A': 0, '36B': 0}
+        # [AGENT-EDIT] diff state 누적 부하도 에피소드마다 초기화한다.
+        self.branch_loads = {
+            '35A': {'seam': 0.0, 'longi': 0.0, 'processing': 0.0},
+            '36B': {'seam': 0.0, 'longi': 0.0, 'processing': 0.0},
+        }
+        self.last_assigned_bay = None
+        self.last_block_flags = {'c_seam': 0.0, 'curved': 0.0, 'high_seam': 0.0}
+        self.consecutive_bay_streak = 0
+
     ########################################################################
     # [FIX] 베이 별 누적 카운트 업데이트 유틸
     ########################################################################
     def _update_branch_usage(self, block, assigned_bay: Optional[BayType]):
         bay_key = None
+        resolved_bay = assigned_bay
         if assigned_bay == BayType.BAY_35A:
             bay_key = '35A'
         elif assigned_bay == BayType.BAY_36B:
             bay_key = '36B'
         else:
             line_key = self._normalize_line_key(getattr(block, 'line_group', None))
-            if line_key in ('35A', '36B'):
-                bay_key = line_key
+            if line_key == '35A':
+                bay_key = '35A'
+                resolved_bay = BayType.BAY_35A
+            elif line_key == '36B':
+                bay_key = '36B'
+                resolved_bay = BayType.BAY_36B
         if bay_key is None:
-            # 균형 유지용 기본 분배
             if self.branch_usage_counts.get('35A', 0) <= self.branch_usage_counts.get('36B', 0):
                 bay_key = '35A'
+                resolved_bay = BayType.BAY_35A
             else:
                 bay_key = '36B'
+                resolved_bay = BayType.BAY_36B
         self.branch_usage_counts[bay_key] = self.branch_usage_counts.get(bay_key, 0) + 1
+        # [AGENT-ADD] diff state: 베이별 실제 부하를 누적한다.
+        load_entry = self.branch_loads.setdefault(bay_key, {'seam': 0.0, 'longi': 0.0, 'processing': 0.0})
+        load_entry['seam'] = float(load_entry.get('seam', 0.0)) + float(getattr(block, 'seam_count', 0.0) or 0.0)
+        load_entry['longi'] = float(load_entry.get('longi', 0.0)) + float(getattr(block, 'longi_count', 0.0) or 0.0)
+        load_entry['processing'] = float(load_entry.get('processing', 0.0)) + self._processing_total(block)
+
+        if self.last_assigned_bay == resolved_bay:
+            self.consecutive_bay_streak += 1
+        else:
+            self.consecutive_bay_streak = 1 if resolved_bay is not None else 0
+        self.last_assigned_bay = resolved_bay
+        self.last_block_flags = {
+            'c_seam': 1.0 if getattr(block, 'is_cross_seam', False) else 0.0,
+            'curved': 1.0 if getattr(block, 'has_curved_plate', False) else 0.0,
+            'high_seam': 1.0 if getattr(block, 'is_high_seam_block', False) else 0.0,
+        }
 
     # 블록 특성만 사용
 
     #  환경 스냅샷 생성 제거 (추정치/가정 사용 금지 정책에 따라 불필요)
-    
+
+    def _extract_diff_environment_state(
+        self,
+        env,
+        selected_blocks: List[int],
+        blocks_dict: Dict,
+        current_time: datetime,
+        capacity_snapshot: Dict[str, float],
+        is_weekend: bool,
+        is_holiday_eve: bool,
+        is_hot_season: bool,
+    ) -> List[float]:
+        # [AGENT-ADD] diff env state는 마스킹 결과/최근 위반 로그를 제외하고 실제 상태와 도메인 부하만 담는다.
+        state: List[float] = [
+            1.0 if is_weekend else 0.0,
+            1.0 if is_holiday_eve else 0.0,
+            1.0 if is_hot_season else 0.0,
+            capacity_snapshot['daily_seam_usage_ratio'],
+            capacity_snapshot['daily_block_usage_ratio'],
+            capacity_snapshot['remaining_capacity_ratio'],
+        ]
+
+        remaining_blocks = [block for block_id, block in blocks_dict.items() if block_id not in selected_blocks]
+        total_blocks = max(1, len(blocks_dict))
+        remaining_count = len(remaining_blocks)
+        remaining_ratio = self._safe_ratio(remaining_count, total_blocks)
+        max_total_log = math.log1p(max(1, total_blocks))
+        remaining_blocks_norm = (math.log1p(remaining_count) / max_total_log) if max_total_log > 0 else 0.0
+        state.extend([remaining_blocks_norm, remaining_ratio])
+
+        ps_blocks = 0
+        line_count = 0
+        fixed_count = 0
+        subassembly_count = 0
+        needs_pm_count = 0
+        curved_count = 0
+        high_seam_count = 0
+        overdue_count = 0
+        slack_values: List[float] = []
+
+        for block in remaining_blocks:
+            port_state = getattr(block, 'port_starboard', PortStarboard.NONE)
+            if port_state != PortStarboard.NONE:
+                ps_blocks += 1
+
+            assembly_type = getattr(block, 'assembly_type', None)
+            assembly_value = getattr(assembly_type, 'value', str(assembly_type)).lower()
+            if 'line' in assembly_value:
+                line_count += 1
+            elif 'fixed' in assembly_value:
+                fixed_count += 1
+
+            if getattr(block, 'is_subassembly', False):
+                subassembly_count += 1
+
+            try:
+                if block.needs_afternoon_start():
+                    needs_pm_count += 1
+            except Exception as exc:
+                raise RuntimeError(
+                    f"RL diff env_state P6 피처 계산 실패: block_id={getattr(block, 'block_id', 'unknown')}"
+                ) from exc
+
+            if getattr(block, 'has_curved_plate', False):
+                curved_count += 1
+            if getattr(block, 'is_high_seam_block', False):
+                high_seam_count += 1
+
+            slack = self._compute_slack_days(block, current_time)
+            slack_values.append(slack)
+            if slack < 0:
+                overdue_count += 1
+
+        state.extend([
+            self._safe_ratio(ps_blocks, remaining_count),
+            self._safe_ratio(line_count, remaining_count),
+            self._safe_ratio(fixed_count, remaining_count),
+            self._safe_ratio(subassembly_count, remaining_count),
+            self._safe_ratio(needs_pm_count, remaining_count),
+            self._safe_ratio(curved_count, remaining_count),
+            self._safe_ratio(high_seam_count, remaining_count),
+            self._compute_bay_balance_delta(),
+        ])
+
+        overdue_ratio = self._safe_ratio(overdue_count, remaining_count)
+        if slack_values:
+            avg_slack = sum(slack_values) / len(slack_values)
+            min_slack = min(slack_values)
+            max_slack = max(slack_values)
+            max_abs_slack = max(abs(min_slack), abs(max_slack))
+        else:
+            avg_slack = min_slack = max_slack = max_abs_slack = 0.0
+        if max_abs_slack > 0:
+            self.env_state_max_abs_slack = max(self.env_state_max_abs_slack, max_abs_slack)
+        slack_scale = max(1e-6, self.env_state_max_abs_slack)
+
+        def _scale_slack(value: float) -> float:
+            clipped = max(-slack_scale, min(slack_scale, value))
+            return clipped / slack_scale
+
+        state.extend([
+            overdue_ratio,
+            _scale_slack(avg_slack),
+            _scale_slack(min_slack),
+            _scale_slack(max_slack),
+        ])
+
+        seam_remaining_abs = max(0.0, capacity_snapshot['capacity_limit'] - capacity_snapshot['used_seam'])
+        self.env_state_max_seam_remaining = max(
+            self.env_state_max_seam_remaining,
+            seam_remaining_abs,
+            capacity_snapshot['capacity_limit'],
+        )
+        seam_remaining_norm = self._safe_ratio(seam_remaining_abs, self.env_state_max_seam_remaining)
+
+        block_count = float(env.capacity_tracker.get_block_count(is_weekend))
+        effective_block_limit = self._compute_effective_block_limit(env, current_time, capacity_snapshot)
+        block_slots_remaining_abs = max(0.0, effective_block_limit - block_count)
+        self.env_state_max_block_slots = max(
+            self.env_state_max_block_slots,
+            block_slots_remaining_abs,
+            effective_block_limit,
+        )
+        block_slots_remaining_norm = self._safe_ratio(block_slots_remaining_abs, self.env_state_max_block_slots)
+
+        prev_bay_is_35a = 1.0 if self.last_assigned_bay == BayType.BAY_35A else 0.0
+        prev_bay_is_36b = 1.0 if self.last_assigned_bay == BayType.BAY_36B else 0.0
+        self.env_state_max_consecutive_bay = max(
+            self.env_state_max_consecutive_bay,
+            float(self.consecutive_bay_streak),
+        )
+        consecutive_bay_count = min(float(self.consecutive_bay_streak) / max(1.0, self.env_state_max_consecutive_bay), 1.0)
+
+        state.extend([
+            seam_remaining_norm,
+            block_slots_remaining_norm,
+            prev_bay_is_35a,
+            prev_bay_is_36b,
+            consecutive_bay_count,
+        ])
+
+        state.extend(self._compute_last_pattern_distances(selected_blocks, blocks_dict))
+        state.extend(self._compute_bay_load_deltas())
+        state.extend(self._compute_remaining_difficulty(remaining_blocks))
+        state.extend(self._compute_future_capacity_structure(env, current_time))
+
+        if len(state) != self.env_state_dim:
+            state = state[:self.env_state_dim]
+            if len(state) < self.env_state_dim:
+                state.extend([0.0] * (self.env_state_dim - len(state)))
+        return state
+
     def _extract_environment_state(self, env, selected_blocks: List[int], blocks_dict: Dict, block_analysis: Optional[List[Dict]] = None) -> List[float]:
         """환경 상태 벡터 추출 (ENV_STATE_DIM 차원)"""
-        # [AGENT-EDIT] env_state를 전역 맥락 + 남은 블록 분포 + 후보 품질 요약으로 확장.
         state: List[float] = []
 
         current_time = env.current_time
@@ -283,7 +683,6 @@ class RLAssemblyScheduler:
         ])
 
         capacity_snapshot = self._compute_capacity_snapshot(env, current_time)
-        # ==== [AGENT-EDIT] Reduced env_state (4 dims) ====
         if self.feature_mode == "reduced":
             remaining_blocks = [block for block_id, block in blocks_dict.items() if block_id not in selected_blocks]
             total_blocks = max(1, len(blocks_dict))
@@ -301,14 +700,12 @@ class RLAssemblyScheduler:
                 if len(reduced_state) < self.env_state_dim:
                     reduced_state.extend([0.0] * (self.env_state_dim - len(reduced_state)))
             return reduced_state
-        # ==== [AGENT-EDIT] Constraint-aligned env_state (9 dims) ====
+
         if self.feature_mode == "constraint":
             remaining_blocks = [block for block_id, block in blocks_dict.items() if block_id not in selected_blocks]
             total_blocks = max(1, len(blocks_dict))
             remaining_ratio = len(remaining_blocks) / total_blocks
             bay_balance_delta = self._compute_bay_balance_delta()
-            hour_of_day = current_time.hour + (current_time.minute / 60.0)
-            hour_of_day_norm = hour_of_day / 23.0 if hour_of_day > 0 else 0.0
 
             constraint_state = [
                 capacity_snapshot['remaining_capacity_ratio'],
@@ -326,6 +723,19 @@ class RLAssemblyScheduler:
                 if len(constraint_state) < self.env_state_dim:
                     constraint_state.extend([0.0] * (self.env_state_dim - len(constraint_state)))
             return constraint_state
+
+        if self.feature_mode == "diff":
+            return self._extract_diff_environment_state(
+                env,
+                selected_blocks,
+                blocks_dict,
+                current_time,
+                capacity_snapshot,
+                is_weekend,
+                is_holiday_eve,
+                is_hot_season,
+            )
+
         state.extend([
             capacity_snapshot['daily_seam_usage_ratio'],
             capacity_snapshot['daily_block_usage_ratio'],
@@ -337,7 +747,6 @@ class RLAssemblyScheduler:
         remaining_count = len(remaining_blocks)
         remaining_ratio = remaining_count / total_blocks
 
-        # [AGENT-EDIT] 블록 수는 log 스케일 + 자동 최대치 기반 정규화
         self.env_state_max_total_blocks = max(self.env_state_max_total_blocks, total_blocks)
         max_total_log = math.log1p(self.env_state_max_total_blocks)
         total_blocks_norm = (math.log1p(total_blocks) / max_total_log) if max_total_log > 0 else 0.0
@@ -372,8 +781,10 @@ class RLAssemblyScheduler:
             try:
                 if block.needs_afternoon_start():
                     needs_pm_count += 1
-            except Exception:
-                pass
+            except Exception as exc:
+                raise RuntimeError(
+                    f"RL env_state P6 피처 계산 실패: block_id={getattr(block, 'block_id', 'unknown')}"
+                ) from exc
 
             if getattr(block, 'has_curved_plate', False):
                 curved_count += 1
@@ -421,23 +832,23 @@ class RLAssemblyScheduler:
             if line_keys:
                 diversity = len(set(line_keys)) / len(line_keys)
 
-        available_ps_forced_ratio = 0.0
-        available_masking_stage_mean = 0.0
-        if block_analysis:
-            available_entries = [a for a in block_analysis if a.get('is_available')]
-            if available_entries:
-                ps_forced_count = sum(1 for a in available_entries if a.get('ps_forced'))
-                available_ps_forced_ratio = self._safe_ratio(ps_forced_count, len(available_entries))
-                stage_values = [self._encode_masking_stage(a.get('masking_stage')) for a in available_entries]
-                if stage_values:
-                    available_masking_stage_mean = float(sum(stage_values) / len(stage_values))
-
-        state.extend([
-            available_ratio,
-            diversity,
-            available_ps_forced_ratio,
-            available_masking_stage_mean
-        ])
+        if self.feature_mode == "diff":
+            state.extend([available_ratio, diversity])
+        else:
+            available_ps_forced_ratio = 0.0
+            available_masking_stage_mean = 0.0
+            if block_analysis:
+                available_entries = [a for a in block_analysis if a.get('is_available')]
+                if available_entries:
+                    stage_values = [self._encode_masking_stage(a.get('masking_stage')) for a in available_entries]
+                    if stage_values:
+                        available_masking_stage_mean = float(sum(stage_values) / len(stage_values))
+            state.extend([
+                available_ratio,
+                diversity,
+                available_ps_forced_ratio,
+                available_masking_stage_mean
+            ])
 
         overdue_ratio = self._safe_ratio(overdue_count, remaining_count)
         if slack_values:
@@ -451,7 +862,6 @@ class RLAssemblyScheduler:
             max_slack = 0.0
             max_abs_slack = 0.0
 
-        # [AGENT-EDIT] slack도 자동 최대치 기반 정규화
         if max_abs_slack > 0:
             self.env_state_max_abs_slack = max(self.env_state_max_abs_slack, max_abs_slack)
         slack_scale = max(1e-6, self.env_state_max_abs_slack)
@@ -466,15 +876,53 @@ class RLAssemblyScheduler:
             _scale_slack(max_slack)
         ])
 
+        if self.feature_mode == "diff":
+            seam_remaining_abs = max(0.0, capacity_snapshot['capacity_limit'] - capacity_snapshot['used_seam'])
+            self.env_state_max_seam_remaining = max(
+                self.env_state_max_seam_remaining,
+                seam_remaining_abs,
+                capacity_snapshot['capacity_limit'],
+            )
+            seam_remaining_norm = self._safe_ratio(seam_remaining_abs, self.env_state_max_seam_remaining)
+
+            block_count = float(env.capacity_tracker.get_block_count(is_weekend))
+            effective_block_limit = self._compute_effective_block_limit(env, current_time, capacity_snapshot)
+            block_slots_remaining_abs = max(0.0, effective_block_limit - block_count)
+            self.env_state_max_block_slots = max(
+                self.env_state_max_block_slots,
+                block_slots_remaining_abs,
+                effective_block_limit,
+            )
+            block_slots_remaining_norm = self._safe_ratio(block_slots_remaining_abs, self.env_state_max_block_slots)
+
+            prev_bay_is_35a = 1.0 if self.last_assigned_bay == BayType.BAY_35A else 0.0
+            prev_bay_is_36b = 1.0 if self.last_assigned_bay == BayType.BAY_36B else 0.0
+            # [AGENT-EDIT] 고정 분모(4)로 인한 saturation을 러닝 max auto-scale로 교체
+            self.env_state_max_consecutive_bay = max(
+                self.env_state_max_consecutive_bay,
+                float(self.consecutive_bay_streak),
+            )
+            consecutive_bay_scale = max(1.0, self.env_state_max_consecutive_bay)
+            consecutive_bay_count = min(float(self.consecutive_bay_streak) / consecutive_bay_scale, 1.0)
+
+            state.extend([
+                seam_remaining_norm,
+                block_slots_remaining_norm,
+                prev_bay_is_35a,
+                prev_bay_is_36b,
+                consecutive_bay_count,
+                float(self.last_block_flags.get('c_seam', 0.0) or 0.0),
+                float(self.last_block_flags.get('curved', 0.0) or 0.0),
+                float(self.last_block_flags.get('high_seam', 0.0) or 0.0),
+            ])
+
         if len(state) != self.env_state_dim:
-            # [AGENT-EDIT] 안전장치: 차원 불일치 시 패딩/절단
             state = state[:self.env_state_dim]
             if len(state) < self.env_state_dim:
                 state.extend([0.0] * (self.env_state_dim - len(state)))
 
         if self._env_state_debug_prints < 5:
             preview = np.round(state[:10], 3).tolist()
-            # print(f"[EnvState] sample#{self._env_state_debug_prints+1}: first10={preview} ... len={len(state)}")
             self._env_state_debug_prints += 1
 
         return state
@@ -488,7 +936,10 @@ class RLAssemblyScheduler:
                            training_mode: bool = False,
                            env_state_vector: Optional[List[float]] = None,
                            analysis_map: Optional[Dict[int, Dict]] = None,
-                           forced_block_id: Optional[int] = None) -> Tuple[int, float, torch.Tensor]:
+                           forced_block_id: Optional[int] = None,
+                           collect_episode_data: Optional[bool] = None,
+                           enable_grad: Optional[bool] = None,
+                           collect_step_metrics: Optional[bool] = None) -> Tuple[int, float, torch.Tensor]:
         """
         hope.txt 방식: 통합 상태 벡터를 사용한 RL 블록 선택
         """
@@ -512,6 +963,21 @@ class RLAssemblyScheduler:
 
         available_features_list = []
         available_indices = []
+        candidate_rows = []
+        processing_time_values: Dict[int, float] = {}
+        seam_values: Dict[int, float] = {}
+        slack_values: Dict[int, float] = {}
+        selected_set = set(selected_blocks)
+        available_set = set(available_blocks)
+        remaining_set = set(blocks_dict.keys()) - selected_set
+        workshop_head_flags = self._compute_workshop_head_flags(available_blocks, blocks_dict) if self.feature_mode == 'diff' else {}
+        workshop_order_features = self._compute_workshop_order_features(blocks_dict, selected_blocks) if self.feature_mode == 'diff' else {}
+
+        is_current_weekend = env.calendar_manager.is_weekend(current_time) if hasattr(env, 'calendar_manager') else current_time.weekday() >= 5
+        seam_remaining_abs = max(0.0, capacity_snapshot['capacity_limit'] - capacity_snapshot['used_seam'])
+        current_block_count = float(env.capacity_tracker.get_block_count(is_current_weekend))
+        effective_block_limit = self._compute_effective_block_limit(env, current_time, capacity_snapshot)
+        block_slots_remaining_abs = max(0.0, effective_block_limit - current_block_count)
 
         for block_id in available_blocks:
             block = blocks_dict[block_id]
@@ -525,7 +991,6 @@ class RLAssemblyScheduler:
             count_35a = float(current_branch_counts.get('35A', 0))
             count_36b = float(current_branch_counts.get('36B', 0))
             analysis = analysis_map.get(block_id) if analysis_map else None
-            inclusion_reason = (analysis.get('inclusion_reason') if analysis else '') or ''
             mask_stage_score = self._encode_masking_stage((analysis.get('masking_stage') if analysis else None))
             three_bay_state = 0.0
             if analysis:
@@ -534,64 +999,129 @@ class RLAssemblyScheduler:
                     three_bay_state = 1.0
                 elif 'RELAX' in bay_state:
                     three_bay_state = 0.5
-            ps_forced_flag = 1.0 if (analysis and analysis.get('ps_forced')) else 0.0
+            ps_forced_flag = 0.0
+            line_is_fixed, line_is_line = self._classify_line_flags(block)
+            deadline_urgency = self._compute_deadline_urgency(slack_days)
+            processing_times = getattr(block, 'processing_times', None)
+            processing_time_values[block_id] = float(sum(processing_times)) if processing_times else 0.0
+            seam_values[block_id] = float(getattr(block, 'seam_count', 0.0) or 0.0)
+            slack_values[block_id] = slack_days
 
-            candidate_branch_35a = 0.0
-            candidate_branch_36b = 0.0
-            try:
-                candidate_bay = env._preview_assign_bay(block)
+            candidate_row = {
+                'block_id': block_id,
+                'block': block,
+                'slack_days': slack_days,
+                'count_35a': count_35a,
+                'count_36b': count_36b,
+                'workshop_backlog_ratio': workshop_backlog_ratio,
+                'line_backlog_ratio': line_backlog_ratio,
+                'deadline_urgency': deadline_urgency,
+                'line_is_fixed': line_is_fixed,
+                'line_is_line': line_is_line,
+                'masking_stage_value': mask_stage_score,
+                'three_bay_state': three_bay_state,
+                'ps_forced_flag': ps_forced_flag,
+            }
+
+            if self.feature_mode == 'diff':
+                bay_35a_feasible, bay_36b_feasible = self._compute_diff_bay_feasibility(block, blocks_dict)
+                pair_id = getattr(block, 'pair_block_id', None)
+                workshop_rank, workshop_head_gap_days = workshop_order_features.get(block_id, (0.0, 0.0))
+                candidate_row.update({
+                    'bay_35a_feasible': bay_35a_feasible,
+                    'bay_36b_feasible': bay_36b_feasible,
+                    'is_workshop_head': workshop_head_flags.get(block_id, 0.0),
+                    'pair_already_selected': 1.0 if pair_id in selected_set else 0.0,
+                    'pair_remaining': 1.0 if pair_id in remaining_set else 0.0,
+                    'pair_available': 1.0 if pair_id in available_set else 0.0,
+                    'workshop_rank': workshop_rank,
+                    'workshop_head_gap_days': workshop_head_gap_days,
+                    'candidate_seam_capacity_ratio': self._capacity_consumption_ratio(
+                        float(getattr(block, 'seam_count', 0.0) or 0.0),
+                        seam_remaining_abs,
+                    ),
+                    'candidate_block_slot_ratio': self._capacity_consumption_ratio(1.0, block_slots_remaining_abs),
+                })
+            else:
+                candidate_branch_35a = 0.0
+                candidate_branch_36b = 0.0
+                try:
+                    candidate_bay = env._preview_assign_bay(block)
+                except Exception as exc:
+                    raise RuntimeError(
+                        f"RL candidate preview bay 계산 실패: block_id={block.block_id}"
+                    ) from exc
                 if candidate_bay == BayType.BAY_35A:
                     candidate_branch_35a = 1.0
                 elif candidate_bay == BayType.BAY_36B:
                     candidate_branch_36b = 1.0
-            except Exception:
-                candidate_bay = None
-
-            ########################################################################
-            # [FIX] 최소 한 개의 후보 플래그는 1이 되도록 보정
-            ########################################################################
-            if candidate_branch_35a == 0.0 and candidate_branch_36b == 0.0:
-                line_key = self._normalize_line_key(getattr(block, 'line_group', None))
-                if line_key == '35A':
-                    candidate_branch_35a = 1.0
-                elif line_key == '36B':
-                    candidate_branch_36b = 1.0
                 else:
-                    if current_branch_counts.get('35A', 0) <= current_branch_counts.get('36B', 0):
-                        candidate_branch_35a = 1.0
+                    raise RuntimeError(
+                        f"RL candidate preview bay 미확정: block_id={block.block_id}, bay={candidate_bay}"
+                    )
+
+                if candidate_branch_35a == 1.0 and candidate_branch_36b == 1.0:
+                    if current_branch_counts.get('35A', 0) > current_branch_counts.get('36B', 0):
+                        candidate_branch_35a = 0.0
                     else:
-                        candidate_branch_36b = 1.0
+                        candidate_branch_36b = 0.0
+                candidate_row.update({
+                    'candidate_branch_35a': candidate_branch_35a,
+                    'candidate_branch_36b': candidate_branch_36b,
+                })
+            candidate_rows.append(candidate_row)
 
-            if candidate_branch_35a == 1.0 and candidate_branch_36b == 1.0:
-                if current_branch_counts.get('35A', 0) > current_branch_counts.get('36B', 0):
-                    candidate_branch_35a = 0.0
-                else:
-                    candidate_branch_36b = 0.0
+        processing_time_rank_map = self._compute_desc_rank_map(processing_time_values) if self.feature_mode == 'diff' else {}
+        seam_rank_map = self._compute_desc_rank_map(seam_values) if self.feature_mode == 'diff' else {}
+        slack_rank_map = self._compute_slack_rank_map(slack_values) if self.feature_mode == 'diff' else {}
 
-            line_is_fixed, line_is_line = self._classify_line_flags(block)
-            deadline_urgency = self._compute_deadline_urgency(slack_days)
-
-            block_features = extract_block_features_single(
-                block,
-                slack_days=slack_days,
-                feature_mode=self.feature_mode,
-                branch_count_35a=count_35a,
-                branch_count_36b=count_36b,
-                workshop_backlog_ratio=workshop_backlog_ratio,
-                line_backlog_ratio=line_backlog_ratio,
+        for candidate_row in candidate_rows:
+            block_id = candidate_row['block_id']
+            block = candidate_row['block']
+            feature_kwargs = dict(
+                branch_count_35a=candidate_row['count_35a'],
+                branch_count_36b=candidate_row['count_36b'],
+                workshop_backlog_ratio=candidate_row['workshop_backlog_ratio'],
+                line_backlog_ratio=candidate_row['line_backlog_ratio'],
                 ps_pair_remaining_ratio=ps_pair_ratio,
                 daily_seam_usage_ratio=capacity_snapshot['daily_seam_usage_ratio'],
                 daily_block_usage_ratio=capacity_snapshot['daily_block_usage_ratio'],
                 remaining_capacity_ratio=capacity_snapshot['remaining_capacity_ratio'],
-                candidate_branch_35a=candidate_branch_35a,
-                candidate_branch_36b=candidate_branch_36b,
-                masking_stage_value=mask_stage_score,
-                three_bay_state=three_bay_state,
-                ps_forced_flag=ps_forced_flag,
                 bay_balance_delta=bay_balance_delta,
-                deadline_urgency=deadline_urgency,
-                line_is_fixed=line_is_fixed,
-                line_is_line=line_is_line,
+                deadline_urgency=candidate_row['deadline_urgency'],
+                line_is_fixed=candidate_row['line_is_fixed'],
+                line_is_line=candidate_row['line_is_line'],
+            )
+            if self.feature_mode == 'diff':
+                feature_kwargs.update({
+                    'bay_35a_feasible': candidate_row['bay_35a_feasible'],
+                    'bay_36b_feasible': candidate_row['bay_36b_feasible'],
+                    'is_workshop_head': candidate_row['is_workshop_head'],
+                    'pair_already_selected': candidate_row['pair_already_selected'],
+                    'pair_remaining': candidate_row['pair_remaining'],
+                    'pair_available': candidate_row['pair_available'],
+                    'processing_time_rank': processing_time_rank_map.get(block_id, 0.0),
+                    'seam_rank': seam_rank_map.get(block_id, 0.0),
+                    'workshop_rank': candidate_row['workshop_rank'],
+                    'workshop_head_gap_days': candidate_row['workshop_head_gap_days'],
+                    'candidate_seam_capacity_ratio': candidate_row['candidate_seam_capacity_ratio'],
+                    'candidate_block_slot_ratio': candidate_row['candidate_block_slot_ratio'],
+                    'slack_rank': slack_rank_map.get(block_id, 0.0),
+                })
+            else:
+                feature_kwargs.update({
+                    'candidate_branch_35a': candidate_row['candidate_branch_35a'],
+                    'candidate_branch_36b': candidate_row['candidate_branch_36b'],
+                    'masking_stage_value': candidate_row['masking_stage_value'],
+                    'three_bay_state': candidate_row['three_bay_state'],
+                    'ps_forced_flag': candidate_row['ps_forced_flag'],
+                })
+
+            block_features = extract_block_features_single(
+                block,
+                slack_days=candidate_row['slack_days'],
+                feature_mode=self.feature_mode,
+                **feature_kwargs,
             )
             available_features_list.append(block_features)
             available_indices.append(block_id)
@@ -608,8 +1138,13 @@ class RLAssemblyScheduler:
             self.rl_agent.eval()
         
         decode_type = getattr(self.rl_agent, 'default_decode_type', 'sampling')
+        # [AGENT-ADD] Rollout 후보 생성은 teacher/PPO 업데이트에서 log prob를 다시 계산하므로
+        # episode_data 수집과 autograd 사용 여부를 분리한다.
+        collect_episode_data = training_mode if collect_episode_data is None else bool(collect_episode_data)
+        enable_grad = training_mode if enable_grad is None else bool(enable_grad)
+        collect_step_metrics = collect_episode_data if collect_step_metrics is None else bool(collect_step_metrics)
         
-        with torch.set_grad_enabled(training_mode):
+        with torch.set_grad_enabled(enable_grad):
             # agent/actor.py 방식: 블록 특성만 전달 (+ 선택적 env_state)
             selected_original_index, confidence, action_logits = self.rl_agent.forward_single_step(
                 available_block_features=available_features,
@@ -658,12 +1193,28 @@ class RLAssemblyScheduler:
                 else:
                     forced_log_prob = action_logits[forced_action_idx]
                     confidence = float(np.exp(forced_log_prob))
-            except Exception:
-                confidence = 1.0
+            except Exception as exc:
+                # [AGENT-EDIT] forced action confidence 실패를 기본값으로 덮지 않는다.
+                raise RuntimeError(
+                    f"RL forced action confidence 계산 실패: block_id={selected_original_index}"
+                ) from exc
         
         selected_analysis = analysis_map.get(selected_original_index) if analysis_map else None
 
-        if training_mode:
+        self.last_decision_snapshot = {
+            'selected_block_id': selected_original_index,
+            'available_indices': available_indices.copy(),
+            'available_count': len(available_indices),
+            'selected_action_idx': available_indices.index(selected_original_index),
+            'confidence': float(confidence),
+            'action_logits': action_logits.detach().cpu().tolist() if isinstance(action_logits, torch.Tensor) else list(action_logits) if action_logits is not None else None,
+            'selected_analysis_reason': selected_analysis.get('exclusion_reason') if selected_analysis else None,
+            'selected_masking_stage': selected_analysis.get('masking_stage') if selected_analysis else None,
+            'selected_three_bay_check': selected_analysis.get('three_bay_check') if selected_analysis else None,
+            'forced_action': bool(forced_used),
+        }
+
+        if collect_episode_data:
             selected_action_idx = available_indices.index(selected_original_index)
             
             # gradient 유지를 위해 no_grad 제거
@@ -681,55 +1232,48 @@ class RLAssemblyScheduler:
             # 수정: 현재 선택 후 상태를 current로, 선택 전 상태를 previous로
             current_selected_blocks = selected_blocks + [selected_original_index]  # 선택 후
             previous_selected_blocks = selected_blocks  # 선택 전
-            try:
-                current_bay_assignments = {}
-                for block_id in current_selected_blocks:
-                    if block_id in blocks_dict:
-                        block = blocks_dict[block_id]
-                        assigned_bay = env._preview_assign_bay(block)
-                        current_bay_assignments[block_id] = assigned_bay
-                
-                if current_selected_blocks:
-                    current_makespan_sec, _ = env.calculate_makespan(
-                        current_selected_blocks, 
-                        current_bay_assignments, 
-                        {}
-                    )
-                    actual_current_makespan = current_makespan_sec / 3600.0
-                    
-                    #  디버깅: 매 스텝 부분 makespan 확인
-                    step_idx = len(self.episode_data)
-                    # if step_idx < 5 or step_idx % 20 == 0 or step_idx >= len(blocks_dict) - 2:
-                        # print(f"  Step {step_idx}: 선택된 블록 {len(current_selected_blocks)}개 → Makespan: {actual_current_makespan:.2f}h")
-                else:
-                    actual_current_makespan = 0.0
-                
-                # 이전 makespan 계산
-                if previous_selected_blocks:  # 블록이 있으면
-                    previous_bay_assignments = {}
-                    for block_id in previous_selected_blocks:
+            current_bay_assignments = {}
+            current_makespan_sec = 0.0
+            actual_current_makespan = 0.0
+            actual_previous_makespan = 0.0
+            if collect_step_metrics:
+                try:
+                    for block_id in current_selected_blocks:
                         if block_id in blocks_dict:
                             block = blocks_dict[block_id]
                             assigned_bay = env._preview_assign_bay(block)
-                            previous_bay_assignments[block_id] = assigned_bay
+                            current_bay_assignments[block_id] = assigned_bay
                     
-                    previous_makespan_sec, _ = env.calculate_makespan(
-                        previous_selected_blocks, 
-                        previous_bay_assignments, 
-                        {}
-                    )
-                    actual_previous_makespan = previous_makespan_sec / 3600.0
+                    if current_selected_blocks:
+                        current_makespan_sec, _ = env.calculate_makespan(
+                            current_selected_blocks, 
+                            current_bay_assignments, 
+                            {}
+                        )
+                        actual_current_makespan = current_makespan_sec / 3600.0
                     
-                    #  디버깅: 이전 makespan도 확인
-                    # if step_idx < 5:
-                        # print(f"    → 이전 {len(previous_selected_blocks)}개 블록 Makespan: {actual_previous_makespan:.2f}h")
-                        # print(f"    → 차이 (보상): {actual_previous_makespan - actual_current_makespan:.2f}h")
-                else:
-                    actual_previous_makespan = 0.0  # 첫 스텝은 이전이 0
-                    
-            except Exception as makespan_err:
-                actual_current_makespan = 0.0
-                actual_previous_makespan = 0.0
+                    # 이전 makespan 계산
+                    if previous_selected_blocks:  # 블록이 있으면
+                        previous_bay_assignments = {}
+                        for block_id in previous_selected_blocks:
+                            if block_id in blocks_dict:
+                                block = blocks_dict[block_id]
+                                assigned_bay = env._preview_assign_bay(block)
+                                previous_bay_assignments[block_id] = assigned_bay
+                        
+                        previous_makespan_sec, _ = env.calculate_makespan(
+                            previous_selected_blocks, 
+                            previous_bay_assignments, 
+                            {}
+                        )
+                        actual_previous_makespan = previous_makespan_sec / 3600.0
+                        
+                except Exception as makespan_err:
+                    # [AGENT-EDIT] rollout 기록용 makespan 실패를 0으로 덮지 않는다.
+                    raise RuntimeError(
+                        f"RL rollout makespan 기록 실패: step={len(self.episode_data)}, "
+                        f"selected={selected_original_index}"
+                    ) from makespan_err
 
             ########################################################################
             # [AGENT-EDIT] step_reward shaping 제거 (global advantage만 사용)
@@ -784,36 +1328,8 @@ class RLAssemblyScheduler:
         """
         현재 시점에서의 실제 makespan 계산
         """
-        try:
-            # 🔥 실제 선택된 블록들의 수 기반으로 정확한 현재 makespan 계산
-            total_blocks = len(env.blocks_dict) if hasattr(env, 'blocks_dict') else 50
-            completed_blocks = total_blocks - len(remaining_blocks)
-            
-            # 완료된 블록들의 실제 처리 시간 합계
-            if hasattr(env, 'blocks_dict') and completed_blocks > 0:
-                # 실제 선택된 블록들의 처리 시간 계산
-                selected_block_ids = []
-                for block_id, block in env.blocks_dict.items():
-                    if block_id not in remaining_blocks:
-                        selected_block_ids.append(block_id)
-                
-                # 선택된 블록들의 평균 처리 시간
-                if selected_block_ids:
-                    total_processing_time = 0
-                    for block_id in selected_block_ids:
-                        block = env.blocks_dict[block_id]
-                        total_processing_time += sum(block.processing_times)
-                    
-                    # 병렬 처리를 고려한 추정 (실제 makespan은 순차 합보다 작음)
-                    estimated_makespan = total_processing_time / 60.0 * 0.7  # 70% 효율 가정
-                    return estimated_makespan
-            
-            # Fallback: 스텝 기반 추정
-            return len(self.episode_data) * 2.5  # 스텝당 평균 2.5시간 가정
-            
-        except Exception as e:
-            # 에러 발생 시 기본값 반환
-            return len(self.episode_data) * 2.0  # 스텝당 2시간 가정
+        # [AGENT-EDIT] 추정 기반 makespan fallback 제거.
+        raise RuntimeError("RL 추정 makespan helper는 제거되었고 더 이상 사용하면 안 된다.")
 
 
 ################################################################################################
@@ -826,81 +1342,62 @@ def _finalize_rl_results(
     blocks: List,
     rl_scheduler: RLAssemblyScheduler,
     training_mode: bool,
-    afternoon_guard_blocks_all: Set[int]
+    afternoon_guard_blocks_all: Set[int],
+    decision_trace: Optional[List[Dict]] = None,
 ) -> Tuple[List[Dict], Dict, List[Dict]]:
     # 8. 통계 계산
     total_blocks_processed = len(schedule_results)
+    total_blocks_expected = count_expanded_block_units(blocks)
     total_time_hours = sum(r.get('total_time_min', 0) for r in schedule_results) / 60.0
-    # 휴리스틱과 동일: primary 기반 위반 합산
-    total_violations = sum(r.get('violations', 0) for r in schedule_results)
-    # 학습용 별도 조정 불필요
+    # [AGENT-EDIT] raw / primary / meta를 공통 기준으로 재집계한다.
+    violation_summary = summarize_violations(
+        all_violations,
+        keep_info=True,
+        include_guard=False,
+    )
+    total_violations = int(violation_summary.get('violations_primary_count', 0))
     total_violations_train = total_violations
 
-    # 실제 makespan 계산 (간트차트와 동일한 방식: 실제 시작~끝 시간 차이)
-    try:
-        import pandas as pd
-        start_times = []
-        end_times = []
-
-        for result in schedule_results:
-            if 'start_time' in result and result['start_time']:
-                try:
-                    start_dt = pd.to_datetime(result['start_time'])
-                    start_times.append(start_dt)
-                except Exception:
-                    pass
-            if 'end_time' in result and result['end_time']:
-                try:
-                    end_dt = pd.to_datetime(result['end_time'])
-                    end_times.append(end_dt)
-                except Exception:
-                    pass
-
-        if start_times and end_times:
-            min_start_time = min(start_times)
-            max_end_time = max(end_times)
-            actual_makespan_hours = (max_end_time - min_start_time).total_seconds() / 3600.0
-        else:
-            all_block_ids = [r['block_id'] for r in schedule_results]
-            final_bay_assignments = {}
-            for r in schedule_results:
-                final_bay_assignments[r['block_id']] = BayType(r['assigned_bay'])
-
-            final_makespan_sec, final_detailed = env.calculate_makespan(
-                all_block_ids,
-                final_bay_assignments,
-                {},  # 첫날부터 시작
-                afternoon_guard_blocks=afternoon_guard_blocks_all
-            )
-            actual_makespan_hours = final_makespan_sec / 3600.0
-    except Exception:
-        actual_makespan_hours = total_time_hours
+    # [AGENT-EDIT] RL도 실제 결과 row의 wall-clock span을 canonical makespan으로 사용한다.
+    actual_makespan_hours = compute_schedule_span_hours(schedule_results)
 
     # RL 성능 통계
     rl_confidence_scores = [r.get('rl_confidence', 0) for r in schedule_results]
     avg_confidence = sum(rl_confidence_scores) / len(rl_confidence_scores) if rl_confidence_scores else 0
 
+    # ==== [AGENT-EDIT BEGIN: canonical runtime replay sync] ====
+    runtime_cfg = get_runtime_config() or {}
+    schedule_results, audit_stats, _ = sync_runtime_results_to_canonical_constraints(
+        schedule_results=schedule_results,
+        blocks=blocks,
+        metadata=getattr(env, "metadata", {}) or {},
+        runtime_cfg=runtime_cfg,
+        case_label="runtime_rl",
+    )
+
     # 별판 통합 행 풀기 (휴리스틱과 동일 출력 형식 유지)
     schedule_results = expand_rows_with_subassembly(schedule_results)
     total_blocks_processed = len(schedule_results)
 
-    # [AGENT-ADD] C/Seam 위반 카운트 기본값 보강 (정의 누락 방지)
-    cseam_ids = {"ROUTING_C_SEAM_SPACING", "C_SEAM_SPACING"}
     total_cseam_violations = sum(
-        1
-        for v in all_violations
-        if getattr(v, "constraint_id", "") in cseam_ids
-        and getattr(v, "severity", "").upper() in {"ERROR", "WARNING"}
+        int(row.get("violations_primary_count", row.get("violations", 0)) or 0)
+        for row in schedule_results
+        if "ROUTING_C_SEAM_SPACING" in list(row.get("constraint_ids") or [])
     )
 
     statistics = {
         'total_blocks_processed': total_blocks_processed,
-        'total_blocks_expected': len(blocks),
-        'success_rate': (total_blocks_processed / len(blocks)) * 100 if blocks else 0.0,
+        'total_blocks_expected': total_blocks_expected,
+        'success_rate': (total_blocks_processed / total_blocks_expected) * 100 if total_blocks_expected else 0.0,
         'total_time_hours': total_time_hours,
         'makespan_hours': actual_makespan_hours,
-        'total_violations': total_violations,
-        'total_violations_train': total_violations_train,
+        'total_violations': int(audit_stats.get('total_violations', total_violations)),
+        'total_violations_primary': int(audit_stats.get('total_violations_primary', total_violations)),
+        'total_violations_raw': int(audit_stats.get('total_violations_raw', violation_summary.get('violations_raw_count', 0))),
+        'total_violations_meta': int(audit_stats.get('total_violations_meta', violation_summary.get('violations_meta_count', 0))),
+        'total_violations_info': int(audit_stats.get('total_violations_info', violation_summary.get('violations_info_count', 0))),
+        'total_violations_train': int(audit_stats.get('total_violations_primary', total_violations_train)),
+        'total_violations_primary_train': int(audit_stats.get('total_violations_primary', total_violations_train)),
         'total_cseam_violations': total_cseam_violations,
         'ps_success_rate': 0,
         'ps_pairs_total': 0,
@@ -908,10 +1405,17 @@ def _finalize_rl_results(
         'daily_analyses_generated': 0,
         'step_analyses_generated': 0,
         'rl_confidence_avg': avg_confidence,
-        'rl_mode': 'training' if training_mode else 'evaluation'
+        'rl_mode': 'training' if training_mode else 'evaluation',
+        'audit_workshop_order_inversions': int(audit_stats.get('audit_workshop_order_inversions', 0)),
+        'audit_constraint_ids': list(audit_stats.get('audit_constraint_ids', [])),
+        'audit_constraint_families': list(audit_stats.get('audit_constraint_families', [])),
     }
+    # ==== [AGENT-EDIT END] ====
 
-    step_data = rl_scheduler.episode_data if hasattr(rl_scheduler, 'episode_data') else []
+    if not training_mode and decision_trace is not None:
+        step_data = decision_trace
+    else:
+        step_data = rl_scheduler.episode_data if hasattr(rl_scheduler, 'episode_data') else []
     return schedule_results, statistics, step_data
 
 
@@ -929,7 +1433,13 @@ def run_rl_assembly_decoding_sequence_with_blocks(
     save_detailed: bool = False,
     training_mode: bool = False,
     use_env_step: bool = True,
-    forced_sequence: Optional[List[int]] = None  # [AGENT-ADD] block_id 강제 시퀀스
+    forced_sequence: Optional[List[int]] = None,  # [AGENT-ADD] block_id 강제 시퀀스
+    allow_forced_prefix_override: bool = False,  # [AGENT-ADD] masking 밖 강제 선택 허용
+    precedence_rules: Optional[List[Tuple[int, int]]] = None,  # [AGENT-ADD] interactive precedence
+    manual_bay_assignments: Optional[Dict[int, str]] = None,  # [AGENT-ADD] interactive bay override
+    collect_episode_data: Optional[bool] = None,  # [AGENT-ADD] collect rollout records without requiring autograd
+    enable_grad: Optional[bool] = None,  # [AGENT-ADD] rollout forward autograd toggle
+    collect_step_metrics: Optional[bool] = None,  # [AGENT-ADD] expensive per-step partial makespan metrics
 ) -> Tuple[List[Dict], Dict, List[Dict], 'EnhancedPanelBlockShop']:
     """
     RL Agent를 사용한 Assembly Decoding 실행
@@ -940,6 +1450,10 @@ def run_rl_assembly_decoding_sequence_with_blocks(
     Returns:
         (results, statistics, episode_data, env)
     """
+    # [AGENT-ADD] Rollout 기록 수집과 autograd 사용 여부를 함수 진입부에서 확정한다.
+    collect_episode_data = training_mode if collect_episode_data is None else bool(collect_episode_data)
+    enable_grad = training_mode if enable_grad is None else bool(enable_grad)
+    collect_step_metrics = collect_episode_data if collect_step_metrics is None else bool(collect_step_metrics)
     
     # print(f" RL Assembly Decoding 시작 ({'학습모드' if training_mode else '평가모드'})")
     
@@ -981,7 +1495,7 @@ def run_rl_assembly_decoding_sequence_with_blocks(
     ########################################################################
     # [FIX] 에피소드 시작 시 누적 베이 카운트 리셋
     ########################################################################
-    rl_scheduler.branch_usage_counts = {'35A': 0, '36B': 0}
+    rl_scheduler._reset_state_tracking()
 
     ########################################################################
     # [AGENT-ADD] Assembly Decoding: env.step 기반 정석 루트
@@ -989,6 +1503,7 @@ def run_rl_assembly_decoding_sequence_with_blocks(
     if use_env_step:
         schedule_results: List[Dict] = []
         all_violations: List[ConstraintViolation] = []
+        decision_trace: List[Dict] = []  # [AGENT-ADD] evaluation/test decision trace
         blocks_dict = {block.block_id: block for block in blocks}
         assembly_sequence = 1
         # [AGENT-ADD] 강제 시퀀스 포인터 (block_id 기준)
@@ -998,7 +1513,7 @@ def run_rl_assembly_decoding_sequence_with_blocks(
         # 메인 루프 (환경이 상태를 관리)
         while not env.is_done and len(env.assembly_selected_blocks) < len(blocks):
             available_ids, violations, block_analysis = env.get_available_actions_assembly()
-            if env.is_done or not available_ids:
+            if env.is_done:
                 break
 
             current_datetime = env.assembly_current_datetime
@@ -1012,36 +1527,106 @@ def run_rl_assembly_decoding_sequence_with_blocks(
 
             analysis_map = {analysis.get('block_id'): analysis for analysis in block_analysis}
 
-            # [AGENT-ADD] 강제 시퀀스가 있으면 가능한 블록을 우선 사용
-            forced_block_id = None
-            if forced_sequence:
-                while forced_idx < len(forced_sequence):
-                    candidate_id = forced_sequence[forced_idx]
-                    forced_idx += 1
-                    if candidate_id in available_ids:
-                        forced_block_id = candidate_id
-                        break
+            forced_block_id, forced_idx = resolve_forced_prefix_block(
+                forced_sequence,
+                forced_idx,
+                env.assembly_selected_blocks,
+            )
+            filtered_available_ids, precedence_blocked_ids, precedence_override_block_id = filter_available_ids_by_precedence(
+                available_ids=available_ids,
+                selected_block_ids=env.assembly_selected_blocks,
+                precedence_rules=precedence_rules,
+            )
+            forced_override_active = False
 
-            selected_block_id, confidence, action_logits = rl_scheduler._rl_block_selection(
-                available_ids,
-                blocks_dict,
-                selected_blocks,
-                current_datetime,
-                env,
-                training_mode,
-                env_state_vector=env_state_vector,
-                analysis_map=analysis_map,
-                forced_block_id=forced_block_id
+            if not filtered_available_ids and forced_block_id is None and precedence_override_block_id is None:
+                break
+
+            if forced_block_id is not None and forced_block_id not in available_ids and allow_forced_prefix_override:
+                selected_block_id = forced_block_id
+                confidence = 1.0
+                action_logits = None
+                forced_override_active = True
+                prime_forced_override_cache(
+                    env=env,
+                    forced_block_id=forced_block_id,
+                    masking_violations=violations,
+                    block_analysis=block_analysis,
+                    blocks_dict=blocks_dict,
+                    note="interactive prefix override",
+                )
+                rl_scheduler.last_decision_snapshot = {
+                    'selected_block_id': selected_block_id,
+                    'available_indices': list(filtered_available_ids),
+                    'available_count': len(filtered_available_ids),
+                    'selected_action_idx': 0,
+                    'confidence': 1.0,
+                    'action_logits': None,
+                    'selected_analysis_reason': 'interactive prefix override',
+                    'selected_masking_stage': 'forced_prefix_override',
+                    'selected_three_bay_check': None,
+                    'forced_action': True,
+                }
+                action_idx = 0
+            elif precedence_override_block_id is not None and allow_forced_prefix_override:
+                selected_block_id = precedence_override_block_id
+                confidence = 1.0
+                action_logits = None
+                forced_override_active = True
+                prime_forced_override_cache(
+                    env=env,
+                    forced_block_id=precedence_override_block_id,
+                    masking_violations=violations,
+                    block_analysis=block_analysis,
+                    blocks_dict=blocks_dict,
+                    note="interactive precedence override",
+                )
+                rl_scheduler.last_decision_snapshot = {
+                    'selected_block_id': selected_block_id,
+                    'available_indices': list(filtered_available_ids),
+                    'available_count': len(filtered_available_ids),
+                    'selected_action_idx': 0,
+                    'confidence': 1.0,
+                    'action_logits': None,
+                    'selected_analysis_reason': 'interactive precedence override',
+                    'selected_masking_stage': 'precedence_override',
+                    'selected_three_bay_check': None,
+                    'forced_action': True,
+                }
+                action_idx = 0
+            else:
+                selected_block_id, confidence, action_logits = rl_scheduler._rl_block_selection(
+                    filtered_available_ids,
+                    blocks_dict,
+                    selected_blocks,
+                    current_datetime,
+                    env,
+                    training_mode,
+                    env_state_vector=env_state_vector,
+                    analysis_map=analysis_map,
+                    forced_block_id=forced_block_id,
+                    collect_episode_data=collect_episode_data,
+                    enable_grad=enable_grad,
+                    collect_step_metrics=collect_step_metrics,
+                )
+
+                if selected_block_id not in available_ids:
+                    # 안전장치: 예측이 유효하지 않으면 첫 후보로 대체
+                    selected_block_id = filtered_available_ids[0]
+
+                action_idx = available_ids.index(selected_block_id)
+
+            manual_bay_override = apply_manual_bay_override_if_requested(
+                env=env,
+                selected_block_id=selected_block_id,
+                manual_bay_assignments=manual_bay_assignments,
+                final_reason="INTERACTIVE_USER_FIXED_BAY",
             )
 
-            if selected_block_id not in available_ids:
-                # 안전장치: 예측이 유효하지 않으면 첫 후보로 대체
-                selected_block_id = available_ids[0]
-
-            action_idx = available_ids.index(selected_block_id)
             _, _, done, step_info = env.step(action_idx)
 
             selected_block = blocks_dict[selected_block_id]
+            selected_analysis = analysis_map.get(selected_block_id) if analysis_map else None
             assigned_bay = step_info.get('assigned_bay')
             bay_analysis = step_info.get('bay_analysis', {})
             block_start_time = step_info.get('block_start_time')
@@ -1075,7 +1660,7 @@ def run_rl_assembly_decoding_sequence_with_blocks(
             primary_violations, info_violations = dedup_violations(
                 reconstructed_violations, keep_info=True, include_guard=False
             )
-            all_violations.extend(primary_violations)
+            all_violations.extend(reconstructed_violations)
 
             # [AGENT-EDIT] 원본 위반 리스트를 전달해 완화/메타 정보를 CSV에 반영
             result = create_block_result(
@@ -1101,8 +1686,34 @@ def run_rl_assembly_decoding_sequence_with_blocks(
             result['method'] = 'RL_ASSEMBLY'
             result['rl_confidence'] = round(confidence, 3)
             result['rl_available_count'] = len(available_ids)
+            result['forced_override'] = forced_override_active
+            result['precedence_blocked_ids'] = ','.join(str(block_id) for block_id in precedence_blocked_ids)
+            result['interactive_precedence_blocked_ids'] = ','.join(str(block_id) for block_id in precedence_blocked_ids)
+            result['interactive_manual_bay_override'] = manual_bay_override or ''
 
             schedule_results.append(result)
+
+            decision_snapshot = getattr(rl_scheduler, 'last_decision_snapshot', None) or {}
+            decision_trace.append({
+                'step': int(assembly_sequence),
+                'selected_block_id': selected_block_id,
+                'selected_action_idx': decision_snapshot.get('selected_action_idx'),
+                'available_count': decision_snapshot.get('available_count', len(filtered_available_ids)),
+                'available_indices_json': json.dumps(decision_snapshot.get('available_indices', filtered_available_ids), ensure_ascii=False),
+                'current_date': env.assembly_current_date.strftime('%Y-%m-%d'),
+                'current_datetime': current_datetime.strftime('%Y-%m-%d %H:%M'),
+                'selection_method': 'rl',
+                'selection_reason': decision_snapshot.get('selected_analysis_reason') or (selected_analysis.get('inclusion_reason') if selected_analysis else ''),
+                'masking_stage_used': decision_snapshot.get('selected_masking_stage') or (selected_analysis.get('masking_stage') if selected_analysis else ''),
+                'selected_three_bay_check': decision_snapshot.get('selected_three_bay_check') or (selected_analysis.get('three_bay_check') if selected_analysis else ''),
+                'forced_override': bool(forced_override_active or decision_snapshot.get('forced_action')),
+                'precedence_blocked_ids': ','.join(str(block_id) for block_id in precedence_blocked_ids),
+                'manual_bay_override': manual_bay_override or '',
+                'assigned_bay': assigned_bay if isinstance(assigned_bay, str) else assigned_bay.value,
+                'confidence': decision_snapshot.get('confidence', confidence),
+                'rl_log_prob_json': json.dumps(decision_snapshot.get('action_logits'), ensure_ascii=False),
+            })
+
             assembly_sequence += 1
 
             # 베이 사용량 누적
@@ -1120,7 +1731,8 @@ def run_rl_assembly_decoding_sequence_with_blocks(
             blocks,
             rl_scheduler,
             training_mode,
-            env.assembly_afternoon_guard_blocks_all
+            env.assembly_afternoon_guard_blocks_all,
+            decision_trace=decision_trace,
         )
         # ==== [AGENT-ADD BEGIN: env.step 경로에서도 RL 상세 CSV 생성] ====
         if save_detailed and schedule_results:
@@ -1270,8 +1882,8 @@ def run_rl_assembly_decoding_sequence_with_blocks(
     daily_sequence = []  #  현재 날짜의 시퀀스 (용량 체크용)
     current_bay_assignments = {}
     previous_machine_state = {}
-    afternoon_guard_blocks_day: Set[int] = set()  # [AGENT-ADD] 리드타임 강제+P6 대상
-    afternoon_guard_blocks_all: Set[int] = set()
+    afternoon_guard_blocks_day: Set[int] = set()  # [AGENT-EDIT] legacy no-op
+    afternoon_guard_blocks_all: Set[int] = set()  # [AGENT-EDIT] legacy no-op
     
     # 제약조건 위반 추적
     all_violations = []
@@ -1350,8 +1962,11 @@ def run_rl_assembly_decoding_sequence_with_blocks(
                         'branch_b_times': _shift(final_state.get('branch_b_times', [])),
                         'day_start_offset': new_offset
                     }
-                except Exception as e:
-                    pass
+                except Exception as exc:
+                    # [AGENT-EDIT] 일자 전환 상태 계산 실패는 숨기지 않는다.
+                    raise RuntimeError(
+                        f"RL 일자 전환 makespan 계산 실패: date={current_date}, blocks={len(daily_sequence)}"
+                    ) from exc
 
             current_date += timedelta(days=1)
             current_datetime = datetime.combine(current_date, datetime.min.time().replace(hour=8))
@@ -1375,12 +1990,28 @@ def run_rl_assembly_decoding_sequence_with_blocks(
             #  용량 한계로 다음날로 넘어간 경우 continue
             continue
         elif current_capacity_used >= actual_capacity_limit and urgent_exists:
-            # 리드타임 임박/초과 블록이 있으므로 용량 제약을 임시 완화하여 선택 시도
-            capacity_bypass = True
+            # [AGENT-EDIT] RL 경로의 긴급 용량 우회도 config 토글로 제어한다.
+            if getattr(env.constraint_config, 'enable_rl_urgent_capacity_bypass', True):
+                capacity_bypass = True
+            else:
+                current_date += timedelta(days=1)
+                current_datetime = datetime.combine(current_date, datetime.min.time().replace(hour=8))
+                day_counter += 1
+                date_start_time = current_datetime
+                daily_sequence = []
+                afternoon_guard_blocks_day = set()
+                is_weekend = current_datetime.weekday() >= 5
+                if is_weekend:
+                    env.capacity_tracker.reset_weekend()
+                else:
+                    env.capacity_tracker.reset_daily()
+                if day_counter > max_days:
+                    break
+                continue
         
         # 선택 가능한 블록 찾기 (용량에 여유가 있을 때만)
         env.constraint_checker.set_sequence(selected_blocks)
-        if capacity_bypass:
+        if capacity_bypass and getattr(env.constraint_config, 'enable_rl_urgent_capacity_bypass', True):
             cfg = env.constraint_config
             orig_flags = {
                 'enable_p5_8_weekday_capacity': cfg.enable_p5_8_weekday_capacity,
@@ -1402,7 +2033,7 @@ def run_rl_assembly_decoding_sequence_with_blocks(
                 current_day_selected_blocks=daily_sequence
             )
         finally:
-            if capacity_bypass:
+            if capacity_bypass and getattr(env.constraint_config, 'enable_rl_urgent_capacity_bypass', True):
                 cfg.enable_p5_8_weekday_capacity = orig_flags['enable_p5_8_weekday_capacity']
                 cfg.enable_p5_9_block_count_check = orig_flags['enable_p5_9_block_count_check']
                 cfg.enable_p5_10_weekend_capacity = orig_flags['enable_p5_10_weekend_capacity']
@@ -1450,18 +2081,14 @@ def run_rl_assembly_decoding_sequence_with_blocks(
         selected_block_id, confidence, action_logits = rl_scheduler._rl_block_selection(
             available_ids, blocks_dict, selected_blocks, current_datetime, env, training_mode,
             env_state_vector=env_state_vector,
-            analysis_map=analysis_map
+            analysis_map=analysis_map,
+            collect_episode_data=collect_episode_data,
+            enable_grad=enable_grad,
+            collect_step_metrics=collect_step_metrics,
         )
         
         selected_block = blocks_dict[selected_block_id]
         selected_analysis = next((analysis for analysis in block_analysis if analysis.get('block_id') == selected_block_id), None)
-        is_afternoon_guard = False
-        if selected_analysis:
-            inc = (selected_analysis.get('inclusion_reason') or '').strip()
-            if inc.startswith('[LEADTIME-GUARD]') and selected_block.needs_afternoon_start():
-                is_afternoon_guard = True
-                afternoon_guard_blocks_day.add(selected_block_id)
-                afternoon_guard_blocks_all.add(selected_block_id)
         selected_block_load = selected_block.seam_count + getattr(selected_block, 'c_seam_count', 0)
 
         #  추가 안전장치: 선택된 블록이 용량을 초과하는지 재확인
@@ -1485,8 +2112,11 @@ def run_rl_assembly_decoding_sequence_with_blocks(
                     # 다음 날 시작 시간 오프셋 계산 (24시간 = 86400초)
                     day_duration_seconds = 24 * 3600
                     previous_machine_state['day_start_offset'] = day_duration_seconds
-                except Exception as e:
-                    pass
+                except Exception as exc:
+                    # [AGENT-EDIT] 용량 초과 시점의 상태 계산 실패는 숨기지 않는다.
+                    raise RuntimeError(
+                        f"RL 용량 초과 일자 전환 makespan 계산 실패: date={current_date}, blocks={len(daily_sequence)}"
+                    ) from exc
 
             current_date += timedelta(days=1)
             current_datetime = datetime.combine(current_date, datetime.min.time().replace(hour=8))
@@ -1523,6 +2153,8 @@ def run_rl_assembly_decoding_sequence_with_blocks(
         # makespan 계산
         total_sequence.append(selected_block_id)  # 전체 시퀀스에 추가
         daily_sequence.append(selected_block_id)  # 날짜별 시퀀스에도 추가
+        bs = None
+        detailed = None
         try:
             # 현재 날짜의 makespan 계산 (머신 상태 포함)
             makespan_sec, detailed = env.calculate_makespan(
@@ -1530,32 +2162,23 @@ def run_rl_assembly_decoding_sequence_with_blocks(
                 afternoon_guard_blocks=afternoon_guard_blocks_day
             )
             bs = next((b for b in detailed['block_schedules'] if b['block_id'] == selected_block_id), None)
-            if bs:
-                block_start_time = date_start_time + timedelta(seconds=bs['start_seconds'])
-                block_end_time = date_start_time + timedelta(seconds=bs['end_seconds'])
-                total_completion_time = date_start_time + timedelta(seconds=makespan_sec)
-                makespan_minutes = makespan_sec / 60.0
-                makespan_hours = makespan_minutes / 60.0
-            else:
-                # Fallback 계산
-                block_total_time = sum(selected_block.processing_times)
-                block_start_time = date_start_time + timedelta(minutes=sum(sum(blocks_dict[bid].processing_times) for bid in final_sequence[:-1]))
-                block_end_time = block_start_time + timedelta(minutes=block_total_time)
-                makespan_minutes = (block_end_time - date_start_time).total_seconds() / 60.0
-                makespan_hours = makespan_minutes / 60.0
-                total_completion_time = block_end_time
-        except Exception as makespan_err:
-            block_total_time = sum(selected_block.processing_times)
-            block_start_time = date_start_time + timedelta(minutes=sum(sum(blocks_dict[bid].processing_times) for bid in final_sequence[:-1]))
-            block_end_time = block_start_time + timedelta(minutes=block_total_time)
-            makespan_minutes = (block_end_time - date_start_time).total_seconds() / 60.0
+            if bs is None:
+                raise RuntimeError(f"선택 블록 스케줄을 찾지 못함: block_id={selected_block_id}")
+            block_start_time = date_start_time + timedelta(seconds=bs['start_seconds'])
+            block_end_time = date_start_time + timedelta(seconds=bs['end_seconds'])
+            total_completion_time = date_start_time + timedelta(seconds=makespan_sec)
+            makespan_minutes = makespan_sec / 60.0
             makespan_hours = makespan_minutes / 60.0
-            total_completion_time = block_end_time
+        except Exception as makespan_err:
+            # [AGENT-EDIT] RL 핵심 경로의 makespan 실패를 단순 합산으로 숨기지 않는다.
+            raise RuntimeError(
+                f"RL 블록 makespan 계산 실패: block_id={selected_block_id}, date={current_date}"
+            ) from makespan_err
         
         # 실제 시작 시간으로 제약 검증 (실제 처리된 블록이므로 모든 제약조건 검사)
         # 🆕 실제 머신 2번(전면SAW) 시작 시간 계산 (makespan 계산 결과에서 추출)
         actual_machine_2_start_time = None
-        if bs and 'detailed' in locals():
+        if bs is not None and detailed is not None:
             # CT 테이블에서 머신 2번(전면SAW) 시작 시간 직접 계산
             ct_common = detailed['ct_tables']['ct_common']
             block_seq_idx = daily_sequence.index(selected_block_id)
@@ -1576,49 +2199,41 @@ def run_rl_assembly_decoding_sequence_with_blocks(
             # print(f"      📊 CT 테이블 디버깅: seq_idx={block_seq_idx}, ct_row={block_seq_idx + 1}, machine_2_seconds={machine_2_start_seconds}")
         
         # ✅ 휴리스틱과 동일하게: 검증 전에 completed_steps를 “현재까지 실제 스케줄”로 재구성
-        try:
-            env.completed_steps = []
-            # 1) 이미 확정된 schedule_results를 기반으로 반영
-            for rec in schedule_results:
-                try:
-                    st = pd.to_datetime(rec.get('start_time')) if rec.get('start_time') else None
-                    et = pd.to_datetime(rec.get('end_time')) if rec.get('end_time') else st
-                    bay_val = rec.get('assigned_bay', '35A')
-                    bay_type = BayType.BAY_36B if str(bay_val) == '36B' else BayType.BAY_35A
-                    pid = rec.get('block_id')
-                    if st is None or pid is None:
-                        continue
-                    ps = ProcessStep(
-                        block_id=int(pid),
-                        process_num=1,
-                        bay_type=bay_type,
-                        start_time=st.to_pydatetime(),
-                        end_time=et.to_pydatetime() if et is not None else st.to_pydatetime(),
-                        processing_time=(et - st).total_seconds() if et is not None else 0.0,
-                        completion_time=(et - st).total_seconds() if et is not None else 0.0,
-                    )
-                    env.completed_steps.append(ps)
-                except Exception:
+        env.completed_steps = []
+        # 1) 이미 확정된 schedule_results를 기반으로 반영
+        for rec in schedule_results:
+            try:
+                st = pd.to_datetime(rec.get('start_time')) if rec.get('start_time') else None
+                et = pd.to_datetime(rec.get('end_time')) if rec.get('end_time') else st
+                bay_val = rec.get('assigned_bay', '35A')
+                bay_type = BayType.BAY_36B if str(bay_val) == '36B' else BayType.BAY_35A
+                pid = rec.get('block_id')
+                if st is None or pid is None:
                     continue
-            # 2) 이번에 선택한 블록을 추가
-            ps_step = ProcessStep(
-                block_id=selected_block.block_id,
-                process_num=1,
-                bay_type=assigned_bay,
-                start_time=block_start_time if block_start_time else current_datetime,
-                end_time=block_end_time if block_end_time else (block_start_time if block_start_time else current_datetime),
-                processing_time=sum(selected_block.processing_times) * 60,
-                completion_time=sum(selected_block.processing_times) * 60,
-            )
-            env.completed_steps.append(ps_step)
-        except Exception:
-            pass
-
-        block_violations = env._validate_all_constraints_realtime_action(
+                ps = ProcessStep(
+                    block_id=int(pid),
+                    process_num=1,
+                    bay_type=bay_type,
+                    start_time=st.to_pydatetime(),
+                    end_time=et.to_pydatetime() if et is not None else st.to_pydatetime(),
+                    processing_time=(et - st).total_seconds() if et is not None else 0.0,
+                    completion_time=(et - st).total_seconds() if et is not None else 0.0,
+                )
+                env.completed_steps.append(ps)
+            except Exception as exc:
+                # [AGENT-EDIT] validator 입력 복원 실패는 숨기지 않는다.
+                raise RuntimeError(
+                    f"RL completed_steps 복원 실패: record_block_id={rec.get('block_id')}"
+                ) from exc
+        block_violations = env._validate_and_commit_constraints_action(
             selected_block,
             assigned_bay,
             block_start_time if block_start_time is not None else current_datetime,
-            actual_machine_2_start_time=actual_machine_2_start_time
+            actual_machine_2_start_time=actual_machine_2_start_time,
+            processing_time_seconds=sum(selected_block.processing_times) * 60,
+            step_start_time=block_start_time if block_start_time else current_datetime,
+            step_end_time=block_end_time if block_end_time else (block_start_time if block_start_time else current_datetime),
+            current_in_history=False,
         )
 
         # [AGENT-EDIT] 후공정 착수 순서 제약은 기록 유지 (오탐 방지 로직은 action_masking 쪽에서 보정)
@@ -1673,10 +2288,6 @@ def run_rl_assembly_decoding_sequence_with_blocks(
         existing_messages = {violation.message for violation in block_violations}
         if selected_analysis:
             inclusion_reason = (selected_analysis.get('inclusion_reason') or '').strip()
-            # [AGENT-ADD] 리드타임 강제+P6 대상 트래킹 → 15시 이후 강제 지연 적용
-            if inclusion_reason.startswith('[LEADTIME-GUARD]') and selected_block.needs_afternoon_start():
-                afternoon_guard_blocks_day.add(selected_block_id)
-                afternoon_guard_blocks_all.add(selected_block_id)
             if inclusion_reason:
                 if inclusion_reason.startswith('[RELAX]'):
                     relax_violation = ConstraintViolation(
@@ -1726,8 +2337,11 @@ def run_rl_assembly_decoding_sequence_with_blocks(
                 completion_time=sum(selected_block.processing_times) * 60,
             )
             env.completed_steps.append(ps_step)
-        except Exception:
-            pass
+        except Exception as exc:
+            # [AGENT-EDIT] validator 히스토리 입력 실패는 숨기지 않는다.
+            raise RuntimeError(
+                f"RL completed_steps 기록 실패: block_id={selected_block.block_id}"
+            ) from exc
 
         # 🧹 휴리스틱과 동일: 위반 dedup 후 ERROR/WARNING만 카운트
         primary_violations, info_violations = dedup_violations(
@@ -1735,8 +2349,8 @@ def run_rl_assembly_decoding_sequence_with_blocks(
         )
         violation_count = len([v for v in primary_violations if v.severity in ['ERROR', 'WARNING']])
 
-        # 🆕 제약조건 위반 추적 (primary만 집계용)
-        all_violations.extend(primary_violations)
+        # [AGENT-EDIT] 총괄 metric은 raw 기준으로 집계하고 create_block_result에서 primary/meta로 다시 분리한다.
+        all_violations.extend(block_violations)
         
         # [AGENT-EDIT] 원본 위반 리스트를 전달해 완화/메타 정보를 CSV에 반영
         result = create_block_result(
@@ -1763,6 +2377,24 @@ def run_rl_assembly_decoding_sequence_with_blocks(
 
         # RL 전용 필드 업데이트
         result['method'] = 'RL_ASSEMBLY'
+
+        # ==== [AGENT-ADD] PPO용 스텝 보상 입력(실제 시간/위반) ====
+        if collect_episode_data and hasattr(rl_scheduler, "episode_data") and rl_scheduler.episode_data:
+            try:
+                last_step = rl_scheduler.episode_data[-1]
+                # 마지막 스텝이 현재 선택 블록인지 확인
+                if last_step.get('selected_block_id') == selected_block_id:
+                    if block_start_time and block_end_time:
+                        step_duration_hours = (block_end_time - block_start_time).total_seconds() / 3600.0
+                    else:
+                        step_duration_hours = 0.0
+                    last_step['step_duration_hours'] = step_duration_hours
+                    last_step['step_violation_count'] = int(violation_count)
+            except Exception as exc:
+                # [AGENT-EDIT] PPO 학습용 step metric 기록 실패는 숨기지 않는다.
+                raise RuntimeError(
+                    f"RL step metric 기록 실패: block_id={selected_block_id}"
+                ) from exc
         result['rl_confidence'] = round(confidence, 3)
         result['rl_available_count'] = len(available_ids)
 
@@ -1805,7 +2437,6 @@ def run_rl_assembly_decoding_sequence_with_blocks(
     
     # 6. 결과 저장
     if save_csv:
-        import pandas as pd
         df = pd.DataFrame(schedule_results)
         df.to_csv(output_csv, index=False, encoding='utf-8-sig')
         # print(f"  RL 결과 저장 완료: {output_csv}")

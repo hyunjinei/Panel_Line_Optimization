@@ -74,6 +74,10 @@ class ConstraintValidatorCore:
         mixing_violations = self.validate_mixed_assembly_realtime(block, current_time)
         all_violations.extend(mixing_violations)
 
+        # [AGENT-ADD] LINE_GROUP_CONSTRAINT는 runtime 마스킹과 독립적으로 final/audit에서도 반드시 다시 센다.
+        line_group_violations = self.validate_line_group_realtime(block)
+        all_violations.extend(line_group_violations)
+
         # ✅ P5#13: 자재 미입고 제약 검증 (실시간 추가)
         material_violations = self.validate_material_ready_realtime(block)
         all_violations.extend(material_violations)
@@ -111,7 +115,7 @@ class ConstraintValidatorCore:
         current_time: datetime,
         actual_machine_2_start_time: datetime = None,
         capacity_time_override: Optional[datetime] = None,
-        current_in_history: bool = True,
+        current_in_history: bool = False,
     ) -> List[ConstraintViolation]:
         """
         Action Masking용 모든 제약조건 실시간 검증 (P7#7 중복 해결)
@@ -129,8 +133,10 @@ class ConstraintValidatorCore:
         )
         violations.extend(saw_violations)
 
-        # ❌ P5#3,4: P/S 순서 제약 검증 (Action Masking용에서는 제외)
-        # Action Masking에서 이미 P → S 강제 선택을 보장하므로 중복 검증 불필요
+        # [AGENT-EDIT] runtime canonical 검사에서는 P/S 순서도 실시간으로 계속 검수한다.
+        ps_order_violations = self.validate_ps_order_realtime(block)
+        violations.extend(ps_order_violations)
+
 
         # ✅ P5#8,9,10,16: 용량 관리 제약 검증 (추가!)
         # [AGENT-EDIT] 계획일 기준으로 용량/혹서기 판단을 통일하기 위해 시간 오버라이드를 지원
@@ -150,6 +156,10 @@ class ConstraintValidatorCore:
         # ✅ P5#11,12: 혼합 배정 제약 검증 (유지)
         mixing_violations = self.validate_mixing_constraints_realtime(block)
         violations.extend(mixing_violations)
+
+        # [AGENT-ADD] LINE_GROUP_CONSTRAINT canonical audit/runtime counting
+        line_group_violations = self.validate_line_group_realtime(block)
+        violations.extend(line_group_violations)
 
         # ✅ P5#13: 자재 미입고 제약 검증 (유지)
         material_violations = self.validate_material_constraints_realtime(block)

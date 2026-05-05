@@ -114,8 +114,8 @@ class ConstraintChecker(DebugMixin, CapacityMixin, RoutingMixin, PSMixingMixin, 
             # P5 제약조건
             "P5#1": 0, "P5#3": 0, "P5#4": 0, "P5#6": 0, "P5#8": 0, 
             "P5#9": 0, "P5#10": 0, "P5#11": 0, "P5#12": 0, "P5#11,12": 0, "P5#13": 0,
-            # P6 제약조건  
-            "P6#1": 0, "P6#2": 0, "P6#3": 0, "P6#4": 0,
+            # [AGENT-EDIT] P6#1,#2,#3 시간 제약 제거 이후 P6는 pure cross seam 혼합만 유지한다.
+            "P6#4": 0,
             # P7 제약조건
             "P7#1": 0, "P7#2": 0, "P7#3": 0, "P7#7": 0, "P7#8": 0, 
             "P7#10": 0, "P7#11": 0, "P7#12": 0,
@@ -156,8 +156,6 @@ class ConstraintChecker(DebugMixin, CapacityMixin, RoutingMixin, PSMixingMixin, 
             "라인고정간격": "LINE_GROUP_CONSTRAINT",
             "라인혼합": ["P5#11", "P5#12"],
             "용량": ["P5#8", "P5#9", "P5#10", "P5#16"],
-            "p6": ["P6#1", "P6#2", "P6#3"],
-            "p6시간": ["P6#1", "P6#2", "P6#3"],
             # [AGENT-ADD] P/S 연속 키 확장
             "ps연속": ["P5#3", "P5#4"],
             "ps연속라인": "P5#3",
@@ -180,6 +178,30 @@ class ConstraintChecker(DebugMixin, CapacityMixin, RoutingMixin, PSMixingMixin, 
 
         return strict_set
 
+    def _expand_constraint_aliases(self, constraint_ids: List[str]) -> Set[str]:
+        """[AGENT-ADD] 묶인 constraint id를 개별 id까지 확장한다."""
+        expanded: Set[str] = set()
+        for raw in constraint_ids or []:
+            text = str(raw).strip()
+            if not text:
+                continue
+            expanded.add(text)
+            if text == "P5#3,4":
+                expanded.update(["P5#3", "P5#4"])
+            elif text == "P5#8,9,10,16":
+                expanded.update(["P5#8", "P5#9", "P5#10", "P5#16"])
+            elif text == "P5#11,12":
+                expanded.update(["P5#11", "P5#12"])
+            elif text == "P7#3,4":
+                expanded.update(["P7#3", "P7#4"])
+        return expanded
+
+    def _has_strict_constraint_failure(self, failed_constraints: List[str], strict_rules: Set[str]) -> bool:
+        """[AGENT-ADD] strict rule set과 failed constraints를 동일 기준으로 비교한다."""
+        if not strict_rules:
+            return False
+        return bool(self._expand_constraint_aliases(failed_constraints) & strict_rules)
+
     def _get_relax_mapping(self) -> Dict[str, Tuple[str, List[str]]]:
         """완화 키 매핑 테이블."""
         return {
@@ -198,8 +220,6 @@ class ConstraintChecker(DebugMixin, CapacityMixin, RoutingMixin, PSMixingMixin, 
             "곡판간격": ("곡판 간격 완화", ["ROUTING_CURVED_SPACING"]),
             "고심수": ("고심수 간격 완화", ["ROUTING_HIGH_SEAM_SPACING"]),
             "고심수간격": ("고심수 간격 완화", ["ROUTING_HIGH_SEAM_SPACING"]),
-            "p6": ("P6 시간 완화", ["P6#1", "P6#2", "P6#3"]),
-            "p6시간": ("P6 시간 완화", ["P6#1", "P6#2", "P6#3"]),
             "p64": ("P6#4 완화", ["P6#4"]),
             "p615": ("P5#15 완화", ["P5#15"]),
             "p515": ("P5#15 완화", ["P5#15"]),
@@ -280,10 +300,9 @@ class ConstraintChecker(DebugMixin, CapacityMixin, RoutingMixin, PSMixingMixin, 
         새로운 우선순위:
          최우선: P5#15 (명절 전날 야간 차단) - 물리적 불가능
          1순위: P5#8,9,10,16 (통합 용량 제약) - 환경 기본 한계
-         2순위: P6#1,2,3 (SAW 시간 제약) - 공정별 시간 조건
-         3순위: P5#3,4 (P/S 순서 제약) - 블록 순서 논리
-         4순위: P5#11,12 (Assembly Type 제약) - 작업 효율
-         5순위: P6#4 (Cross seam 제약) - 품질 관리
+         2순위: P5#3,4 (P/S 순서 제약) - 블록 순서 논리
+         3순위: P5#11,12 (Assembly Type 제약) - 작업 효율
+         4순위: P6#4 (Cross seam 제약) - 품질 관리
         """
         ####################################################################################################################################
         # [AGENT-EDIT] 착수일 고정 휴리스틱 전용 경량 마스킹 + 단계적 완화
@@ -363,8 +382,7 @@ class ConstraintChecker(DebugMixin, CapacityMixin, RoutingMixin, PSMixingMixin, 
                 ("C/Seam 완화", ["ROUTING_C_SEAM_SPACING"]),
                 ("곡판 간격 완화", ["ROUTING_CURVED_SPACING"]),
                 ("고심수 간격 완화", ["ROUTING_HIGH_SEAM_SPACING"]),
-                # [AGENT-EDIT] 작업장 순서 제약은 하드 유지: 완화 단계에서 제외
-                ("P6 시간 완화", ["P6#1", "P6#2", "P6#3"]),
+                # [AGENT-EDIT] P6#1,#2,#3 시간 제약 제거: 완화 단계에서도 제외
                 ("P6#4 완화", ["P6#4"]),
                 ("3베이 패턴 완화", ["CONSECUTIVE_3BAY"]),
             ]
@@ -393,23 +411,6 @@ class ConstraintChecker(DebugMixin, CapacityMixin, RoutingMixin, PSMixingMixin, 
                         info['final_violation_count'] = 1
                 available_block_ids = remaining
     
-        ps_forced_blocks = self._apply_ps_pair_masking(
-            [b for b in blocks if b.block_id in available_block_ids],
-            selected_blocks,
-            violations,
-            blocks
-        )
-    
-        if ps_forced_blocks:
-            forced_ids = [b.block_id for b in ps_forced_blocks]
-            violations.append(ConstraintViolation(
-                constraint_id="PS_FORCED",
-                message=f"P/S 강제 선택: {forced_ids}",
-                severity="WARNING",
-                block_id=forced_ids[0] if forced_ids else None
-            ))
-            return forced_ids, violations, block_analysis
-    
         return available_block_ids, violations, block_analysis
 
     def get_next_available_blocks_assembly(
@@ -428,10 +429,9 @@ class ConstraintChecker(DebugMixin, CapacityMixin, RoutingMixin, PSMixingMixin, 
         Assembly Decoding 전용 블록 선택 로직 (조립착수일 우선순위 기반)
     
         새로운 우선순위:
-        1. P/S 강제 연속성 (최우선) - S 블록은 조립착수일 무관하게 선택
-        2. 조립착수일 우선순위 마스킹 (급한 것부터 순차 해제)
-        3. 연속 3판 B베이 방지
-        4. 나머지 기본 제약조건들
+        1. 조립착수일 우선순위 마스킹 (급한 것부터 순차 해제)
+        2. 연속 3판 B베이 방지
+        3. 나머지 기본 제약조건들
         """
         violations = []
         block_analysis = []
@@ -452,8 +452,8 @@ class ConstraintChecker(DebugMixin, CapacityMixin, RoutingMixin, PSMixingMixin, 
         # [AGENT-EDIT] 현재까지 선택된 순서를 SequenceState에 동기화하여 CT 계산 시 대기열을 반영
         try:
             self.set_sequence(selected_blocks)
-        except Exception:
-            pass
+        except Exception as exc:
+            raise RuntimeError("Assembly masking sequence_state 동기화 실패") from exc
         # [AGENT-EDIT] 당일 시퀀스 별도 보관 (P6 시간 계산 시 날짜 리셋 반영)
         self.current_day_selected_blocks = current_day_selected_blocks or []
         # ==== [AGENT-EDIT END] ====
@@ -489,7 +489,7 @@ class ConstraintChecker(DebugMixin, CapacityMixin, RoutingMixin, PSMixingMixin, 
                 'constraint_checks': {},
                 'masking_stage': '',
                 'three_bay_check': '',
-                'ps_forced': '',
+                'ps_forced': False,
                 'relax_level': 0,
                 # [AGENT-ADD] 완화 단계/대상 정보 (CSV 기록용)
                 'relax_stage': '',
@@ -556,7 +556,10 @@ class ConstraintChecker(DebugMixin, CapacityMixin, RoutingMixin, PSMixingMixin, 
             b for _, (_, blks) in workshop_min_by_key.items() for b in blks
         ]
         workshop_head_ids = {b.block_id for b in workshop_heads_full}
-        remaining_unscheduled = workshop_heads_full
+        # [AGENT-EDIT] workshop-head masking 토글이 assembly 경로의 선필터에도 동일하게 적용되도록 맞춘다.
+        # 이전에는 여기서 무조건 workshop head만 남겨 뒤쪽 토글 분기가 사실상 무효였다.
+        workshop_head_masking = bool(getattr(self.constraint_config, 'enable_workshop_head_masking', True))
+        remaining_unscheduled = workshop_heads_full if workshop_head_masking else remaining_all_unscheduled
     
         # ==== [AGENT-EDIT BEGIN: 용량 하드 제약 선필터] ====
         # [AGENT-EDIT] 강제/PS-only와 무관하게 일일 용량을 넘길 수 없는 경우 당일 선택을 종료
@@ -584,99 +587,28 @@ class ConstraintChecker(DebugMixin, CapacityMixin, RoutingMixin, PSMixingMixin, 
             remaining_unscheduled = capacity_filtered
         # ==== [AGENT-EDIT END] ====
     
-        # ==== [AGENT-EDIT BEGIN: P/S 연속 우선 강제(하드 제약만 검사)] ====
-        # [AGENT-EDIT] P 선택 직후 S를 가능한 한 즉시 강제(우선순위). 하드 제약(용량/곡판/고심수/P6/명절)만 유지.
-        if selected_blocks:
-            last_selected_id = selected_blocks[-1]
-            starboard_id = None
-            try:
-                if self.ps_manager.is_port_block(last_selected_id):
-                    starboard_id = self.ps_manager.get_starboard_for_port(last_selected_id)
-            except Exception:
-                starboard_id = None
-    
-            if starboard_id and starboard_id not in selected_blocks:
-                ps_block = next((b for b in remaining_unscheduled if b.block_id == starboard_id), None)
-                if ps_block is None:
-                    ps_block = next((b for b in blocks if b.block_id == starboard_id), None)
-    
-                if ps_block is not None:
-                    hard_reasons: List[str] = []
-                    hard_ok = True
-    
-                    curved_ok, curved_reason = self._check_curved_plate_spacing(ps_block, selected_blocks)
-                    if not curved_ok:
-                        hard_ok = False
-                        hard_reasons.append(curved_reason)
-    
-                    high_ok, high_reason = self._check_high_seam_spacing(ps_block, selected_blocks)
-                    if not high_ok:
-                        hard_ok = False
-                        hard_reasons.append(high_reason)
-    
-                    holiday_ok, holiday_reason = self._check_holiday_eve_constraint(ps_block, current_time)
-                    if not holiday_ok:
-                        hard_ok = False
-                        hard_reasons.append(holiday_reason)
-    
-                    capacity_ok, capacity_reason = self._check_integrated_capacity_constraints(ps_block, current_time)
-                    if not capacity_ok:
-                        hard_ok = False
-                        hard_reasons.append(capacity_reason)
-    
-                    saw_ok, saw_reason = self._check_saw_time_constraint(
-                        ps_block,
-                        current_time,
-                        previous_machine_state=previous_machine_state,
-                        current_bay_assignments=current_bay_assignments,
-                        current_day_selected_blocks=current_day_selected_blocks
-                    )
-                    if not saw_ok:
-                        hard_ok = False
-                        hard_reasons.append(saw_reason)
-                    # [AGENT-EDIT] 작업장 순서 하드 제약: 전체 미선택 기준으로 위반이면 P/S 강제 불가
-                    workshop_ok, workshop_reason = self._check_workshop_order_constraint(
-                        ps_block, remaining_all_unscheduled, selected_blocks
-                    )
-                    if not workshop_ok:
-                        hard_ok = False
-                        hard_reasons.append(workshop_reason)
-    
-                    analysis = analysis_map.get(ps_block.block_id)
-                    if hard_ok:
-                        if analysis:
-                            analysis['is_available'] = True
-                            analysis['inclusion_reason'] = 'P/S 연속 우선 강제'
-                        # [AGENT-EDIT] 이전에 누적된 P/S 강제 실패 기록 제거
-                        if not hasattr(self, "ps_forced_pending_info"):
-                            self.ps_forced_pending_info = {}
-                        self.ps_forced_pending_info.pop(ps_block.block_id, None)
-                        violations.append(ConstraintViolation(
-                            constraint_id="PS_FORCED",
-                            message=f"P/S 연속 우선 강제 선택: {ps_block.block_id}",
-                            severity="INFO",
-                            block_id=ps_block.block_id
-                        ))
-                        return [ps_block.block_id], violations, block_analysis
-                    else:
-                        if analysis:
-                            analysis['is_available'] = False
-                            analysis['exclusion_reason'] = f"P/S 연속 차단(하드 제약): {', '.join(hard_reasons)}"
-                        # [AGENT-EDIT] S 블록 선택 시점에 표시할 수 있도록 보류 정보로 저장
-                        if not hasattr(self, "ps_forced_pending_info"):
-                            self.ps_forced_pending_info = {}
-                        self.ps_forced_pending_info[ps_block.block_id] = f"P/S 연속 강제 불가: {', '.join(hard_reasons)}"
-                        # [AGENT-EDIT] P/S 강제 실패 시 다른 블록 선택을 허용 (우회 가능)
-                        pass
+        # ==== [AGENT-EDIT BEGIN: P/S 즉시 추종 강제 제거] ====
+        # 논문 실험 기준으로 P 이후 S 즉시 추종 강제는 제거한다.
+        # P/S 순서 자체는 _check_ps_order_constraint()가 계속 유지한다.
         # ==== [AGENT-EDIT END] ====
-        emergency_blocks = [b for b in remaining_unscheduled if _slack_days(b) < min_lead_days]
-        urgent_blocks = [b for b in remaining_unscheduled if _slack_days(b) == min_lead_days]
-        normal_blocks = [b for b in remaining_unscheduled if _slack_days(b) > min_lead_days]
+        leadtime_layers_enabled = bool(getattr(self.constraint_config, 'enable_assembly_start_leadtime_layers', True))
+        if leadtime_layers_enabled:
+            emergency_blocks = [b for b in remaining_unscheduled if _slack_days(b) < min_lead_days]
+            urgent_blocks = [b for b in remaining_unscheduled if _slack_days(b) == min_lead_days]
+            normal_blocks = [b for b in remaining_unscheduled if _slack_days(b) > min_lead_days]
+        else:
+            # [AGENT-EDIT] 조립착수일 slack 기반 층 분리를 끄면 전체 후보를 normal 한 층으로 본다.
+            emergency_blocks = []
+            urgent_blocks = []
+            normal_blocks = remaining_unscheduled
         if debug_enabled:
-            print(
-                f"[Masking] layer_counts: emergency={len(emergency_blocks)} "
-                f"urgent={len(urgent_blocks)} normal={len(normal_blocks)} (total={len(remaining_unscheduled)})"
-            )
+            if leadtime_layers_enabled:
+                print(
+                    f"[Masking] layer_counts: emergency={len(emergency_blocks)} "
+                    f"urgent={len(urgent_blocks)} normal={len(normal_blocks)} (total={len(remaining_unscheduled)})"
+                )
+            else:
+                print(f"[Masking] leadtime layers disabled: normal={len(normal_blocks)} (total={len(remaining_unscheduled)})")
     
         def _mark_inclusion(cands: List[EnhancedBlock], reason: str):
             for c in cands:
@@ -772,8 +704,7 @@ class ConstraintChecker(DebugMixin, CapacityMixin, RoutingMixin, PSMixingMixin, 
                 ("C/Seam 완화", ["ROUTING_C_SEAM_SPACING"]),
                 ("곡판 간격 완화", ["ROUTING_CURVED_SPACING"]),
                 ("고심수 간격 완화", ["ROUTING_HIGH_SEAM_SPACING"]),
-                # [AGENT-EDIT] 작업장 순서 제약은 하드 유지: 완화 단계에서 제외
-                ("P6 시간 완화", ["P6#1", "P6#2", "P6#3"]),
+                # [AGENT-EDIT] P6#1,#2,#3 시간 제약 제거: 완화 단계에서도 제외
                 ("3베이 패턴 완화", ["CONSECUTIVE_3BAY"]),
             ]
             relax_list = getattr(self.constraint_config, "relax_order_assembly", []) or getattr(self.constraint_config, "relax_order", [])
@@ -966,14 +897,15 @@ class ConstraintChecker(DebugMixin, CapacityMixin, RoutingMixin, PSMixingMixin, 
         urgent_blocks: List[EnhancedBlock] = []
         urgent_slack_days = getattr(self.constraint_config, 'minimum_panel_lead_days', 1) or 1
         urgent_slack_days = max(urgent_slack_days, 2)  # 기본 2일 임계
-        for blk in remaining_blocks:
-            start_dt = getattr(blk, 'assembly_start_date', None)
-            if isinstance(start_dt, datetime):
-                slack = (start_dt.date() - current_panel_date).days
-                if slack <= urgent_slack_days:
-                    urgent_blocks.append(blk)
+        if leadtime_layers_enabled:
+            for blk in remaining_blocks:
+                start_dt = getattr(blk, 'assembly_start_date', None)
+                if isinstance(start_dt, datetime):
+                    slack = (start_dt.date() - current_panel_date).days
+                    if slack <= urgent_slack_days:
+                        urgent_blocks.append(blk)
     
-        if urgent_blocks:
+        if leadtime_layers_enabled and urgent_blocks:
             # 긴급 후보에도 일반 제약 순서를 적용하여 통과한 블록만 후보로 올린다
             evaluated_urgent = self._evaluate_blocks_stage(
                 urgent_blocks,
@@ -1005,8 +937,7 @@ class ConstraintChecker(DebugMixin, CapacityMixin, RoutingMixin, PSMixingMixin, 
                 ("C/Seam 완화", ["ROUTING_C_SEAM_SPACING"]),
                 ("곡판 간격 완화", ["ROUTING_CURVED_SPACING"]),
                 ("고심수 간격 완화", ["ROUTING_HIGH_SEAM_SPACING"]),
-                # [AGENT-EDIT] 작업장 순서 제약은 하드 유지: 완화 단계에서 제외
-                ("P6 시간 완화", ["P6#1", "P6#2", "P6#3"]),
+                # [AGENT-EDIT] P6#1,#2,#3 시간 제약 제거: 완화 단계에서도 제외
                 ("3베이 패턴 완화", ["CONSECUTIVE_3BAY"]),
             ]
             relax_list = getattr(self.constraint_config, "relax_order_assembly", []) or getattr(self.constraint_config, "relax_order", [])
@@ -1076,14 +1007,28 @@ class ConstraintChecker(DebugMixin, CapacityMixin, RoutingMixin, PSMixingMixin, 
             elif start_date == min_by_root[root][0]:
                 min_by_root[root][1].append(blk)
     
-        workshop_heads: List[EnhancedBlock] = []
-        for _, (_, blks) in min_by_root.items():
-            workshop_heads.extend(blks)
+        if not workshop_head_masking:
+            # [AGENT-ADD] workshop-head masking 비활성화 시 날짜창 안의 전체 후보를 평가한다.
+            workshop_heads = [
+                blk for blk in remaining_blocks
+                if isinstance(getattr(blk, 'assembly_start_date', None), datetime)
+            ]
+        else:
+            workshop_heads: List[EnhancedBlock] = []
+            for _, (_, blks) in min_by_root.items():
+                workshop_heads.extend(blks)
         if debug_enabled:
             print(f"[Masking] normal_workshop_heads={len(workshop_heads)}")
+            if not workshop_head_masking:
+                print("[Masking] workshop-head masking disabled: using all dated remaining blocks")
     
         # 창별 후보 필터 함수
+        window_filter_enabled = bool(getattr(self.constraint_config, 'enable_assembly_start_window_filter', True))
+        if debug_enabled and not window_filter_enabled:
+            print('[Masking] assembly_start window filter disabled: evaluating full candidate pool')
         def _filter_by_window(cands: List[EnhancedBlock], window_days: int) -> List[EnhancedBlock]:
+            if not window_filter_enabled:
+                return list(cands)
             upper = current_panel_date + timedelta(days=max(0, window_days))
             return [
                 blk for blk in cands
@@ -1215,8 +1160,7 @@ class ConstraintChecker(DebugMixin, CapacityMixin, RoutingMixin, PSMixingMixin, 
                     ("C/Seam 완화", ["ROUTING_C_SEAM_SPACING"]),
                     ("곡판 간격 완화", ["ROUTING_CURVED_SPACING"]),
                     ("고심수 간격 완화", ["ROUTING_HIGH_SEAM_SPACING"]),
-                    # [AGENT-EDIT] 작업장 순서 제약은 하드 유지: 완화 단계에서 제외
-                    ("P6#1,2,3 완화", ["P6#1", "P6#2", "P6#3"]),
+                    # [AGENT-EDIT] P6#1,#2,#3 시간 제약 제거: 완화 단계에서도 제외
                     ("3베이 패턴 완화", ["CONSECUTIVE_3BAY"]),
                 ]
                 relax_list = getattr(self.constraint_config, "relax_order_assembly", []) or getattr(self.constraint_config, "relax_order", [])
@@ -1258,21 +1202,12 @@ class ConstraintChecker(DebugMixin, CapacityMixin, RoutingMixin, PSMixingMixin, 
                 if debug_enabled:
                     print(f"[Masking] NORMAL: window={wd} candidates={len(window_candidates)}")
     
+                # [AGENT-EDIT] P6#1,#2,#3 제거 이후 작업장 창 평가는 단일 후보군만 사용한다.
                 groups = [
-                    ("NON_P6", [b for b in window_candidates if not b.needs_afternoon_start()]),
-                    ("P6_FORCED", [b for b in window_candidates if b.needs_afternoon_start() and self._is_leadtime_guard_block(b, current_panel_date)]),
-                    ("P6_NONFORCED", [b for b in window_candidates if b.needs_afternoon_start() and not self._is_leadtime_guard_block(b, current_panel_date)]),
+                    ("WORKSHOP_WINDOW", window_candidates),
                 ]
-    
+
                 for g_label, g_list in groups:
-                    # [AGENT-EDIT] 오후착수 필요(P6_FORCED) 블록은 15:00 이전이면 완화 포함 모든 단계에서 제외
-                    if (
-                        g_label == "P6_FORCED"
-                        and isinstance(current_time, datetime)
-                        and current_time.hour < 15
-                    ):
-                        continue
-    
                     if not g_list:
                         continue
                     picked = _run_group(g_list, f"{stage_label}-{wd}d-{g_label}")
@@ -1307,86 +1242,8 @@ class ConstraintChecker(DebugMixin, CapacityMixin, RoutingMixin, PSMixingMixin, 
         workshop_allowed_ids: Set[int] = {blk.block_id for blk in blocks if blk.block_id not in selected_blocks}
         workshop_block_reasons: Dict[int, str] = {}
     
-        # 1단계: P/S 강제 연속성 체크 (최우선)
-        if selected_blocks:
-            last_selected_id = selected_blocks[-1]
-            # print(f"   🔍 마지막 선택 블록: {last_selected_id}")
-    
-            if self.ps_manager.is_port_block(last_selected_id):
-                starboard_id = self.ps_manager.get_starboard_for_port(last_selected_id)
-                # print(f"   🔍 P 블록 {last_selected_id} 발견 → 연결된 S 블록: {starboard_id}")
-    
-                if starboard_id and starboard_id not in selected_blocks:
-                    # print(f"   🔍 S 블록 {starboard_id} 아직 선택 안됨 → 강제 선택 시도")
-                    # S 블록을 전체 풀에서 찾아서 강제 반환 (조립착수일 무관!)
-                    starboard_block = next((block for block in blocks if block.block_id == starboard_id), None)
-                    if starboard_block:
-                        if starboard_id not in workshop_allowed_ids:
-                            reason = workshop_block_reasons.get(starboard_id)
-                            analysis = analysis_map.get(starboard_id)
-                            if analysis and reason:
-                                analysis['exclusion_reason'] = reason
-                            # 작업장 우선 제약에 걸렸으므로 강제 선택 불가
-                        else:
-                            ################################################################################################################################################################################################
-                            # fix: Routing 상위 제약 (곡판/고심수 간격 & 후공정 착수 순서)
-                            ################################################################################################################################################################################################
-                            curved_pass, curved_reason = self._check_curved_plate_spacing(starboard_block, selected_blocks)
-                            high_seam_pass, high_seam_reason = self._check_high_seam_spacing(starboard_block, selected_blocks)
-    
-                            for analysis in block_analysis:
-                                if analysis['block_id'] == starboard_id:
-                                    analysis['constraint_checks']['ROUTING_CURVED_SPACING'] = {
-                                        'result': 'PASS' if curved_pass else 'FAIL',
-                                        'reason': curved_reason
-                                    }
-                                    analysis['constraint_checks']['ROUTING_HIGH_SEAM_SPACING'] = {
-                                        'result': 'PASS' if high_seam_pass else 'FAIL',
-                                        'reason': high_seam_reason
-                                    }
-                                    if curved_pass and high_seam_pass:
-                                        analysis['ps_forced'] = 'P/S 강제 선택'
-                                        analysis['inclusion_reason'] = 'P/S 강제 연속성'
-                                        analysis['is_available'] = True
-                                    else:
-                                        priority_reason = curved_reason if not curved_pass else high_seam_reason
-                                        analysis['is_available'] = False
-                                        analysis['exclusion_reason'] = priority_reason
-                                    break
-    
-                            self._debug_candidate_stage(debug_enabled, "P/S 강제 후보", [starboard_id], stage_history)
-    
-                            if not curved_pass or not high_seam_pass:
-                                priority_reason = curved_reason if not curved_pass else high_seam_reason
-                                violations.append(ConstraintViolation(
-                                    constraint_id='ROUTING_CURVED_SPACING' if not curved_pass else 'ROUTING_HIGH_SEAM_SPACING',
-                                    message=priority_reason,
-                                    block_id=starboard_id,
-                                    severity='ERROR'
-                                ))
-                            else:
-                                return [starboard_id], violations, block_analysis
-                    else:
-                        # S 블록을 찾을 수 없는 경우 → 강제 반환하지 않고 후속 단계로 진행
-                        # [AGENT-EDIT] 후보 0 방지를 위해 빈 리스트 반환 대신 정상 루트로 진행
-                        violations.append(ConstraintViolation(
-                            constraint_id="PS_FORCED_MISSING",
-                            message=f"P/S 강제 대상 S 블록 {starboard_id} 미존재 → 강제 선택 건너뜀",
-                            block_id=starboard_id,
-                            severity="WARNING"
-                        ))
-                elif starboard_id and starboard_id in selected_blocks:
-                    # print(f"   ✅ S 블록 {starboard_id}은 이미 선택됨")
-                    pass
-                else:
-                    # print(f"   ⚠️ P 블록 {last_selected_id}에 연결된 S 블록이 없음")
-                    pass
-            else:
-                # print(f"   ℹ️ 마지막 블록 {last_selected_id}은 P 블록이 아님")
-                pass
-        else:
-            # print(f"   ℹ️ 선택된 블록이 없어서 P/S 강제성 체크 건너뜀")
-            pass
+        # [AGENT-EDIT] P 이후 S 즉시 추종 강제 제거.
+        # 이 경로에서는 특정 S 블록을 강제 반환하지 않고, 아래 완화/후보 평가만 사용한다.
     
     #################################################################################################################################################
     ###############                                            완화 모드                                                               ###############  
@@ -1419,8 +1276,7 @@ class ConstraintChecker(DebugMixin, CapacityMixin, RoutingMixin, PSMixingMixin, 
                 ("C/Seam 완화", ["ROUTING_C_SEAM_SPACING"]),
                 ("곡판 간격 완화", ["ROUTING_CURVED_SPACING"]),
                 ("고심수 간격 완화", ["ROUTING_HIGH_SEAM_SPACING"]),
-                # [AGENT-EDIT] 작업장 순서 제약은 하드 유지: 완화 단계에서 제외
-                ("P6#1,2,3 완화", ["P6#1", "P6#2", "P6#3"]),
+                # [AGENT-EDIT] P6#1,#2,#3 시간 제약 제거: 완화 단계에서도 제외
                 ("3베이 패턴 완화", ["CONSECUTIVE_3BAY"]),
             ]
             relax_list = getattr(self.constraint_config, "relax_order_assembly", []) or getattr(self.constraint_config, "relax_order", [])
@@ -1563,32 +1419,7 @@ class ConstraintChecker(DebugMixin, CapacityMixin, RoutingMixin, PSMixingMixin, 
                                 passes_all = False
                                 failed_constraints.append("P5#8,9,10,16")
     
-                        # P6#1,2,3: SAW 시간 제약 (완화 가능)
-                        # needs_afternoon_start 블록은 15:00 이전이면 완화 여부와 무관하게 탈락
-                        if isinstance(current_time, datetime):
-                            before_afternoon = current_time.hour < 15
-                        else:
-                            before_afternoon = False
-    
-                        if block.needs_afternoon_start() and before_afternoon:
-                            passes_all = False
-                            failed_constraints.append("P6#1,2,3_TIME")
-                        elif (not any(c in combined_relax_constraints for c in ["P6#1", "P6#2", "P6#3"]) and 
-                              not self._check_saw_time_constraint(
-                                  block,
-                                  current_time,
-                                  previous_machine_state=previous_machine_state,
-                                  current_bay_assignments=current_bay_assignments,
-                                  current_day_selected_blocks=current_day_selected_blocks
-                              )[0]):
-                            passes_all = False
-                            failed_constraints.append("P6#1,2,3")
-    
-                        # 완화 리스트에 P6가 들어 있더라도 15:00 이전이면 강제 탈락 (완화로 우회 금지)
-                        if before_afternoon and any(c in combined_relax_constraints for c in ["P6#1", "P6#2", "P6#3"]):
-                            passes_all = False
-                            if "P6#1,2,3_TIME" not in failed_constraints:
-                                failed_constraints.append("P6#1,2,3_TIME")
+                        # [AGENT-EDIT] P6#1,#2,#3 시간 제약 제거: 이 단계에서는 더 이상 검사하지 않는다.
     
                         ######################################################################################################################################################################################
                         # fix: 연속 3베이 방지 유지 (완화 모드에서도 적용)
@@ -1757,6 +1588,12 @@ class ConstraintChecker(DebugMixin, CapacityMixin, RoutingMixin, PSMixingMixin, 
                         if debug_enabled:
                             print("   ⚠️ deadline 강제 후보 없음 → 최후 선택")
     
+            # [AGENT-EDIT] fallback tie-break helper를 공통 위치로 올려
+            # MIN_VIOLATION_CHOICE / FINAL_FORCE 양쪽에서 동일하게 사용한다.
+            def _start_key_fallback(b: EnhancedBlock):
+                dt = getattr(b, 'assembly_start_date', None)
+                return (dt if isinstance(dt, datetime) else datetime.max, b.block_id)
+
             # 제약조건 완화로도 해결되지 않으면 최후 선택(최소 위반)
             if not final_candidates:
                 if debug_enabled:
@@ -1772,21 +1609,14 @@ class ConstraintChecker(DebugMixin, CapacityMixin, RoutingMixin, PSMixingMixin, 
                     blk for blk in blocks
                     if blk.block_id not in selected_blocks and blk.block_id in workshop_head_ids
                 ]
-    
+
                 if remaining_blocks:
-                    def _start_key(b: EnhancedBlock):
-                        start_dt = getattr(b, 'assembly_start_date', None)
-                        if isinstance(start_dt, datetime):
-                            return start_dt
-                        return datetime.max
-    
+                    # ==== [AGENT-EDIT BEGIN: strict fallback filtering] ====
+                    strict_rules = self._resolve_strict_rules()
                     best_block: Optional[EnhancedBlock] = None
                     best_score = (float('inf'), datetime.max, float('inf'))
                     best_failed: List[str] = []
-                    # [AGENT-ADD] 용량 제약으로 인해 모든 후보가 막혔는지 추적
-                    capacity_blocked_count = 0
-                    total_remaining = len(remaining_blocks)
-    
+
                     for blk in remaining_blocks:
                         violation_count, failed = self._score_block_violations(
                             blk,
@@ -1798,52 +1628,43 @@ class ConstraintChecker(DebugMixin, CapacityMixin, RoutingMixin, PSMixingMixin, 
                             current_bay_assignments=current_bay_assignments,
                             current_day_selected_blocks=current_day_selected_blocks
                         )
-                        # [AGENT-EDIT] 작업장 순서 제약은 하드 유지: 최후 선택 후보에서 제외
-                        if "ROUTING_WORKSHOP_ORDER" in failed:
+                        if self._has_strict_constraint_failure(failed, strict_rules):
                             continue
-                        # [AGENT-ADD] 용량 제약은 완화하지 않음: 위반 시 최후 선택에서 제외
-                        if any("P5#8" in item for item in failed):
-                            capacity_blocked_count += 1
-                            if not getattr(self.constraint_config, 'allow_capacity_relaxation', False):
-                                continue
-                        start_key = _start_key(blk)
-                        tie_key = (violation_count, start_key, blk.block_id)
+                        tie_key = (violation_count, _start_key_fallback(blk)[0], blk.block_id)
                         if tie_key < best_score:
                             best_score = tie_key
                             best_block = blk
                             best_failed = failed
-    
-                    # [AGENT-EDIT] 용량 때문에 전부 막힌 경우: 최후 선택을 하지 않고 빈 후보로 반환하여 날짜 전환 유도
-                    if best_block is None and capacity_blocked_count == total_remaining and not getattr(self.constraint_config, 'allow_capacity_relaxation', False):
-                        final_candidates = []
-                        if debug_enabled:
-                            print("   ⚠️ 용량 제약으로 모든 후보가 차단됨 → 다음날로 전환")
-                    else:
-                        fallback_block = best_block if best_block else min(remaining_blocks, key=_start_key)
+
+                    if best_block is not None:
+                        fallback_block = best_block
                         final_candidates = [fallback_block]
-    
+                        final_block_ids = [fallback_block.block_id]
+
                         analysis = analysis_map.get(fallback_block.block_id)
                         if analysis:
                             analysis['is_available'] = True
-                            if best_block:
-                                failed_text = ", ".join(best_failed) if best_failed else "위반 없음"
-                                analysis['inclusion_reason'] = f"[MIN_VIOLATION] 최후 선택: {failed_text}"
-                            else:
-                                analysis['inclusion_reason'] = '[RELAX_STAGE_FINAL] 창/리드타임 무시, 최소 착수일 블록 복귀'
+                            failed_text = ", ".join(best_failed) if best_failed else "위반 없음"
+                            analysis['inclusion_reason'] = f"[MIN_VIOLATION] 최후 선택: {failed_text}"
                             analysis['relax_level'] = analysis.get('relax_level') or len(relaxation_sequences) + 1
-                            # [AGENT-ADD] 최후 선택 단계 위반 목록 기록
                             analysis['final_choice_flag'] = True
-                            analysis['final_violation_list'] = list(best_failed) if best_block else []
-                            analysis['final_violation_count'] = len(best_failed) if best_block else 0
-    
+                            analysis['final_violation_list'] = list(best_failed)
+                            analysis['final_violation_count'] = len(best_failed)
+
                         violations.append(
                             ConstraintViolation(
-                                constraint_id="MIN_VIOLATION_CHOICE" if best_block else "RELAX_STAGE_FINAL",
-                                message="최후 선택: 제약 위반 수 최소 블록 선택" if best_block else "최후 완화: 창/리드타임 무시하고 가장 빠른 착수일 블록을 복귀",
+                                constraint_id="MIN_VIOLATION_CHOICE",
+                                message="최후 선택: 제약 위반 수 최소 블록 선택",
                                 block_id=fallback_block.block_id,
                                 severity="INFO",
                             )
                         )
+                    else:
+                        final_candidates = []
+                        final_block_ids = []
+                        if debug_enabled:
+                            print("      ⚠️ strict hard 제약으로 MIN_VIOLATION 후보가 없음")
+                    # ==== [AGENT-EDIT END] ====
                 else:
                     if debug_enabled:
                         print("   ❌ 남은 블록이 없음")
@@ -1904,14 +1725,12 @@ class ConstraintChecker(DebugMixin, CapacityMixin, RoutingMixin, PSMixingMixin, 
         if not final_block_ids:
             remaining_unscheduled = [blk for blk in blocks if blk.block_id not in selected_blocks]
             if remaining_unscheduled:
-                def _start_key_fallback(b: EnhancedBlock):
-                    dt = getattr(b, 'assembly_start_date', None)
-                    return (dt if isinstance(dt, datetime) else datetime.max, b.block_id)
-    
+                # ==== [AGENT-EDIT BEGIN: final force respects strict rules] ====
+                strict_rules = self._resolve_strict_rules()
                 best_block: Optional[EnhancedBlock] = None
                 best_score = (float('inf'), datetime.max, float('inf'))
                 best_failed: List[str] = []
-    
+
                 for blk in remaining_unscheduled:
                     violation_count, failed = self._score_block_violations(
                         blk,
@@ -1923,31 +1742,40 @@ class ConstraintChecker(DebugMixin, CapacityMixin, RoutingMixin, PSMixingMixin, 
                         current_bay_assignments=current_bay_assignments,
                         current_day_selected_blocks=current_day_selected_blocks
                     )
+                    if self._has_strict_constraint_failure(failed, strict_rules):
+                        continue
                     tie_key = (violation_count, _start_key_fallback(blk)[0], blk.block_id)
                     if tie_key < best_score:
                         best_score = tie_key
                         best_block = blk
                         best_failed = failed
-    
-                fallback_block = best_block if best_block else min(remaining_unscheduled, key=_start_key_fallback)
-                final_candidates = [fallback_block]
-                final_block_ids = [fallback_block.block_id]
-    
-                analysis = analysis_map.get(fallback_block.block_id)
-                if analysis:
-                    analysis['is_available'] = True
-                    failed_text = ", ".join(best_failed) if best_failed else "위반 없음"
-                    analysis['inclusion_reason'] = f"[FINAL_FORCE] 후보 0 → 최소 위반 강제 선택 ({failed_text})"
-                    analysis['final_choice_flag'] = True
-                    analysis['final_violation_list'] = list(best_failed)
-                    analysis['final_violation_count'] = len(best_failed)
-    
-                violations.append(ConstraintViolation(
-                    constraint_id="FINAL_FORCE",
-                    message="후보 0개 → 최소 위반 강제 선택으로 공백 방지",
-                    block_id=fallback_block.block_id,
-                    severity="WARNING"
-                ))
+
+                if best_block is not None:
+                    fallback_block = best_block
+                    final_candidates = [fallback_block]
+                    final_block_ids = [fallback_block.block_id]
+
+                    analysis = analysis_map.get(fallback_block.block_id)
+                    if analysis:
+                        analysis['is_available'] = True
+                        failed_text = ", ".join(best_failed) if best_failed else "위반 없음"
+                        analysis['inclusion_reason'] = f"[FINAL_FORCE] 후보 0 → 최소 위반 강제 선택 ({failed_text})"
+                        analysis['final_choice_flag'] = True
+                        analysis['final_violation_list'] = list(best_failed)
+                        analysis['final_violation_count'] = len(best_failed)
+
+                    violations.append(ConstraintViolation(
+                        constraint_id="FINAL_FORCE",
+                        message="후보 0개 → 최소 위반 강제 선택으로 공백 방지",
+                        block_id=fallback_block.block_id,
+                        severity="WARNING"
+                    ))
+                else:
+                    final_candidates = []
+                    final_block_ids = []
+                    if debug_enabled:
+                        print("      ⚠️ strict hard 제약으로 FINAL_FORCE 후보가 없음")
+                # ==== [AGENT-EDIT END] ====
     
         # 🆕 Assembly 모드 스텝 선택지 분석 출력
         expansion_mode = getattr(self, 'assembly_expansion_mode', 1)
@@ -2201,11 +2029,11 @@ class ConstraintChecker(DebugMixin, CapacityMixin, RoutingMixin, PSMixingMixin, 
             "P5#12": "사내/사외 혼합 배정 (최대 3개 연속 제한)",
             "P5#13": "자재 미입고 상태 체크",
     
-            # P6 제약조건 (SAW 공정)
-            "P6#1": "Draft 블록 오후 3시 착수 체크",
-            "P6#2": "Cross seam 오후 3시 착수 체크",
-            "P6#3": "D/C 블록 착수 체크 (주판 10장+ 오후 3시)",
-            "P6#4": "Cross seam 블록 혼합 배치 (3개 연속 제한)",
+            # [AGENT-EDIT] P6#1,#2,#3은 제거된 legacy 시간 제약이고, P6#4만 유지한다.
+            "P6#1": "제거된 legacy 시간 제약",
+            "P6#2": "제거된 legacy 시간 제약",
+            "P6#3": "제거된 legacy 시간 제약",
+            "P6#4": "Cross seam 블록 혼합 배치 (pure cross seam 기준)",
     
             # P7 제약조건 (론지 취부) - 분기 선택에서 적용
             "P7#1": "론지 베이 부하 균등 배정",

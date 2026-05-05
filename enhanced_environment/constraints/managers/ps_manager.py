@@ -28,7 +28,7 @@ class PSBlockManager:
     - 분기점에서도 같은 순서 유지로 역전 불가능
     """
     
-    def __init__(self, ps_complete_info=None, subassembly_info=None):  # ✅ 메타데이터 매개변수 추가
+    def __init__(self, ps_complete_info=None, subassembly_info=None, constraint_config=None):  # ✅ 메타데이터 매개변수 추가
         # P/S 쌍 정보 저장
         self.ps_pairs: Dict[int, PSBlockPair] = {}  # {port_block_id: PSBlockPair}
         
@@ -45,6 +45,7 @@ class PSBlockManager:
         # ✅ 메타데이터 저장 및 처리
         self.ps_complete_info = ps_complete_info or {}
         self.subassembly_info = subassembly_info or {}
+        self.constraint_config = constraint_config
         
         # ✅ P/S 쌍 고급 매핑
         self.ps_pair_requirements = {}  # {pair_id: requirements}
@@ -53,6 +54,14 @@ class PSBlockManager:
         # ✅ 별판 P/S 쌍 추적
         self.subassembly_ps_pairs = {}  # {unified_block_id: ps_info}
         self._process_subassembly_ps_info()
+
+    def _is_enabled(self, constraint_id: str, default: bool = True) -> bool:
+        if self.constraint_config is None:
+            return default
+        try:
+            return bool(self.constraint_config.is_constraint_enabled(constraint_id))
+        except Exception:
+            return default
     
     def _process_ps_complete_info(self):
         """완전한 P/S 정보를 내부 구조로 변환"""
@@ -228,44 +237,35 @@ class PSBlockManager:
     
     def process_block(self, block: EnhancedBlock, assigned_bay: BayType, current_time: datetime) -> List[ConstraintViolation]:
         """
-        블록 처리 및 상태 업데이트 (PFSP 방식) + 실시간 제약조건 검증
-        
-        Args:
-            block: 처리할 블록
-            assigned_bay: 할당된 베이
-            current_time: 현재 시간
-            
-        Returns:
-            제약조건 위반 리스트
+        [AGENT-EDIT] canonical runtime 흐름에서는 P5#3,4 / P5#11,12를 validator에서 먼저 계산한다.
+        이 함수는 상태 반영과 P7#3,4 동일 베이 검증만 담당한다.
         """
-        violations = []
-        
-        # ✅ P5#11,12: 혼합 배정 제약 실시간 검증
-        mixing_violations = self._check_assembly_mixing_constraints(block, current_time)
-        violations.extend(mixing_violations)
-        
-        # 블록 완료 처리
+        _ = current_time
+        violations: List[ConstraintViolation] = []
+
         self.completed_blocks.add(block.block_id)
         self.bay_assignments[block.block_id] = assigned_bay
-        
-        # P/S 쌍 베이 할당 검증 (P7#3,4)
-        if block.is_p_s_pair() and block.longi_count < 7:
-            if block.port_starboard == PortStarboard.STARBOARD:
-                pair_p_id = block.pair_block_id
-                if (pair_p_id and 
-                    pair_p_id in self.bay_assignments and 
-                    self.bay_assignments[pair_p_id] != assigned_bay):
-                    
-                    violations.append(ConstraintViolation(
-                        constraint_id="P7#3,4",
+
+        if (
+            (self._is_enabled("P7#3") or self._is_enabled("P7#4"))
+            and block.is_p_s_pair()
+            and block.longi_count < 7
+            and block.port_starboard == PortStarboard.STARBOARD
+        ):
+            pair_p_id = block.pair_block_id
+            if (
+                pair_p_id
+                and pair_p_id in self.bay_assignments
+                and self.bay_assignments[pair_p_id] != assigned_bay
+            ):
+                violations.append(
+                    ConstraintViolation(
+                        constraint_id="P7#3",
                         message=f"P/S 블록 동일 베이 위반: P({self.bay_assignments[pair_p_id].value}) ≠ S({assigned_bay.value})",
-                        block_id=block.block_id
-                    ))
-        
-        # ✅ P5#3,4: P/S 연속성 제약 실시간 검증
-        ps_continuity_violations = self._check_ps_continuity_constraints(block)
-        violations.extend(ps_continuity_violations)
-        
+                        block_id=block.block_id,
+                    )
+                )
+
         return violations
     
     def _check_assembly_mixing_constraints(self, block: EnhancedBlock, current_time: datetime) -> List[ConstraintViolation]:

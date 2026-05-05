@@ -1,0 +1,6 @@
+﻿method,label,n,makespan_mean,makespan_median,makespan_std,violations_mean,violations_median,violations_max,missing_blocks_sum,computation_seconds_mean,computation_seconds_median
+SPT,SPT,114,172.122953,172.075,88.740986,25.491228,22.5,64,0,,
+SEAM_MIN,MSF,114,166.775439,165.908333,85.230963,14.719298,12.0,56,0,,
+LPT,LPT,114,163.175,162.0,83.41166,8.157895,8.0,24,0,,
+GA,GA,114,161.232018,160.916667,83.940591,5.315789,3.0,22,0,95.488472,83.275872
+RL,Proposed,114,159.477485,156.241667,83.65678,1.359649,1.0,7,0,,

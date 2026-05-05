@@ -8,7 +8,12 @@ Keep all fields identical to the legacy constraint_config.py to preserve behavio
 from dataclasses import dataclass, field
 from typing import Dict, List, Any
 
-from runtime_config import get_constraint_overrides, build_calendar_overrides  # [AGENT-ADD] 런타임 설정 반영
+from runtime_config import (
+    BIAS_COMPONENT_FIELD_MAP,
+    build_calendar_overrides,
+    get_constraint_overrides,
+    parse_bias_components,
+)  # [AGENT-ADD] 런타임 설정 반영
 
 
 @dataclass
@@ -31,7 +36,8 @@ class ConstraintConfig:
     # P5: 판계 작업 제약조건 (개별 설정)
     # ========================================
     enable_p5_1_delivery_date: bool = False
-    enable_p5_3_ps_line_continuous: bool = True
+    # [AGENT-EDIT] 사용자 요청: P/S 쌍 순서/연속 제약(P5#3, P5#4) 기본 비활성화
+    enable_p5_3_ps_line_continuous: bool = False
     enable_p5_4_ps_fixed_continuous: bool = False
     enable_p5_6_line_b_fab_interval: bool = False
     enable_p5_8_weekday_capacity: bool = True
@@ -45,12 +51,12 @@ class ConstraintConfig:
     enable_p5_17_subassembly_grouping: bool = True
 
     # ========================================
-    # P6: 전/후면 SAW 제약조건 (개별 설정)
+    # [AGENT-EDIT] 사용자 요청: P6 시간 제약(P6#1~3)과 P6#4를 모두 기본 비활성화
     # ========================================
-    enable_p6_1_draft_afternoon: bool = True
-    enable_p6_2_cross_seam_afternoon: bool = True
-    enable_p6_3_dc_block_afternoon: bool = True
-    enable_p6_4_cross_seam_mixing: bool = True
+    enable_p6_1_draft_afternoon: bool = False
+    enable_p6_2_cross_seam_afternoon: bool = False
+    enable_p6_3_dc_block_afternoon: bool = False
+    enable_p6_4_cross_seam_mixing: bool = False
 
     # ========================================
     # P7: 론지 취부 제약조건 (개별 설정)
@@ -69,12 +75,30 @@ class ConstraintConfig:
     # Assembly/Relaxation 제어 플래그
     # ========================================
     allow_capacity_relaxation: bool = False
+    # [AGENT-ADD] 작업장 헤드 기반 후보 축소 편향 on/off. 실제 작업장 순서 하드 제약과는 별개다.
+    enable_workshop_head_masking: bool = True
+    # [AGENT-ADD] assembly_start 조립착수일 slack 기반 emergency/urgent/normal 층 분리 on/off.
+    enable_assembly_start_leadtime_layers: bool = True
+    # [AGENT-ADD] assembly_start 현재일~현재일+window 날짜창 필터 on/off.
+    enable_assembly_start_window_filter: bool = True
+    # [AGENT-ADD] start_date 경로가 생성 단계에서 용량/달력 제약을 임시로 풀지 여부.
+    # 기본값은 기존 동작 유지(True)지만, 이제 yaml에서 명시적으로 끌 수 있다.
+    enable_start_date_generation_capacity_override: bool = True
+    # [AGENT-ADD] replay 경로가 생성 단계에서 용량/달력 제약을 임시로 풀지 여부.
+    enable_replay_generation_capacity_override: bool = True
+    # [AGENT-ADD] assembly env가 긴급 블록 때문에 용량 우회를 허용할지 여부.
+    enable_assembly_urgent_capacity_bypass: bool = True
+    # [AGENT-ADD] RL/self-label decoding 경로가 긴급 블록 때문에 용량 우회를 허용할지 여부.
+    enable_rl_urgent_capacity_bypass: bool = True
 
     # ========================================
-    # 연속 3판 B베이 방지 제약조건
+    # B베이 연속 배치 제약
     # ========================================
-    enable_consecutive_3bay_prevention: bool = True
-    enable_consecutive_b_bay_prevention: bool = True
+    # [AGENT-EDIT] CONSECUTIVE_3BAY는 runtime guard로만 보며 기본값은 비활성화한다.
+    enable_consecutive_3bay_prevention: bool = False
+    # [AGENT-EDIT] 도메인 규칙에 맞춰 B베이 2연속 금지는 기본 비활성화.
+    # B베이는 3연속부터 P7#7로 판단한다.
+    enable_consecutive_b_bay_prevention: bool = False
 
     # 작업장 우선순위 확장 파라미터
     workshop_priority_initial_window_days: int = 3
@@ -109,7 +133,8 @@ class ConstraintConfig:
     # Routing flags
     enable_routing_curved_spacing: bool = True
     enable_routing_high_seam_spacing: bool = True
-    enable_routing_workshop_order: bool = True
+    # [AGENT-EDIT] 사용자 요청: 작업장 순서 제약 기본 비활성화
+    enable_routing_workshop_order: bool = False
 
     # Assembly mixing advanced settings
     assembly_mixing_use_category: bool = True
@@ -154,11 +179,21 @@ class ConstraintConfig:
     daily_seam_cap_scales: Dict[str, float] = field(default_factory=dict)
     calendar_overrides: Dict[str, Any] = field(default_factory=dict)
     constraint_scope: str = ""
+    bias_components: List[int] = field(default_factory=list)
+
+    def _apply_bias_components(self, components: List[int]) -> None:
+        # [AGENT-ADD] bias component selector drives the three candidate-reduction toggles.
+        enabled = set(components or [])
+        self.bias_components = sorted(enabled)
+        for component_id, field_name in BIAS_COMPONENT_FIELD_MAP.items():
+            setattr(self, field_name, component_id in enabled)
 
     def __post_init__(self) -> None:
         """런타임 설정 파일 기반 오버라이드 적용."""
         # [AGENT-ADD] runtime_config에서 제약/캘린더 오버라이드 반영
         overrides = get_constraint_overrides()
+        runtime_bias_components_present = False
+        runtime_bias_components: List[int] = []
         if overrides:
             if not self.relax_order and overrides.get("relax_order"):
                 self.relax_order = list(overrides.get("relax_order") or [])
@@ -182,6 +217,22 @@ class ConstraintConfig:
                 self.daily_seam_cap_overrides = dict(overrides.get("daily_seam_cap_overrides") or {})
             if not self.daily_seam_cap_scales and overrides.get("daily_seam_cap_scales"):
                 self.daily_seam_cap_scales = dict(overrides.get("daily_seam_cap_scales") or {})
+            # [AGENT-EDIT] Apply all boolean enable_* overrides generically so hard-constraint ablations do not require per-field wiring.
+            for override_key, override_value in overrides.items():
+                if not isinstance(override_key, str):
+                    continue
+                if not override_key.startswith("enable_"):
+                    continue
+                if hasattr(self, override_key):
+                    setattr(self, override_key, bool(override_value))
+            if "bias_components" in overrides:
+                runtime_bias_components_present = True
+                runtime_bias_components = parse_bias_components(overrides.get("bias_components")) or []
+
+        if runtime_bias_components_present:
+            self._apply_bias_components(runtime_bias_components)
+        elif self.bias_components:
+            self._apply_bias_components(parse_bias_components(self.bias_components) or [])
 
         # [AGENT-ADD] 공통 relax_order를 start/assembly에 보정 적용
         if self.relax_order:
@@ -262,7 +313,8 @@ class ConstraintConfig:
             "LINE_GROUP_CONSTRAINT": self.enable_line_group_constraint,
         }
 
-        return constraint_mapping.get(constraint_id, True)
+        # [AGENT-EDIT] 알 수 없는 제약 키는 기본 비활성으로 처리해 실험 설정 오염을 막는다.
+        return constraint_mapping.get(constraint_id, False)
 
     def set_constraint_scope(self, scope: str) -> None:
         """현재 제약 스코프 설정 (start_date/assembly)."""
@@ -314,7 +366,10 @@ class ConstraintConfig:
             text = str(raw).strip()
             if not text:
                 continue
-            if "#" in text or text.isupper():
+            # [AGENT-EDIT] 한글이 섞인 별칭(예: PS연속)은 constraint id로 오인하지 않고
+            # 매핑 테이블을 통과시켜야 한다. 기존 text.isupper()는 'PS연속'도 True로 처리해
+            # assembly scope enabled list에서 P5#3/#4가 사실상 꺼지는 버그를 만들었다.
+            if "#" in text or (text.isascii() and text.isupper()):
                 normalized.append(text)
                 continue
             key = _normalize(text)
@@ -351,8 +406,10 @@ class ConstraintConfig:
         self.enable_p5_panel_constraints = True
         self.enable_p6_saw_constraints = True
         self.enable_p7_longi_constraints = True
-        self.enable_consecutive_3bay_prevention = True
-        self.enable_consecutive_b_bay_prevention = True
+        # [AGENT-EDIT] CONSECUTIVE_3BAY는 연구용 runtime guard이므로 enable_all_constraints에도 포함하지 않는다.
+        self.enable_consecutive_3bay_prevention = False
+        # [AGENT-EDIT] B베이 2연속 금지는 연구 제약에서 제외한다.
+        self.enable_consecutive_b_bay_prevention = False
         self.enable_c_seam_spacing = True
         self.enable_routing_curved_spacing = True
         self.enable_routing_high_seam_spacing = True

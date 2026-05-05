@@ -6,6 +6,20 @@ from enhanced_environment.models import EnhancedBlock, BayType, ConstraintViolat
 
 
 class BayValidationMixin:
+    # [AGENT-ADD] Centralize config-gated P7 checks so runtime and ablation share the same toggles.
+    def _is_enabled(self, constraint_id: str, default: bool = True) -> bool:
+        constraint_config = getattr(self, "constraint_config", None)
+        if constraint_config is None and getattr(self, "env", None) is not None:
+            constraint_config = getattr(self.env, "constraint_config", None)
+        if constraint_config is None and getattr(self, "bay_tracker", None) is not None:
+            constraint_config = getattr(self.bay_tracker, "constraint_config", None)
+        if constraint_config is None:
+            return default
+        try:
+            return bool(constraint_config.is_constraint_enabled(constraint_id))
+        except Exception:
+            return default
+
     def validate_p7_constraints_with_existing_functions(
         self, block: EnhancedBlock, assigned_bay: BayType
     ) -> List[ConstraintViolation]:
@@ -26,7 +40,7 @@ class BayValidationMixin:
         violations: List[ConstraintViolation] = []
 
         # ✅ P7#2: 물리적 제약 (21m 초과 → B베이 권장)
-        if block.width > 21.0 and assigned_bay == BayType.BAY_35A:
+        if self._is_enabled("P7#2") and block.width > 21.0 and assigned_bay == BayType.BAY_35A:
             violations.append(
                 ConstraintViolation(
                     constraint_id="P7#2",
@@ -37,7 +51,7 @@ class BayValidationMixin:
             )
 
         # ✅ P7#10: 론지 30개 이상 → A베이 우선
-        if block.longi_count >= 30 and assigned_bay == BayType.BAY_36B:
+        if self._is_enabled("P7#10") and block.longi_count >= 30 and assigned_bay == BayType.BAY_36B:
             violations.append(
                 ConstraintViolation(
                     constraint_id="P7#10",
@@ -49,7 +63,8 @@ class BayValidationMixin:
 
         # ✅ P7#12: LT강재 → A베이 우선
         if (
-            hasattr(block, "material_type")
+            self._is_enabled("P7#12")
+            and hasattr(block, "material_type")
             and block.material_type.value == "LT"
             and assigned_bay == BayType.BAY_36B
         ):
@@ -77,7 +92,7 @@ class BayValidationMixin:
                 )
 
                 # A베이: 이미 1개 있으면 다음 A는 위반 (1개까지만 연속 가능)
-                if assigned_bay == BayType.BAY_35A and consecutive_count >= 1:
+                if self._is_enabled("P7#7") and assigned_bay == BayType.BAY_35A and consecutive_count >= 1:
                     violations.append(
                         ConstraintViolation(
                             constraint_id="P7#7",
@@ -88,7 +103,7 @@ class BayValidationMixin:
                     )
 
                 # B베이: 이미 2개 있으면 다음 B는 위반 (2개까지 연속 가능)
-                if assigned_bay == BayType.BAY_36B and consecutive_count >= 2:
+                if self._is_enabled("P7#7") and assigned_bay == BayType.BAY_36B and consecutive_count >= 2:
                     violations.append(
                         ConstraintViolation(
                             constraint_id="P7#7",
@@ -101,9 +116,58 @@ class BayValidationMixin:
             # 연속성 체크 실패 시 무시 (Action Masking에서는 정상)
             pass
 
+        # [AGENT-ADD] CONSECUTIVE_B_BAY는 runtime can_assign_bay()와 동일하게 B-B 금지를 별도 family로 남긴다.
+        try:
+            consecutive_b_before = self.bay_tracker._get_consecutive_count_with_metadata(BayType.BAY_36B)
+            if (
+                self._is_enabled("CONSECUTIVE_B_BAY")
+                and assigned_bay == BayType.BAY_36B
+                and consecutive_b_before >= 1
+            ):
+                violations.append(
+                    ConstraintViolation(
+                        constraint_id="CONSECUTIVE_B_BAY",
+                        message=f"B베이 2개 연속 배치 불가 (현재 블록 포함 시 {consecutive_b_before + 1}개 연속)",
+                        severity="WARNING",
+                        block_id=block.block_id,
+                    )
+                )
+        except Exception:
+            pass
+
+        # [AGENT-ADD] P7#8도 final audit에서 독립 카운트되도록 runtime과 같은 streak를 다시 검사한다.
+        try:
+            if self._is_enabled("P7#8") and getattr(block, "is_main_plate_only", False):
+                if (
+                    assigned_bay == BayType.BAY_35A
+                    and self.bay_tracker.get_main_plate_consecutive_count(BayType.BAY_35A) >= 2
+                ):
+                    violations.append(
+                        ConstraintViolation(
+                            constraint_id="P7#8",
+                            message="A베이 주판 Only 3판 연속 불가",
+                            severity="WARNING",
+                            block_id=block.block_id,
+                        )
+                    )
+                elif (
+                    assigned_bay == BayType.BAY_36B
+                    and self.bay_tracker.get_main_plate_consecutive_count(BayType.BAY_36B) >= 2
+                ):
+                    violations.append(
+                        ConstraintViolation(
+                            constraint_id="P7#8",
+                            message="B베이 주판 Only 3판 연속 불가",
+                            severity="WARNING",
+                            block_id=block.block_id,
+                        )
+                    )
+        except Exception:
+            pass
+
         # ✅ P7#1: 부하 균형 제약 (정보성 기록)
         current_balance_score = self.bay_tracker.get_load_balance_score()
-        if current_balance_score < 0.7:  # 균형 점수가 70% 미만이면 경고
+        if self._is_enabled("P7#1") and current_balance_score < 0.7:  # 균형 점수가 70% 미만이면 경고
             violations.append(
                 ConstraintViolation(
                     constraint_id="P7#1",
@@ -138,7 +202,7 @@ class BayValidationMixin:
         violations: List[ConstraintViolation] = []
 
         # ✅ P7#2: 물리적 제약 (21m 초과 → B베이 권장)
-        if block.width > 21.0 and assigned_bay == BayType.BAY_35A:
+        if self._is_enabled("P7#2") and block.width > 21.0 and assigned_bay == BayType.BAY_35A:
             violations.append(
                 ConstraintViolation(
                     constraint_id="P7#2",
@@ -149,7 +213,7 @@ class BayValidationMixin:
             )
 
         # ✅ P7#10: 론지 30개 이상 → A베이 우선
-        if block.longi_count >= 30 and assigned_bay == BayType.BAY_36B:
+        if self._is_enabled("P7#10") and block.longi_count >= 30 and assigned_bay == BayType.BAY_36B:
             violations.append(
                 ConstraintViolation(
                     constraint_id="P7#10",
@@ -161,7 +225,8 @@ class BayValidationMixin:
 
         # ✅ P7#12: LT강재 → A베이 우선
         if (
-            hasattr(block, "material_type")
+            self._is_enabled("P7#12")
+            and hasattr(block, "material_type")
             and block.material_type.value == "LT"
             and assigned_bay == BayType.BAY_36B
         ):
@@ -183,7 +248,7 @@ class BayValidationMixin:
             )
 
             # A베이: 이미 1개 있으면 다음 A는 위반 (1개까지만 연속 가능)
-            if assigned_bay == BayType.BAY_35A and consecutive_count >= 1:
+            if self._is_enabled("P7#7") and assigned_bay == BayType.BAY_35A and consecutive_count >= 1:
                 violations.append(
                     ConstraintViolation(
                         constraint_id="P7#7",
@@ -194,7 +259,7 @@ class BayValidationMixin:
                 )
 
             # B베이: 이미 2개 있으면 다음 B는 위반 (2개까지 연속 가능)
-            if assigned_bay == BayType.BAY_36B and consecutive_count >= 2:
+            if self._is_enabled("P7#7") and assigned_bay == BayType.BAY_36B and consecutive_count >= 2:
                 violations.append(
                     ConstraintViolation(
                         constraint_id="P7#7",
@@ -209,7 +274,7 @@ class BayValidationMixin:
 
         # ✅ P7#1: 부하 균형 제약 (정보성 기록)
         current_balance_score = self.bay_tracker.get_load_balance_score()
-        if current_balance_score < 0.7:  # 균형 점수가 70% 미만이면 경고
+        if self._is_enabled("P7#1") and current_balance_score < 0.7:  # 균형 점수가 70% 미만이면 경고
             violations.append(
                 ConstraintViolation(
                     constraint_id="P7#1",
@@ -246,7 +311,7 @@ class BayValidationMixin:
             consecutive_count += 1
 
         # A베이: 1개까지만 연속 가능
-        if assigned_bay == BayType.BAY_35A and consecutive_count >= 2:
+        if self._is_enabled("P7#7") and assigned_bay == BayType.BAY_35A and consecutive_count >= 2:
             violations.append(
                 ConstraintViolation(
                     constraint_id="P7#7",
@@ -257,7 +322,7 @@ class BayValidationMixin:
             )
 
         # B베이: 2개까지만 연속 가능
-        elif assigned_bay == BayType.BAY_36B and consecutive_count >= 3:
+        elif self._is_enabled("P7#7") and assigned_bay == BayType.BAY_36B and consecutive_count >= 3:
             violations.append(
                 ConstraintViolation(
                     constraint_id="P7#7",
@@ -266,6 +331,48 @@ class BayValidationMixin:
                     block_id=block.block_id,
                 )
             )
+
+        # [AGENT-ADD] CONSECUTIVE_B_BAY는 B-B 금지를 독립 family로 기록한다.
+        if (
+            self._is_enabled("CONSECUTIVE_B_BAY")
+            and assigned_bay == BayType.BAY_36B
+            and self.bay_tracker._get_consecutive_count_with_metadata(BayType.BAY_36B) >= 1
+        ):
+            violations.append(
+                ConstraintViolation(
+                    constraint_id="CONSECUTIVE_B_BAY",
+                    message="B베이 2개 연속 배치 불가",
+                    severity="WARNING",
+                    block_id=block.block_id,
+                )
+            )
+
+        # [AGENT-ADD] P7#8는 runtime can_assign_bay()와 동일한 기준으로 주판 streak를 다시 기록한다.
+        if self._is_enabled("P7#8") and getattr(block, "is_main_plate_only", False):
+            if (
+                assigned_bay == BayType.BAY_35A
+                and self.bay_tracker.get_main_plate_consecutive_count(BayType.BAY_35A) >= 2
+            ):
+                violations.append(
+                    ConstraintViolation(
+                        constraint_id="P7#8",
+                        message="A베이 주판 Only 3판 연속 불가",
+                        severity="WARNING",
+                        block_id=block.block_id,
+                    )
+                )
+            elif (
+                assigned_bay == BayType.BAY_36B
+                and self.bay_tracker.get_main_plate_consecutive_count(BayType.BAY_36B) >= 2
+            ):
+                violations.append(
+                    ConstraintViolation(
+                        constraint_id="P7#8",
+                        message="B베이 주판 Only 3판 연속 불가",
+                        severity="WARNING",
+                        block_id=block.block_id,
+                    )
+                )
 
         return violations
 
@@ -278,7 +385,7 @@ class BayValidationMixin:
         # 현재 부하 균형 점수 확인
         balance_score = self.bay_tracker.get_load_balance_score()
 
-        if balance_score < 0.7:  # 70% 미만이면 경고
+        if self._is_enabled("P7#1") and balance_score < 0.7:  # 70% 미만이면 경고
             violations.append(
                 ConstraintViolation(
                     constraint_id="P7#1",

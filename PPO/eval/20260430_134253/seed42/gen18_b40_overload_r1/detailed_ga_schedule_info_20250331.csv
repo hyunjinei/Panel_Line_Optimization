@@ -1,0 +1,4 @@
+﻿type,date,total_blocks,total_steps,step,block_id,assembly_start_date,assembly_type,port_starboard,status,reason,assembly_masking_stage,three_bay_check,ps_forced,selected_block,available_count,excluded_count,emergency_mode,relax_level,relax_stage,relax_constraints,relax_target_count,relax_targets,relaxed_block_count,relax_target_total,final_choice_flag,final_violation_count,final_violation_list,seam_count,c_seam_count,has_curved_plate
+METADATA,20250331,39,1,,,,,,,,,,,,,,,,,,,,,,,,,,,
+STEP_SUMMARY,20250331,39,1,39,선택: 38,2025-04-02,fixed,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 39 선택,,,False,38,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250331,39,1,39,38,2025-04-02,fixed,C,AVAILABLE,[URGENT] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False

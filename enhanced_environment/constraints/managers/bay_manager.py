@@ -228,6 +228,15 @@ class BayStateTracker:
         
         self.atomic_assignment_history.append(atomic_assignment)
     
+    # [AGENT-ADD] Route bay hard-rule checks through config so ablation can toggle them cleanly.
+    def _is_enabled(self, constraint_id: str, default: bool = True) -> bool:
+        if self.constraint_config is None:
+            return default
+        try:
+            return bool(self.constraint_config.is_constraint_enabled(constraint_id))
+        except Exception:
+            return default
+
     def can_assign_bay(self, block: EnhancedBlock, target_bay: BayType) -> Tuple[bool, str]:
         """
         특정 베이 할당 가능 여부 확인 (모든 P7 제약조건 검증)
@@ -254,21 +263,20 @@ class BayStateTracker:
             consecutive_count = self._get_consecutive_count_with_metadata(target_bay)
             
             # A베이: 이미 1개 있으면 다음 A는 위반 (1개까지만 연속 가능)
-            if target_bay == BayType.BAY_35A and consecutive_count >= 1:
+            if self._is_enabled("P7#7") and target_bay == BayType.BAY_35A and consecutive_count >= 1:
                 return False, "P7#7 위반: A베이 2개 연속 배치 불가 (개별 블록 카운트)"
             
             # B베이: 이미 1개 있으면 다음 B는 위반 (1개까지 연속 가능) - config 제어
-            if (target_bay == BayType.BAY_36B and consecutive_count >= 1 and
-                self.constraint_config and 
-                self.constraint_config.is_constraint_enabled("CONSECUTIVE_B_BAY")):
+            if (self._is_enabled("P7#7") and target_bay == BayType.BAY_36B and consecutive_count >= 1 and
+                self._is_enabled("CONSECUTIVE_B_BAY")):
                 return False, "P7#7 위반: B베이 2개 연속 배치 불가 (최대 1개까지) - 연속 3베이 방지 활성화"
             
             # B베이: 기본 제한 (2개까지 연속 가능) - config 비활성화 시
-            elif (target_bay == BayType.BAY_36B and consecutive_count >= 2):
+            elif (self._is_enabled("P7#7") and target_bay == BayType.BAY_36B and consecutive_count >= 2):
                 return False, "P7#7 위반: B베이 3개 연속 배치 불가 (최대 2개까지) - 기본 제한"
         
         # P7#8: 주판 Only 연속 제한 (3판 연속 불가)
-        if block.is_main_plate_only:
+        if self._is_enabled("P7#8") and block.is_main_plate_only:
             if target_bay == BayType.BAY_35A and self.bay_35a_main_plate_consecutive >= 2:
                 return False, "P7#8 위반: A베이 주판 Only 3판 연속 불가"
             elif target_bay == BayType.BAY_36B and self.bay_36b_main_plate_consecutive >= 2:
@@ -291,7 +299,7 @@ class BayStateTracker:
             return False, f"고론지({block.longi_count}개) 연속 송선 불가: 이전 {target_bay.value}도 고론지 처리"
 
         # P7#11: 10번 블록 특별 처리 (B베이 연속 2판)
-        if (block.block_number == 10 and 
+        if (self._is_enabled("P7#11") and block.block_number == 10 and 
             target_bay == BayType.BAY_35A and
             self.last_block_10_processed and
             self.block_10_b_bay_consecutive < 2):
@@ -315,7 +323,7 @@ class BayStateTracker:
         
         # ✅ 물리적 제약 위반 검증 및 기록
         # P7#2: 21m 초과 → B베이 권장 (위반 기록)
-        if block.width > 21.0 and target_bay == BayType.BAY_35A:
+        if self._is_enabled("P7#2") and block.width > 21.0 and target_bay == BayType.BAY_35A:
             violations.append(ConstraintViolation(
                 constraint_id="P7#2",
                 message=f"폭 {block.width:.1f}m > 21m인데 A베이 할당됨 (B베이 권장)",
@@ -324,7 +332,7 @@ class BayStateTracker:
             ))
         
         # P7#10: 론지 30개 이상 → A베이 권장 (위반 기록)
-        if block.longi_count >= 30 and target_bay == BayType.BAY_36B:
+        if self._is_enabled("P7#10") and block.longi_count >= 30 and target_bay == BayType.BAY_36B:
             violations.append(ConstraintViolation(
                 constraint_id="P7#10",
                 message=f"론지 {block.longi_count}개 ≥ 30개인데 B베이 할당됨 (A베이 권장)",
@@ -333,7 +341,7 @@ class BayStateTracker:
             ))
         
         # P7#12: LT강재 → A베이 권장 (위반 기록)
-        if hasattr(block, 'material_type') and block.material_type.value == 'LT' and target_bay == BayType.BAY_36B:
+        if self._is_enabled("P7#12") and hasattr(block, 'material_type') and block.material_type.value == 'LT' and target_bay == BayType.BAY_36B:
             violations.append(ConstraintViolation(
                 constraint_id="P7#12",
                 message=f"LT강재인데 B베이 할당됨 (A베이 권장)",

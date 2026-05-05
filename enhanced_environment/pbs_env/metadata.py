@@ -81,7 +81,8 @@ class MetadataMixin:
         # PSBlockManager: P/S 완전 정보 전달
         self.ps_manager = PSBlockManager(
             ps_complete_info=self.ps_pair_complete_info,
-            subassembly_info=self.subassembly_complete_info
+            subassembly_info=self.subassembly_complete_info,
+            constraint_config=self.constraint_config,
         )
     
         # BayStateTracker: 베이 전략과 특별 규칙들 전달

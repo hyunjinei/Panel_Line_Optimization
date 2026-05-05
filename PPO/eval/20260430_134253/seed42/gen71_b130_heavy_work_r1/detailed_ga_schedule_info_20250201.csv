@@ -1,0 +1,63 @@
+﻿type,date,total_blocks,total_steps,step,block_id,assembly_start_date,assembly_type,port_starboard,status,reason,assembly_masking_stage,three_bay_check,ps_forced,selected_block,available_count,excluded_count,emergency_mode,relax_level,relax_stage,relax_constraints,relax_target_count,relax_targets,relaxed_block_count,relax_target_total,final_choice_flag,final_violation_count,final_violation_list,seam_count,c_seam_count,has_curved_plate
+METADATA,20250201,127,10,,,,,,,,,,,,,,,,,,,,,,,,,,,
+STEP_SUMMARY,20250201,127,10,44,선택: 66,2025-02-03,fixed,P,"가용: 8, 제외: 0",Assembly Decoding 스텝 44 선택,,,False,66,8,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250201,127,10,44,4,2025-02-03,line,C,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,44,49,2025-02-03,line,S,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,44,55,2025-02-03,fixed,C,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,44,56,2025-02-03,fixed,C,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,44,66,2025-02-03,fixed,P,AVAILABLE,[URGENT] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,44,86,2025-02-03,fixed,S,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,44,116,2025-02-03,fixed,S,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,44,121,2025-02-03,fixed,C,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250201,127,10,45,선택: 49,2025-02-03,line,S,"가용: 5, 제외: 0",Assembly Decoding 스텝 45 선택,,,False,49,5,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250201,127,10,45,4,2025-02-03,line,C,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,45,49,2025-02-03,line,S,AVAILABLE,[URGENT] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,45,55,2025-02-03,fixed,C,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,45,56,2025-02-03,fixed,C,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,45,116,2025-02-03,fixed,S,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250201,127,10,46,선택: 85,2025-02-03,fixed,C,"가용: 9, 제외: 0",Assembly Decoding 스텝 46 선택,,,False,85,9,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250201,127,10,46,4,2025-02-03,line,C,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,46,22,2025-02-03,line,C,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,46,42,2025-02-03,line,S,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,46,55,2025-02-03,fixed,C,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,46,56,2025-02-03,fixed,C,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,46,85,2025-02-03,fixed,C,AVAILABLE,[URGENT] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,True
+BLOCK_DETAIL,20250201,127,10,46,86,2025-02-03,fixed,S,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,46,116,2025-02-03,fixed,S,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,46,121,2025-02-03,fixed,C,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250201,127,10,47,선택: 86,2025-02-03,fixed,S,"가용: 6, 제외: 0",Assembly Decoding 스텝 47 선택,,,False,86,6,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250201,127,10,47,4,2025-02-03,line,C,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,47,55,2025-02-03,fixed,C,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,47,56,2025-02-03,fixed,C,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,47,86,2025-02-03,fixed,S,AVAILABLE,[URGENT] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,47,116,2025-02-03,fixed,S,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,47,121,2025-02-03,fixed,C,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250201,127,10,48,선택: 4,2025-02-03,line,C,"가용: 4, 제외: 0",Assembly Decoding 스텝 48 선택,,,False,4,4,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250201,127,10,48,4,2025-02-03,line,C,AVAILABLE,[URGENT] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,48,55,2025-02-03,fixed,C,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,48,56,2025-02-03,fixed,C,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,48,116,2025-02-03,fixed,S,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250201,127,10,49,선택: 22,2025-02-03,line,C,"가용: 6, 제외: 0",Assembly Decoding 스텝 49 선택,,,False,22,6,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250201,127,10,49,22,2025-02-03,line,C,AVAILABLE,[URGENT] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,49,42,2025-02-03,line,S,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,49,55,2025-02-03,fixed,C,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,49,56,2025-02-03,fixed,C,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,49,116,2025-02-03,fixed,S,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,49,121,2025-02-03,fixed,C,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250201,127,10,50,선택: 116,2025-02-03,fixed,S,"가용: 4, 제외: 0",Assembly Decoding 스텝 50 선택,,,False,116,4,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250201,127,10,50,55,2025-02-03,fixed,C,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,50,56,2025-02-03,fixed,C,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,50,116,2025-02-03,fixed,S,AVAILABLE,[URGENT] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,50,121,2025-02-03,fixed,C,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250201,127,10,51,선택: 64,2025-02-05,fixed,S,"가용: 3, 제외: 0",Assembly Decoding 스텝 51 선택,,,False,64,3,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250201,127,10,51,55,2025-02-03,fixed,C,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,51,56,2025-02-03,fixed,C,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,51,121,2025-02-03,fixed,C,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250201,127,10,52,선택: 42,2025-02-03,line,S,"가용: 4, 제외: 0",Assembly Decoding 스텝 52 선택,,,False,42,4,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250201,127,10,52,42,2025-02-03,line,S,AVAILABLE,[URGENT] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,52,55,2025-02-03,fixed,C,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,52,56,2025-02-03,fixed,C,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,52,121,2025-02-03,fixed,C,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250201,127,10,53,선택: 55,2025-02-03,fixed,C,"가용: 2, 제외: 0",Assembly Decoding 스텝 53 선택,,,False,55,2,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250201,127,10,53,55,2025-02-03,fixed,C,AVAILABLE,[URGENT] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250201,127,10,53,56,2025-02-03,fixed,C,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False

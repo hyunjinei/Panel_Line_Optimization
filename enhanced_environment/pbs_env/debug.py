@@ -4,6 +4,7 @@ Environment debug helpers
 
 # [AGENT-ADD] Split from pbs_env/core.py for readability.
 
+import os  # [AGENT-EDIT] PBS_FORCE_DEBUG 환경변수 조회에 필요
 import gymnasium as gym
 import numpy as np
 from datetime import datetime, timedelta, time, date

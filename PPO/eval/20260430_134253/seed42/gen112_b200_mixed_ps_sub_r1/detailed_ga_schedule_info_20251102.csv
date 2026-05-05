@@ -1,0 +1,30 @@
+﻿type,date,total_blocks,total_steps,step,block_id,assembly_start_date,assembly_type,port_starboard,status,reason,assembly_masking_stage,three_bay_check,ps_forced,selected_block,available_count,excluded_count,emergency_mode,relax_level,relax_stage,relax_constraints,relax_target_count,relax_targets,relaxed_block_count,relax_target_total,final_choice_flag,final_violation_count,final_violation_list,seam_count,c_seam_count,has_curved_plate
+METADATA,20251102,190,14,,,,,,,,,,,,,,,,,,,,,,,,,,,
+STEP_SUMMARY,20251102,190,14,132,선택: 98,2025-11-04,fixed,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 132 선택,,,False,98,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251102,190,14,132,69,2025-10-29,line,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251102,190,14,133,선택: 99,2025-11-04,fixed,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 133 선택,,,False,99,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251102,190,14,133,69,2025-10-29,line,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251102,190,14,134,선택: 101,2025-11-04,fixed,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 134 선택,,,False,101,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251102,190,14,134,69,2025-10-29,line,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251102,190,14,135,선택: 102,2025-11-04,fixed,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 135 선택,,,False,102,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251102,190,14,135,69,2025-10-29,line,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251102,190,14,136,선택: 140,2025-11-04,fixed,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 136 선택,,,False,140,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251102,190,14,136,69,2025-10-29,line,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251102,190,14,137,선택: 106,2025-11-04,fixed,P,"가용: 1, 제외: 0",Assembly Decoding 스텝 137 선택,,,False,106,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251102,190,14,137,69,2025-10-29,line,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251102,190,14,138,선택: 109,2025-11-04,fixed,P,"가용: 1, 제외: 0",Assembly Decoding 스텝 138 선택,,,False,109,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251102,190,14,138,69,2025-10-29,line,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251102,190,14,139,선택: 110,2025-11-04,fixed,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 139 선택,,,False,110,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251102,190,14,139,69,2025-10-29,line,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251102,190,14,140,선택: 111,2025-11-04,fixed,P,"가용: 1, 제외: 0",Assembly Decoding 스텝 140 선택,,,False,111,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251102,190,14,140,69,2025-10-29,line,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251102,190,14,141,선택: 112,2025-11-04,fixed,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 141 선택,,,False,112,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251102,190,14,141,69,2025-10-29,line,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251102,190,14,142,선택: 116,2025-11-04,fixed,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 142 선택,,,False,116,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251102,190,14,142,69,2025-10-29,line,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251102,190,14,143,선택: 151,2025-11-04,fixed,P,"가용: 1, 제외: 0",Assembly Decoding 스텝 143 선택,,,False,151,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251102,190,14,143,69,2025-10-29,line,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251102,190,14,144,선택: 118,2025-11-04,fixed,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 144 선택,,,False,118,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251102,190,14,144,69,2025-10-29,line,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251102,190,14,145,선택: 139,2025-11-04,fixed,P,"가용: 1, 제외: 0",Assembly Decoding 스텝 145 선택,,,False,139,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251102,190,14,145,69,2025-10-29,line,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False

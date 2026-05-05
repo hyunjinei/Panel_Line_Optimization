@@ -1,42 +1,42 @@
-# Python cache
+# [AGENT-ADD] Keep the repository small and avoid pushing private/runtime artifacts.
+
+# Python/runtime caches
 __pycache__/
 *.py[cod]
-*$py.class
-
-# Virtual environments
-.venv/
-venv/
-ENV/
-env/
-
-# Build / packaging
-build/
-dist/
-*.egg-info/
-.eggs/
-pip-wheel-metadata/
-
-# Test / coverage
 .pytest_cache/
-.coverage
-coverage.xml
-htmlcov/
-.tox/
-.nox/
-
-# Type checker / linter
 .mypy_cache/
-.pyre/
-.ruff_cache/
-
-# IDE / OS
-.vscode/
-.idea/
-.DS_Store
-Thumbs.db
-
-# Jupyter
 .ipynb_checkpoints/
 
-# Logs
+# Local environments and secrets
+.codex
+.claude/
+.env
+.env.*
+.venv/
+venv/
 *.log
+
+# Private input data
+environment/*.xlsx
+environment/*.xls
+
+# Local UI/runtime outputs
+results/
+*.docx
+[[]hope[]]*.png
+실행명령어.txt
+프레임워크_드로잉_프롬프트.txt
+
+# Model checkpoints: push only the two selected checkpoints below.
+PPO/train/result/evaluation/
+PPO/train/result/log/
+PPO/train/result/models/**/*.pth
+!PPO/train/result/models/0422_14_55_ranger_adabelief_diff_envTrue/best_ppo_rollout_ep400.pth
+!PPO/train/result/models/0428_11_36_ranger_adabelief_diff_envTrue/best_ppo_rollout_ep6600.pth
+
+# Eval outputs: keep source code plus selected report/result folders.
+PPO/eval/20*/
+!PPO/eval/20260430_134253/
+!PPO/eval/20260430_134253/**
+PPO/eval/llm_connect_eval/
+PPO/eval/*.zip

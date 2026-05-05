@@ -128,8 +128,8 @@ blocks
 | check_daily_capacity | (self, blocks_to_add: List[EnhancedBlock], current_date: datetime) | Tuple[bool, List[EnhancedBlock], str] | 🆕 일일 용량 체크 및 분할 |
 | _check_delivery_date | (self, block: EnhancedBlock, current_time: datetime) | bool | P5#1: 납기 기반 착수일 체크 |
 | _check_material_ready | (self, block: EnhancedBlock) | bool | P5#13: 자재 미입고 Skip |
-| _check_afternoon_start_time | (self, block: EnhancedBlock, current_time: datetime) | bool | P6#1,2,3: 오후 3시 착수 체크 |
-| _get_afternoon_constraint_id | (self, block: EnhancedBlock) | str | 오후 3시 제약조건 ID 반환 |
+| _check_afternoon_start_time | (self, block: EnhancedBlock, current_time: datetime) | bool | legacy no-op. 논문 실험 기준 P6#1,2,3 제거 후 항상 통과 |
+| _get_afternoon_constraint_id | (self, block: EnhancedBlock) | str | legacy ID 반환 |
 | _check_holiday_eve_constraint | (self, block: EnhancedBlock, current_time: datetime) | Tuple[bool, str] | P5#15: 명절 전날 야간(15:00 이후) 차단 |
 | _check_integrated_capacity_constraints | (self, block: EnhancedBlock, current_time: datetime) | Tuple[bool, str] | P5#8,9,10,16: 통합 달력+용량 제약조건 |
 
@@ -255,8 +255,8 @@ blocks
 
 | 메서드 | 시그니처 | 반환 | 설명 |
 |---|---|---|---|
-| _check_saw_time_constraint | (self, block: EnhancedBlock, current_time: datetime, previous_machine_state: Optional[Dict], current_bay_assignments: Optional[Dict[int, BayType]], current_day_selected_blocks: Optional[List[int]], sequencing_date: Optional[date]) | Tuple[bool, str] | P6#1,2,3: SAW 시간 제약 체크 (실제 머신 스케줄 기준) |
-| _calculate_actual_machine_2_start_time_action_masking | (self, block: EnhancedBlock, current_time: datetime, afternoon_guard_blocks: Optional[Set[int]], previous_machine_state: Optional[Dict], current_bay_assignments: Optional[Dict[int, BayType]], current_day_selected_blocks: Optional[List[int]]) | datetime | Action Masking용 실제 머신 2번 시작 시간 계산 (CT 테이블 기반) |
+| _check_saw_time_constraint | (self, block: EnhancedBlock, current_time: datetime, previous_machine_state: Optional[Dict], current_bay_assignments: Optional[Dict[int, BayType]], current_day_selected_blocks: Optional[List[int]], sequencing_date: Optional[date]) | Tuple[bool, str] | legacy no-op. 논문 실험 기준 P6#1,2,3 제거 |
+| _calculate_actual_machine_2_start_time_action_masking | (self, block: EnhancedBlock, current_time: datetime, afternoon_guard_blocks: Optional[Set[int]], previous_machine_state: Optional[Dict], current_bay_assignments: Optional[Dict[int, BayType]], current_day_selected_blocks: Optional[List[int]]) | datetime | Action Masking용 실제 머신 2번 시작 시간 계산 |
 | _fallback_machine_2_time_calculation | (self, block: EnhancedBlock, current_time: datetime) | datetime | Fallback 머신 2번 시간 계산 |
 
 #### 함수 없음

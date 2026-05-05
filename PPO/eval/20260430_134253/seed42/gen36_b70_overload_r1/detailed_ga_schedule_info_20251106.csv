@@ -1,0 +1,16 @@
+﻿type,date,total_blocks,total_steps,step,block_id,assembly_start_date,assembly_type,port_starboard,status,reason,assembly_masking_stage,three_bay_check,ps_forced,selected_block,available_count,excluded_count,emergency_mode,relax_level,relax_stage,relax_constraints,relax_target_count,relax_targets,relaxed_block_count,relax_target_total,final_choice_flag,final_violation_count,final_violation_list,seam_count,c_seam_count,has_curved_plate
+METADATA,20251106,68,5,,,,,,,,,,,,,,,,,,,,,,,,,,,
+STEP_SUMMARY,20251106,68,5,64,선택: 21,2025-11-03,line,C,"가용: 2, 제외: 0",Assembly Decoding 스텝 64 선택,,,False,21,2,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251106,68,5,64,21,2025-11-03,line,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20251106,68,5,64,28,2025-11-03,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251106,68,5,65,선택: 28,2025-11-03,fixed,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 65 선택,,,False,28,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251106,68,5,65,28,2025-11-03,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251106,68,5,66,선택: 27,2025-11-09,line,P,"가용: 3, 제외: 0",Assembly Decoding 스텝 66 선택,,,False,27,3,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251106,68,5,66,27,2025-11-09,line,P,AVAILABLE,모든 제약조건 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20251106,68,5,66,37,2025-11-09,fixed,C,AVAILABLE,모든 제약조건 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20251106,68,5,66,53,2025-11-09,fixed,C,AVAILABLE,모든 제약조건 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251106,68,5,67,선택: 37,2025-11-09,fixed,C,"가용: 1, 제외: 1",Assembly Decoding 스텝 67 선택,,,False,37,1,1,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251106,68,5,67,37,2025-11-09,fixed,C,AVAILABLE,모든 제약조건 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20251106,68,5,67,53,2025-11-09,fixed,C,EXCLUDED,ROUTING_C_SEAM_SPACING 위반,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251106,68,5,68,선택: 53,2025-11-09,fixed,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 68 선택,,,False,53,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251106,68,5,68,53,2025-11-09,fixed,C,AVAILABLE,모든 제약조건 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False

@@ -1,0 +1,31 @@
+﻿type,date,total_blocks,total_steps,step,block_id,assembly_start_date,assembly_type,port_starboard,status,reason,assembly_masking_stage,three_bay_check,ps_forced,selected_block,available_count,excluded_count,emergency_mode,relax_level,relax_stage,relax_constraints,relax_target_count,relax_targets,relaxed_block_count,relax_target_total,final_choice_flag,final_violation_count,final_violation_list,seam_count,c_seam_count,has_curved_plate
+METADATA,20250330,39,9,,,,,,,,,,,,,,,,,,,,,,,,,,,
+STEP_SUMMARY,20250330,39,9,30,선택: 26,2025-04-04,fixed,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 30 선택,,,False,26,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250330,39,9,30,5,2025-03-29,line,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250330,39,9,31,선택: 9,2025-03-29,line,C,"가용: 2, 제외: 0",Assembly Decoding 스텝 31 선택,,,False,9,2,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250330,39,9,31,5,2025-03-29,line,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250330,39,9,31,9,2025-03-29,line,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250330,39,9,32,선택: 12,2025-04-05,line,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 32 선택,,,False,12,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250330,39,9,32,5,2025-03-29,line,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250330,39,9,33,선택: 16,2025-04-05,line,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 33 선택,,,False,16,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250330,39,9,33,5,2025-03-29,line,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250330,39,9,34,선택: 5,2025-03-29,line,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 34 선택,,,False,5,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250330,39,9,34,5,2025-03-29,line,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250330,39,9,35,선택: 15,2025-04-05,line,C,"가용: 1, 제외: 4",Assembly Decoding 스텝 35 선택,,,False,15,1,4,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250330,39,9,35,38,2025-04-02,fixed,C,AVAILABLE,모든 제약조건 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250330,39,9,35,23,2025-04-03,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250330,39,9,35,33,2025-04-03,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250330,39,9,35,8,2025-04-05,line,S,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250330,39,9,35,15,2025-04-05,line,C,EXCLUDED,,,,False,★,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250330,39,9,36,선택: 8,2025-04-05,line,S,"가용: 1, 제외: 3",Assembly Decoding 스텝 36 선택,,,False,8,1,3,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250330,39,9,36,38,2025-04-02,fixed,C,EXCLUDED,"ROUTING_HIGH_SEAM_SPACING, ROUTING_C_SEAM_SPACING 위반",,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250330,39,9,36,23,2025-04-03,fixed,C,AVAILABLE,모든 제약조건 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250330,39,9,36,33,2025-04-03,fixed,C,EXCLUDED,ROUTING_C_SEAM_SPACING 위반,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250330,39,9,36,8,2025-04-05,line,S,EXCLUDED,,,,False,★,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250330,39,9,37,선택: 33,2025-04-03,fixed,C,"가용: 1, 제외: 2",Assembly Decoding 스텝 37 선택,,,False,33,1,2,False,,,,,,1,1,0,,,,,
+BLOCK_DETAIL,20250330,39,9,37,38,2025-04-02,fixed,C,AVAILABLE,[RELAX] 작업장헤드-3d-WORKSHOP_WINDOW-고심수 간격 완화: ROUTING_HIGH_SEAM_SPACING,,,False,,,,,0,작업장헤드-3d-WORKSHOP_WINDOW-고심수 간격 완화,ROUTING_HIGH_SEAM_SPACING,1,ROUTING_HIGH_SEAM_SPACING,,,False,0,,,,False
+BLOCK_DETAIL,20250330,39,9,37,23,2025-04-03,fixed,C,EXCLUDED,,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250330,39,9,37,33,2025-04-03,fixed,C,EXCLUDED,,,,False,★,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250330,39,9,38,선택: 23,2025-04-03,fixed,C,"가용: 1, 제외: 1",Assembly Decoding 스텝 38 선택,,,False,23,1,1,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250330,39,9,38,38,2025-04-02,fixed,C,EXCLUDED,용량 제약 위반: P5#10: 용량 초과 47/45심 (주말),,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250330,39,9,38,23,2025-04-03,fixed,C,AVAILABLE,모든 제약조건 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False

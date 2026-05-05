@@ -98,9 +98,12 @@ class AssemblyModeMixin:
                     'branch_b_times': _shift(final_state.get('branch_b_times', [])),
                     'day_start_offset': new_offset
                 }
-            except Exception:
-                # 실패 시 이전 상태 유지
-                pass
+            except Exception as exc:
+                # [AGENT-EDIT] 일자 전환용 makespan 실패는 이후 날짜 상태를 오염시키므로 즉시 중단한다.
+                raise RuntimeError(
+                    f"assembly 일자 전환 makespan 계산 실패: date={self.assembly_current_date}, "
+                    f"reason={reason}, blocks={len(self.assembly_daily_sequence)}"
+                ) from exc
     
         self.assembly_current_date += timedelta(days=1)
         self.assembly_current_datetime = datetime.combine(
@@ -193,14 +196,18 @@ class AssemblyModeMixin:
                     self._advance_assembly_day("capacity_limit")
                     continue
                 elif current_capacity_used >= actual_capacity_limit and urgent_exists:
-                    capacity_bypass = True
+                    if getattr(self.constraint_config, 'enable_assembly_urgent_capacity_bypass', True):
+                        capacity_bypass = True
+                    else:
+                        self._advance_assembly_day("capacity_limit")
+                        continue
             else:
                 if current_capacity_used >= actual_capacity_limit:
                     self._advance_assembly_day("capacity_limit")
                     continue
     
             self.constraint_checker.set_sequence(self.assembly_selected_blocks)
-            if capacity_bypass:
+            if capacity_bypass and getattr(self.constraint_config, 'enable_assembly_urgent_capacity_bypass', True):
                 cfg = self.constraint_config
                 orig_flags = {
                     'enable_p5_8_weekday_capacity': cfg.enable_p5_8_weekday_capacity,
@@ -224,7 +231,7 @@ class AssemblyModeMixin:
                     current_day_selected_blocks=self.assembly_daily_sequence
                 )
             finally:
-                if capacity_bypass:
+                if capacity_bypass and getattr(self.constraint_config, 'enable_assembly_urgent_capacity_bypass', True):
                     cfg.enable_p5_8_weekday_capacity = orig_flags['enable_p5_8_weekday_capacity']
                     cfg.enable_p5_9_block_count_check = orig_flags['enable_p5_9_block_count_check']
                     cfg.enable_p5_10_weekend_capacity = orig_flags['enable_p5_10_weekend_capacity']

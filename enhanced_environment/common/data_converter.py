@@ -18,6 +18,12 @@ from runtime_config import build_calendar_overrides, get_runtime_config
 # [AGENT-EDIT] 타입 힌트 참조 해소를 위해 데이터 구조 타입을 명시적으로 임포트
 from enhanced_environment.models import EnhancedBlock, AssemblyType, PortStarboard, BayType
 
+
+# [AGENT-ADD] 숨은 날짜 보정을 막기 위해 날짜 파싱 실패를 명시적으로 전달한다.
+class DataConversionDateError(ValueError):
+    """데이터 변환 중 날짜 값이 비어 있거나 잘못된 경우 발생."""
+
+
 class DataConverter:
     """데이터 변환 유틸리티"""
     
@@ -97,12 +103,12 @@ class DataConverter:
                     bay_hint = BayType.BAY_35A if longi_workshop == 1 else BayType.BAY_36B
                     
                     # 날짜 변환 (착수일, 조립 착수일)
-                    start_date = DataConverter._parse_date_format(row.get('착수일'))
-                    end_date = DataConverter._parse_date_format(row.get('종료일'))
-                    assembly_start_date = DataConverter._parse_date_format(row.get('조립 착수일'))
+                    start_date = DataConverter._parse_date_format(row.get('착수일'), field_name='착수일')
+                    end_date = DataConverter._parse_date_format(row.get('종료일'), field_name='종료일')
+                    assembly_start_date = DataConverter._parse_date_format(row.get('조립 착수일'), field_name='조립 착수일')
                     
                     # ✅ 실제 착수일은 '착수일' 컬럼 사용 (사용자 요구사항)
-                    actual_start_date = DataConverter._parse_date_format(row.get('착수일'))
+                    actual_start_date = DataConverter._parse_date_format(row.get('착수일'), field_name='착수일')
                     
                     # ✅ 디버깅: 착수일 정보 출력
                     if idx < 5 and VERBOSE_CONVERSION:  # 처음 5개만 출력
@@ -253,6 +259,9 @@ class DataConverter:
                     }
                     
                 except Exception as e:
+                    # [AGENT-EDIT] 날짜 이상치는 조용히 스킵하지 않고 즉시 실패시킨다.
+                    if isinstance(e, DataConversionDateError):
+                        raise
                     if VERBOSE_CONVERSION:
                         print(f"⚠️ 블록 {idx+1} 처리 실패, 스킵: {e}")
                     continue
@@ -586,34 +595,50 @@ class DataConverter:
             return PortStarboard.NONE
     
     @staticmethod
-    def _parse_date_format(date_value) -> datetime:
-        """20240509 형식 날짜를 datetime으로 변환"""
+    def _parse_date_format(date_value, field_name: str = "날짜") -> datetime:
+        """입력 날짜를 datetime으로 변환하고 누락/비정상 값은 즉시 실패시킨다."""
+        def _raise_invalid(message: str) -> None:
+            raise DataConversionDateError(f"{field_name} {message}: {date_value!r}")
+
         if pd.isna(date_value):
-            return datetime.now() + timedelta(days=30)
-            
+            _raise_invalid("값이 비어 있습니다")
+
+        if isinstance(date_value, pd.Timestamp):
+            return date_value.to_pydatetime()
         if isinstance(date_value, datetime):
             return date_value
-        elif isinstance(date_value, str):
-            # 20240509 형식 처리
-            if len(date_value) == 8 and date_value.isdigit():
-                year = int(date_value[:4])
-                month = int(date_value[4:6])
-                day = int(date_value[6:8])
-                return datetime(year, month, day, 8, 0, 0)  # 08:00 시작
-            else:
-                return TimeUtils.parse_time_string(date_value)
-        elif isinstance(date_value, (int, float)):
-            # 20240509 숫자 형식
+        if isinstance(date_value, date):
+            return datetime(date_value.year, date_value.month, date_value.day, 8, 0, 0)
+        if isinstance(date_value, str):
+            cleaned = date_value.strip()
+            if not cleaned:
+                _raise_invalid("값이 비어 있습니다")
+            if re.fullmatch(r"\d{8}", cleaned):
+                year = int(cleaned[:4])
+                month = int(cleaned[4:6])
+                day = int(cleaned[6:8])
+                return datetime(year, month, day, 8, 0, 0)
+            if not re.search(r"\d{4}[-/.]\d{1,2}[-/.]\d{1,2}", cleaned):
+                _raise_invalid("날짜 정보가 없습니다")
+            try:
+                parsed = pd.to_datetime(cleaned, errors="raise")
+            except Exception as exc:
+                raise DataConversionDateError(f"{field_name} 값을 파싱할 수 없습니다: {date_value!r}") from exc
+            if re.fullmatch(r"\d{4}[-/.]\d{1,2}[-/.]\d{1,2}", cleaned):
+                return datetime(parsed.year, parsed.month, parsed.day, 8, 0, 0)
+            return parsed.to_pydatetime()
+        if isinstance(date_value, (int, np.integer, float, np.floating)):
+            if isinstance(date_value, (float, np.floating)) and np.isnan(date_value):
+                _raise_invalid("값이 비어 있습니다")
             date_str = str(int(date_value))
-            if len(date_str) == 8:
+            if re.fullmatch(r"\d{8}", date_str):
                 year = int(date_str[:4])
                 month = int(date_str[4:6])
                 day = int(date_str[6:8])
                 return datetime(year, month, day, 8, 0, 0)
-            else:
-                return pd.to_datetime(date_value)
-        else:
-            return datetime.now() + timedelta(days=30)
+            _raise_invalid("8자리 YYYYMMDD 형식이 아닙니다")
+
+        _raise_invalid(f"지원하지 않는 타입입니다 ({type(date_value).__name__})")
     
     @staticmethod
     def _parse_assembly_workshop(workshop_str: str) -> AssemblyType:
@@ -1245,6 +1270,47 @@ class DataConverter:
 ################################################################################################################################################################################################
     @staticmethod
     def expand_rows_with_subassembly(rows: List[Dict]) -> List[Dict]:
+        # ==== [AGENT-EDIT BEGIN: expanded row metric anchor] ====
+        # 확장된 별판 멤버 row는 표시용이고, canonical metric은 대표 row만 합산해야 한다.
+        # 그렇지 않으면 CSV에서 violations_* 합산 시 통합 블록 metric이 중복 집계된다.
+        numeric_metric_fields = (
+            'violations',
+            'violations_raw_count',
+            'violations_primary_count',
+            'violations_meta_count',
+            'violations_info_count',
+            'info_count',
+            'relax_constraint_count',
+            'relax_event_count',
+        )
+        list_metric_fields = (
+            'violation_details',
+            'violation_severity',
+            'constraint_ids',
+            'constraint_families',
+            'raw_constraint_ids',
+            'raw_constraint_families',
+            'meta_constraint_ids',
+            'meta_constraint_families',
+            'meta_details',
+            'meta_severity',
+            'info_details',
+            'info_constraint_ids',
+            'info_constraint_families',
+            'info_severity',
+            'relax_constraint_ids',
+        )
+
+        def _clear_duplicate_metric_fields(target_row: Dict) -> None:
+            target_row['is_metric_anchor_row'] = False
+            for field_name in numeric_metric_fields:
+                if field_name in target_row:
+                    target_row[field_name] = 0
+            for field_name in list_metric_fields:
+                if field_name in target_row:
+                    target_row[field_name] = []
+        # ==== [AGENT-EDIT END] ====
+
         expanded_rows: List[Dict] = []
         for row in rows:
             expansion = row.get('subassembly_expansion')
@@ -1264,6 +1330,7 @@ class DataConverter:
             base_row['subassembly_representative_id'] = base_row.get('subassembly_representative_id', base_row.get('block_id'))
             base_row['is_subassembly_member'] = group_size > 1
             base_row['is_subassembly_representative'] = True
+            base_row['is_metric_anchor_row'] = True
             base_row['violations_representative'] = base_row.get('violations_representative', base_row.get('violations', 0))
 
             if expansion and isinstance(expansion, list) and len(expansion) > 1:
@@ -1304,6 +1371,7 @@ class DataConverter:
                     })
                     if idx > 0:
                         sub_row['is_subassembly_representative'] = False
+                        _clear_duplicate_metric_fields(sub_row)
                     expanded_rows.append(sub_row)
             else:
                 if expansion and isinstance(expansion, list) and len(expansion) == 1:
@@ -1336,12 +1404,14 @@ class DataConverter:
                         'subassembly_representative_id': base_row.get('subassembly_representative_id', base_row.get('block_id')),
                         'is_subassembly_member': group_size > 1,
                         'is_subassembly_representative': True,
+                        'is_metric_anchor_row': True,
                         'violations_representative': base_row.get('violations_representative', base_row.get('violations', 0))
                     })
                 base_row['subassembly_group_size'] = group_size
                 base_row['subassembly_representative_id'] = base_row.get('subassembly_representative_id', base_row.get('block_id'))
                 base_row['is_subassembly_member'] = group_size > 1
                 base_row['is_subassembly_representative'] = True
+                base_row['is_metric_anchor_row'] = True
                 base_row['violations_representative'] = base_row.get('violations_representative', base_row.get('violations', 0))
                 expanded_rows.append(base_row)
 
@@ -1608,14 +1678,11 @@ class DataConverter:
                     bay_hint = BayType.BAY_35A
                     
                     # 날짜 변환
-                    assembly_start_date_str = str(row.get('조립착수일', '20250101'))
-                    if len(assembly_start_date_str) == 8 and assembly_start_date_str.isdigit():
-                        year = int(assembly_start_date_str[:4])
-                        month = int(assembly_start_date_str[4:6])
-                        day = int(assembly_start_date_str[6:8])
-                        assembly_start_date = datetime(year, month, day, 8, 0, 0)
-                    else:
-                        assembly_start_date = datetime.now() + timedelta(days=30)
+                    # [AGENT-EDIT] 잘못된 조립착수일은 숨기지 않고 즉시 실패시킨다.
+                    assembly_start_date = DataConverter._parse_date_format(
+                        row.get('조립착수일', '20250101'),
+                        field_name='조립착수일'
+                    )
                     
                     # 착수일은 조립착수일과 동일하게 설정 (생성된 데이터용)
                     panel_start_date = assembly_start_date
@@ -1748,6 +1815,9 @@ class DataConverter:
                     }
 
                 except Exception as e:
+                    # [AGENT-EDIT] 날짜 이상치는 조용히 스킵하지 않고 즉시 실패시킨다.
+                    if isinstance(e, DataConversionDateError):
+                        raise
                     if VERBOSE_CONVERSION:
                         print(f"⚠️ 블록 {idx+1} 처리 실패, 스킵: {e}")
                     continue
@@ -1930,7 +2000,8 @@ class DataConverter:
                     blocks_to_sequence[block.block_id] = seq_num
             
             # 제약조건 프로파일
-            afternoon_start_blocks = [b.block_id for b in blocks_in_date if b.needs_afternoon_start()]
+            # [AGENT-EDIT] P6#1,#2,#3 제거 이후 afternoon_start_blocks는 legacy 빈 프로필로 유지한다.
+            afternoon_start_blocks = []
             wide_blocks = [b.block_id for b in blocks_in_date if b.width > 21.0]
             high_longi_blocks = [b.block_id for b in blocks_in_date if b.longi_count >= 30]
             main_plate_only_blocks = [b.block_id for b in blocks_in_date if b.is_main_plate_only]
@@ -2256,12 +2327,12 @@ class DataConverter:
     
     @staticmethod
     def _extract_cross_seam_mixing_control(blocks: List[EnhancedBlock]) -> Dict:
-        """P6#4: 혼합 배치 제어 정보 추출"""
+        """[AGENT-EDIT] P6#4: pure cross seam 혼합 배치 제어 정보 추출."""
         cross_seam_blocks = []
         normal_blocks = []
         
         for block in blocks:
-            if (block.is_cross_seam or block.is_draft or block.main_plate_count > 10):
+            if block.is_cross_seam:
                 cross_seam_blocks.append(block.block_id)
             elif 2 <= block.seam_count <= 4:
                 normal_blocks.append(block.block_id)

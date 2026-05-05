@@ -1,7 +1,20 @@
 # PBS Scheduling 실행 안내 (main.py)
 
 이 저장소는 판넬 라인 스케줄링을 위한 RL, 휴리스틱, 실적 재현을 통합 실행하는 구조입니다.  
-현업 사용자는 **`main.py` 하나만 실행**하면 됩니다.
+현업 사용자는 **`main.py` 하나만 실행**하면 됩니다.  
+
+## 0) 문서 우선순위
+현재 프로젝트의 최신 해석은 아래 문서를 기준으로 봅니다.
+- 1순위: `docs/constraint_catalog.md`
+- 2순위: `docs/project_map.md`
+- 3순위: `CLAUDE.md`, `AGENTS.md`
+- 과거 `docs/audit/*`, `docs/ppt_*`, `docs/paper/*` 문서는 참고용이며, 최신 기본 결정과 충돌하면 위 1~3순위를 따릅니다.
+
+헷갈리면 이렇게 해석합니다.
+- `ROUTING_WORKSHOP_ORDER`: 실제 제약, 현재 기본은 runtime off / audit on
+- `workshop head masking`: 제약이 아니라 후보 축소 편향
+- `CONSECUTIVE_3BAY`: 방법론적 runtime guard, 현재 기본 off
+- 실제 베이 연속 위반 해석: `P7#7`
 
 ---
 
@@ -335,8 +348,10 @@ constraints:
     - 고심수
     - P6
     - P6#4
-    - 3Bay완화
 ```
+설명
+- 현재 기본 프로젝트 결정에서는 `CONSECUTIVE_3BAY`를 방법론적 guard로 보고 기본 비활성화한다.
+- 따라서 최신 기본 설정에서는 `3Bay완화`를 relax order 예시에서 제거한다.
 완화 키 전체 목록은 `relax_keys.md` 참고
 
 ---

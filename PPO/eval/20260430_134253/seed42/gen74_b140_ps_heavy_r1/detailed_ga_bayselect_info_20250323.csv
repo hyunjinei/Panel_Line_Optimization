@@ -1,0 +1,12 @@
+﻿type,date,total_blocks,block_id,assembly_start_date,width_m,longi_count,seam_count,c_seam_count,has_curved_plate,assigned_bay,final_reason,material_type,P7#2_result,P7#3_4_result,P7#7_8_result,P7#10_result,P7#11_result,P7#1_result,bay_35a_worktime_before,bay_36b_worktime_before,bay_35a_worktime_after,bay_36b_worktime_after
+METADATA,20250323,10,,,,,,,,,Assembly Decoding 베이 선택 분석: 10개 블록,,,,,,,,,,,
+BLOCK_DETAIL,20250323,10,54.0,2025-03-24,15.5,13.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,363.17,398.01,367.73,398.01
+BLOCK_DETAIL,20250323,10,52.0,2025-03-24,15.4,16.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,372.28,398.01,372.28,405.51
+BLOCK_DETAIL,20250323,10,64.0,2025-03-24,9.9,13.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,372.28,413.0,376.26,413.0
+BLOCK_DETAIL,20250323,10,74.0,2025-03-24,12.5,22.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,380.24,413.0,380.24,420.61
+BLOCK_DETAIL,20250323,10,84.0,2025-03-24,9.5,9.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,380.24,428.21,383.68,428.21
+BLOCK_DETAIL,20250323,10,94.0,2025-03-24,15.4,20.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,387.12,428.21,387.12,435.78
+BLOCK_DETAIL,20250323,10,104.0,2025-03-24,12.5,21.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,387.12,443.34,392.26,443.34
+BLOCK_DETAIL,20250323,10,107.0,2025-03-24,18.8,17.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,397.41,443.34,397.41,448.07
+BLOCK_DETAIL,20250323,10,114.0,2025-03-24,19.9,21.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,397.41,452.8,403.11,452.8
+BLOCK_DETAIL,20250323,10,117.0,2025-03-24,19.9,16.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,408.82,452.8,408.82,459.07

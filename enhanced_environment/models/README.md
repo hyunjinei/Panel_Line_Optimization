@@ -123,7 +123,7 @@
 |---|---|---|---|
 | __post_init__ | (self) | None | Post-init validation (kept identical). |
 | is_p_s_pair | (self) | bool | Check if this block is a P/S pair. |
-| needs_afternoon_start | (self) | bool | P6#1,2,3: 오후 3시 착수 필요 여부. |
+| needs_afternoon_start | (self) | bool | legacy 메서드. 논문 실험 기준 P6#1,2,3 제거로 항상 False 반환. |
 | get_bay_constraint | (self) | BayType | Physical constraints are relaxed; keep AUTO. |
 | get_physical_characteristics_key | (self) | tuple | Key for P5#17 physical identity. |
 | is_physically_identical_to | (self, other: 'EnhancedBlock') | bool | P5#17: physical identity check. |

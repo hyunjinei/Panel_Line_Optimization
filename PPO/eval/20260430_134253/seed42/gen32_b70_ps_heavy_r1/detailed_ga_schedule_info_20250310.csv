@@ -1,0 +1,15 @@
+﻿type,date,total_blocks,total_steps,step,block_id,assembly_start_date,assembly_type,port_starboard,status,reason,assembly_masking_stage,three_bay_check,ps_forced,selected_block,available_count,excluded_count,emergency_mode,relax_level,relax_stage,relax_constraints,relax_target_count,relax_targets,relaxed_block_count,relax_target_total,final_choice_flag,final_violation_count,final_violation_list,seam_count,c_seam_count,has_curved_plate
+METADATA,20250310,70,5,,,,,,,,,,,,,,,,,,,,,,,,,,,
+STEP_SUMMARY,20250310,70,5,66,선택: 67,2025-03-13,fixed,S,"가용: 2, 제외: 0",Assembly Decoding 스텝 66 선택,,,False,67,2,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250310,70,5,66,19,2025-03-12,line,C,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250310,70,5,66,61,2025-03-12,fixed,S,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250310,70,5,67,선택: 44,2025-03-13,fixed,P,"가용: 2, 제외: 0",Assembly Decoding 스텝 67 선택,,,False,44,2,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250310,70,5,67,19,2025-03-12,line,C,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250310,70,5,67,61,2025-03-12,fixed,S,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250310,70,5,68,선택: 19,2025-03-12,line,C,"가용: 2, 제외: 0",Assembly Decoding 스텝 68 선택,,,False,19,2,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250310,70,5,68,19,2025-03-12,line,C,AVAILABLE,[URGENT] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250310,70,5,68,61,2025-03-12,fixed,S,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250310,70,5,69,선택: 18,2025-03-13,line,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 69 선택,,,False,18,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250310,70,5,69,61,2025-03-12,fixed,S,AVAILABLE,[URGENT] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250310,70,5,70,선택: 61,2025-03-12,fixed,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 70 선택,,,False,61,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250310,70,5,70,61,2025-03-12,fixed,S,AVAILABLE,[URGENT] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False

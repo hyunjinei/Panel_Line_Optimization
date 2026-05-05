@@ -19,7 +19,11 @@ def calculate_entropy(log_probs: torch.Tensor) -> torch.Tensor:
 def get_violation_count(stats: Optional[Dict]) -> int:
     if not stats:
         return 0
-    if 'total_violations_train' in stats:
+    if 'total_violations_primary_train' in stats:
+        value = stats.get('total_violations_primary_train', 0)
+    elif 'total_violations_primary' in stats:
+        value = stats.get('total_violations_primary', 0)
+    elif 'total_violations_train' in stats:
         value = stats.get('total_violations_train', 0)
     else:
         value = stats.get('total_violations', 0)

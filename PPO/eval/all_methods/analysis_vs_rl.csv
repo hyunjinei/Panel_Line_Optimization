@@ -1,0 +1,5 @@
+﻿method,label,makespan_delta_mean_h,makespan_delta_median_h,makespan_delta_pct_mean,cases_faster_than_RL,cases_equal_makespan_RL,cases_slower_than_RL,viol_delta_mean,viol_delta_median,cases_fewer_viol_than_RL,cases_equal_viol_RL,cases_more_viol_than_RL
+SPT,SPT,12.645468,11.7,8.954331,0,0,114,24.131579,22.0,0,7,107
+SEAM_MIN,MSF,7.297953,6.7,5.999766,0,0,114,13.359649,11.0,0,7,107
+LPT,LPT,3.697515,2.833333,3.628006,4,2,108,6.798246,6.0,0,8,106
+GA,GA,1.754532,1.825,1.322155,23,1,90,3.95614,2.0,0,43,71

@@ -53,7 +53,7 @@ schedule
 
 | 함수 | 시그니처 | 반환 | 설명 |
 |---|---|---|---|
-| _apply_afternoon_guard_shift | (i: int, block, ct_common, ct_branch_a, ct_branch_b, assigned_bay: BayType, afternoon_guard_blocks: Set[int]) | None | 리드타임 강제 선택된 P6(15시 필요) 블록을 15:00 이후로 밀어주기 위한 보정. |
+| _apply_afternoon_guard_shift | (i: int, block, ct_common, ct_branch_a, ct_branch_b, assigned_bay: BayType, afternoon_guard_blocks: Set[int]) | None | legacy no-op helper. P6#1,2,3 제거 이후 인터페이스 호환용. |
 | calculate_makespan | (blocks_dict: dict, sequence: List[int], branch_assignments: Dict[int, BayType], previous_machine_state: Dict, afternoon_guard_blocks: Optional[Set[int]]) | Tuple[float, Dict] | 주어진 순서와 베이 할당에 대한 makespan 계산 (8개 공정 구조) |
 
 <!-- /AUTO-GENERATED -->

@@ -6,9 +6,7 @@ from datetime import datetime
 from typing import Dict
 
 from enhanced_environment.common.utils_core import (
-    dedup_violations,
-    extract_relax_constraints,
-    count_relax_events,
+    summarize_violations,
     get_line_group_and_workshop_code,
 )
 
@@ -29,16 +27,15 @@ def create_block_result(
     actual_machine_2_start_time=None,
 ) -> Dict:
     """블록 결과 생성 (공통 포맷)."""
-    # [AGENT-ADD] 완화 제약/이벤트 추출 (중복 제거)
-    relaxed_constraints = extract_relax_constraints(violations)
-    relax_event_count = count_relax_events(violations)
-    # [AGENT-ADD] 제약 중복 제거 및 INFO 분리 (카운트 안정화)
-    primary_violations, info_violations = dedup_violations(
+    # ==== [AGENT-EDIT BEGIN: canonical violation summary] ====
+    # raw / primary / meta / info를 공통 유틸에서 동일 기준으로 산출한다.
+    violation_summary = summarize_violations(
         violations,
         keep_info=True,
-        include_guard=False
+        include_guard=False,
     )
-    violation_count = len([v for v in primary_violations if v.severity in ['ERROR', 'WARNING']])
+    violation_count = int(violation_summary.get("violations_primary_count", 0))
+    # ==== [AGENT-EDIT END] ====
 
     line_group, assembly_code = get_line_group_and_workshop_code(block)
 
@@ -76,18 +73,15 @@ def create_block_result(
         'method': 'ASSEMBLY',
         'plan_date': plan_date_value,
         'excel_sequence': getattr(block, 'sequence_number', None),
+        **violation_summary,
+        # [AGENT-EDIT] 기존 필드 호환성 유지: violations는 primary count alias
         'violations': violation_count,
-        'violation_details': [v.message for v in primary_violations],
-        'violation_severity': [v.severity for v in primary_violations],
-        'constraint_ids': [v.constraint_id for v in primary_violations],
-        'relax_constraint_count': len(relaxed_constraints),
-        'relax_constraint_ids': relaxed_constraints,
-        'relax_event_count': relax_event_count,
-        'info_count': len(info_violations),
-        'info_details': [v.message for v in info_violations],
-        'info_constraint_ids': [v.constraint_id for v in info_violations],
-        'info_severity': [v.severity for v in info_violations],
-        'start_time': actual_machine_2_start_time.strftime('%Y-%m-%d %H:%M') if actual_machine_2_start_time else (start_time.strftime('%Y-%m-%d %H:%M') if start_time else ''),
+        # [AGENT-EDIT] 시간 필드를 분리하여 panel / machine2 / final 종료를 명확히 남긴다.
+        'panel_start_time': start_time.strftime('%Y-%m-%d %H:%M') if start_time else '',
+        'machine2_start_time': actual_machine_2_start_time.strftime('%Y-%m-%d %H:%M') if actual_machine_2_start_time else '',
+        'final_end_time': end_time.strftime('%Y-%m-%d %H:%M') if end_time else '',
+        # [AGENT-EDIT] primary metric의 start_time은 panel start alias로 고정
+        'start_time': start_time.strftime('%Y-%m-%d %H:%M') if start_time else '',
         'end_time': end_time.strftime('%Y-%m-%d %H:%M') if end_time else '',
         'date_start_time': date_start_time.strftime('%Y-%m-%d %H:%M') if date_start_time else '',
         'date_completion_time': total_completion_time.strftime('%Y-%m-%d %H:%M') if total_completion_time else '',

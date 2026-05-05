@@ -1,0 +1,511 @@
+# [AGENT-ADD] Diff-state self-label 학습 설정
+# 기존 full-state config/model은 그대로 두고 새 diff 모델 학습에 사용합니다.
+
+# 실행 모드: train | eval | compare | heuristic | replay | replay_start_date | gantt
+mode: train
+
+# 실행 전 확인 여부 (true면 확인 질문, false면 바로 실행)
+confirm: false
+
+# 재현성/장치
+# - seed: 랜덤 시드 고정값
+# - device: cuda 또는 cpu
+seed: 42
+device: cuda
+
+# 디버그/로그 환경변수 제어 (main.py에서 적용)
+env:
+  PBS_RL_STEP_LOG: "0"
+  PBS_FORCE_DEBUG: "0"
+  PBS_DEBUG_VERBOSE: "0"
+data:
+  # 입력 엑셀 경로 (상대경로는 저장소 루트 기준)
+  excel_path: environment/판넬 블록 데이터셋_250618_SNU.xlsx
+  # excel_path: environment/202601_판넬데이터.xlsx
+  # excel_path: environment/판넬 블록 데이터셋_2차년도예시.xlsx
+
+  # 사용할 시트 이름 (정확한 시트명)
+  # 비워두면 자동 후보(기존데이터/블록데이터/Sheet1 등)에서 선택
+  sheet: Sheet1
+
+model:
+  # RL 모델 경로 (RL 방법 선택 시 사용)
+  # path: PPO/train/result/models/0109_18_09_ranger_adabelief_envTrue/best_ppo_rollout_ep2400.pth # self-label mode 1 model
+  # path: PPO/train/result/models/0116_22_57_ranger_adabelief_envTrue/best_ppo_rollout_ep6700.pth # self-label mode 2 model
+  # path: PPO/train/result/models/0116_22_57_ranger_adabelief_envTrue/ppo_rollout_ep7700.pth # self-label mode 2 model
+  # path: PPO/train/result/models/0120_10_43_ranger_adabelief_envTrue/best_ppo_rollout_ep11900.pth # ppo 학습 model
+
+  # [AGENT-EDIT] diff 새 모델 학습용 config이므로 기존 full-state 모델 경로를 비워둔다.
+  path:
+  
+  # RL 샘플링 횟수 (평가 시 여러 번 샘플링)
+  sampling: 100
+
+gantt:
+  # 간트차트 생성 시 결과 폴더 (비우면 최신 결과 자동 탐색)
+  # 예: PPO/eval/20250609_0115_12_23_seed42
+  search_dir:
+
+heuristic:
+  # heuristic 모드에서 어떤 경로를 실행할지 선택
+  # - assembly_start: 조립착수일 휴리스틱 (selection_rules 사용)
+    # - start_date: 착수일 기반 휴리스틱 (Action Masking)
+  # - performance_replay: 엑셀 순번 재현
+  entry: assembly_start
+  # assembly_start에서만 사용되는 선택 규칙
+  # - priority | random | spt | lpt | seam_min
+  # 예) LPT만 실행하려면 아래처럼 설정
+  #   entry: assembly_start
+  #   method: lpt
+  # start_date/performance_replay에서는 이 값이 무시됩니다.
+  method: lpt
+  # [AGENT-EDIT] 중복 heuristic 키로 method/entry가 덮어써지지 않도록 cli_args를 같은 블록으로 통합
+  cli_args: []
+
+
+calendar:
+  # 점심 시간 적용 여부
+  enable_lunch_break: False
+  # 점심 시간 구간 (enable_lunch_break가 true일 때만 적용)
+  lunch_break: "12:00-13:00"
+
+  # 휴무/반일 적용 여부 (True/False)
+  # - enable_holidays_off: 하루 전체 휴무 사용
+  # - enable_half_day_off: 오후 중지 사용
+  # - enable_morning_shutdown: 오전 중지 사용
+  enable_holidays_off: False
+  enable_half_day_off: False
+  enable_morning_shutdown: False
+
+  # 하루 휴무 (08:00 ~ 다음날 07:59)
+  # 여러 날짜 또는 범위 입력 가능
+  holidays_off:
+   # - 20251225
+    # - 20251225~20251227
+    # - 20251225..20251227
+
+  # 오후 가동 중지 (15:00 ~ 다음날 07:59)
+  # 날짜만 지정하면 afternoon_shutdown 기본 시간을 사용
+  half_day_off:
+   # - 20251203
+    # - 20250221
+
+  # 오전 가동 중지 (예: 08:00 ~ 12:00)
+  # 공통 시간대 (morning_shutdown_dates에 지정된 날짜에 적용)
+  morning_shutdown: "08:00-12:00"
+  morning_shutdown_dates:
+    # - 20250221
+  # 날짜별 시간 지정(덮어쓰기)
+  morning_shutdown_schedule:
+    # 20250221: "08:00-10:30"
+
+  # 오후 가동 중지 시간(기본: 15:00-08:00)
+  # 공통 시간대 (half_day_off / afternoon_shutdown_dates에 적용)
+  afternoon_shutdown: "15:00-08:00"
+  # 날짜별 시간 지정(덮어쓰기)
+  afternoon_shutdown_schedule:
+    # 20250221: "14:00-08:00"
+
+constraints:
+  # [AGENT-ADD] 각 작업장의 맨 앞 블록만 남기는 후보 축소 편향. 실제 작업장 순서 제약과는 다르다.
+  enable_workshop_head_masking: true
+  # [AGENT-ADD] assembly_start 조립착수일 slack 층 분리 on/off
+  enable_assembly_start_leadtime_layers: true
+  # [AGENT-ADD] assembly_start 날짜창 필터 on/off
+  enable_assembly_start_window_filter: true
+  # [AGENT-EDIT] workshop head masking과 중복되는 runtime workshop-order 제약은 기본값에서 비활성화
+  enable_routing_workshop_order: false
+  # 용량 완화 허용 여부 (조립착수일 완화 단계에서만 사용)
+  allow_capacity_relaxation: false
+  # [AGENT-ADD] start_date 생성 단계에서 용량/달력 제약을 임시 해제할지 여부
+  enable_start_date_generation_capacity_override: true
+  # [AGENT-ADD] replay 생성 단계에서 용량/달력 제약을 임시 해제할지 여부
+  enable_replay_generation_capacity_override: true
+  # [AGENT-ADD] assembly 환경이 긴급 블록 때문에 용량 우회를 허용할지 여부
+  enable_assembly_urgent_capacity_bypass: true
+  # [AGENT-ADD] RL/self-label decoding 경로가 긴급 블록 때문에 용량 우회를 허용할지 여부
+  enable_rl_urgent_capacity_bypass: true
+
+  # ===== 활성 제약 리스트 (이 목록에 없으면 검사하지 않음) =====
+  # 비어 있으면 "기존 enable_* 플래그"만 사용합니다.
+  # 한글 키는 자동 매핑됩니다.
+  # 제약 ID 직접 입력도 가능합니다.
+  # - 예: P5#8, ROUTING_WORKSHOP_ORDER
+  enabled_constraints_start_date:
+    - PS연속             # P5#3, P5#4
+    - 라인고정간격        # LINE_GROUP_CONSTRAINT
+    - 라인혼합            # P5#11, P5#12
+    - 용량               # P5#8, P5#9, P5#10, P5#16
+    - P6#4               # P6#4
+    - P5#15              # P5#15
+    - C-Seam            # ROUTING_C_SEAM_SPACING
+    - 곡판               # ROUTING_CURVED_SPACING
+    - 고심수             # ROUTING_HIGH_SEAM_SPACING
+    - 고론지연속금지       # HIGH_LONGI_SPLIT
+    - P5#1
+    - P5#6
+    - P5#13
+    - P5#17
+    - P7#1
+    - P7#2
+    - P7#3
+    - P7#4
+    - P7#7
+    - P7#8
+    - P7#10
+    - P7#11
+    - P7#12
+
+  enabled_constraints_assembly:
+    - PS연속
+    - 라인고정간격
+    - 라인혼합
+    - 용량
+    - P6#4
+    - P5#15
+    - C-Seam
+    - 곡판
+    - 고심수
+    - 고론지연속금지
+    - P5#1
+    - P5#6
+    - P5#13
+    - P5#17
+    - P7#1
+    - P7#2
+    - P7#3
+    - P7#4
+    - P7#7
+    - P7#8
+    - P7#10
+    - P7#11
+    - P7#12
+
+  # ===== 하드 제약 (완화 금지) =====
+  # 여기에 넣으면 relax_order에서 자동 제거됩니다.
+  hard_constraints_start_date:
+    - PS연속
+
+  hard_constraints_assembly:
+    - PS연속
+
+  # 제약 완화 순서 (한글/영문 혼용 가능)
+  relax_order_start_date:
+    # action_masking.py(=masking/core.py) 완화 키 전체 목록과 1:1 매칭
+    - 라인고정간격     # LINE_GROUP_CONSTRAINT
+    - 라인혼합         # P5#11, P5#12
+    - C-Seam          # ROUTING_C_SEAM_SPACING
+    - 곡판            # ROUTING_CURVED_SPACING
+    - 고심수          # ROUTING_HIGH_SEAM_SPACING
+    - P6#4            # P6#4
+
+  relax_order_assembly:
+    # action_masking.py(=masking/core.py) 완화 키 전체 목록과 1:1 매칭
+    - 라인고정간격     # LINE_GROUP_CONSTRAINT
+    - 라인혼합         # P5#11, P5#12
+    - 용량            # P5#8, P5#9, P5#10, P5#16
+    - P6#4            # P6#4
+    - P5#15           # P5#15
+    - C-Seam          # ROUTING_C_SEAM_SPACING
+    - 곡판            # ROUTING_CURVED_SPACING
+    - 고심수          # ROUTING_HIGH_SEAM_SPACING
+
+  # 절대 완화 금지 제약 (한글 가능)
+  # hard_constraints_*와 같은 역할로 사용해도 됩니다.
+  strict_rules:
+    # - P5#3
+    # - P5#4
+
+  # 날짜별 용량 오버라이드 활성화 여부
+  # false면 해당 오버라이드는 무시됨
+  enable_daily_block_cap_overrides: false
+  enable_daily_seam_cap_overrides: false
+  enable_daily_seam_cap_scales: false
+
+  # 특정 날짜 블록 수 제한 (YYYYMMDD)
+  daily_block_cap_overrides:
+    # 20251203: 15
+
+  # 특정 날짜 심수 용량 제한/확장 (YYYYMMDD)
+  daily_seam_cap_overrides:
+    # 20251203: 90
+  # 특정 날짜 심수 용량 배율 (기본 용량 × 배율)
+  daily_seam_cap_scales:
+    # 20251204: 1.2
+
+
+training:
+  # CLI 미지정 시 기본값으로 적용되는 학습 파라미터
+  # 총 학습 에피소드 수
+  episodes: 150001
+  # [AGENT-ADD] 이어학습에서는 episodes를 추가 학습 횟수로 해석
+  resume_episode_mode: additional
+  # 학습률
+  lr: 0.0001
+  # PPO 클리핑 값
+  epsilon: 0.2
+  # PPO 업데이트 반복 횟수
+  ppo_iterations: 2
+  # 그라디언트 클리핑 값
+  grad_clip: 1.0
+  # 임베딩 차원
+  embedding_dim: 256
+  # 히든 차원
+  hidden_dim: 256
+  # 네트워크 층 수
+  n_layers: 1
+  # 어텐션 헤드 수
+  n_heads: 4
+  # 드롭아웃 비율
+  dropout: 0.1
+  # 샘플링 온도 (1.0=기본)
+  temperature: 1.0
+  # 옵티마이저 이름
+  optimizer: ranger_adabelief
+  # 베이스라인 업데이트 간격
+  baseline_update_interval: 10
+  # 통계 검정 임계값
+  statistical_alpha: 0.7
+  # 엔트로피 가중치
+  # [AGENT-EDIT] makespan 우선 학습에서 초반 탐색 붕괴를 늦추기 위해 entropy를 소폭 상향
+  entropy_coeff: 0.02
+  # 엔트로피 감소 비율
+  entropy_decay: 0.995
+  # 엔트로피 최소값
+  min_entropy_coeff: 0.0005
+  # 엔트로피 감소 주기
+  entropy_decay_interval: 50
+  # 초기 엔트로피 가중치
+  initial_entropy_coeff: 0.03
+  # 엔트로피 워밍업 에피소드
+  entropy_warmup_episodes: 50
+  # 학습 분포 (eval_like 또는 custom 등)
+  train_distribution: eval_like
+  # 학습 생성 블록 수 범위
+  num_blocks_min: 50
+  num_blocks_max: 90
+  # 하루 최대 블록 수 (생성용)
+  max_daily_blocks: 17
+  # 조립착수일 분산 정도 (작을수록 몰림)
+  min_spread_days: 5
+  # SNU 데이터 사용 여부
+  use_snu: false
+  # env_state 사용 여부
+  use_env_state: true
+  # [AGENT-EDIT] diff state 새 모델 학습. 기존 full 모델과 checkpoint 호환 안 됨.
+  # feature 모드 (full / reduced / constraint / diff)
+  feature_mode: diff
+  # 포지셔널 인코딩 사용 여부
+  use_positional_encoding: false
+  # 마스킹 디버그 출력
+  masking_debug: false
+  # 마스킹 상세 디버그 출력
+  masking_debug_verbose: false
+  # 고정 정규화 통계 사용 여부 (0/1)
+  fixed_norm_stats: 0
+  # 고정 정규화 워밍업 에피소드
+  fixed_norm_warmup_episodes: 5
+  # 학습 방식 (ppo 또는 self_label)
+  mode: self_label
+  # [AGENT-EDIT] single-agent PPO만 지원
+  agent_architecture: single_agent
+  # [AGENT-EDIT] SLIM/RL 후보 샘플 수
+  self_label_samples: 4
+  # self_label 모드 (1 또는 2) # 1은 makespan이 가장 짧은거 중에서 제약조건을 가장장 적게 어긴 것을 학습, 2는 제약조건을 적게 어긴 것 중에서 makespan이 가장 짧은 것을 학습
+  self_label_mode: 2
+  # [AGENT-ADD] legacy_score(기존), primary_first(제약 우선), feasible_first(위반 0 우선), makespan_first
+  self_label_selection_strategy: primary_first
+  # [AGENT-EDIT] candidate_only(후보군 경쟁만), legacy, warmup_only, disabled
+  self_label_lpt_teacher_policy: candidate_only
+  # [AGENT-ADD] warmup_only일 때 LPT teacher 허용 에피소드 수
+  self_label_lpt_warmup_episodes: 0
+  # [AGENT-ADD] teacher LPT만 bias on override 적용 여부 (1/0)
+  self_label_lpt_teacher_bias_on: 0
+  # [AGENT-ADD] RL 후보 profile 확장: 8 bias x 8 hard x self_label_samples
+  self_label_profile_expansion: 1
+  # [AGENT-ADD] LPT/SEAM_MIN 후보 profile 확장: 각 8 bias
+  self_label_heuristic_profile_expansion: 1
+  # [AGENT-ADD] 후보군 best 갱신 때마다 [시퀀스 갱신] 로그 출력
+  self_label_print_best_updates: 1
+  # [AGENT-ADD] 서버 자원 자동 사용: self-label 후보를 CPU/GPU/RAM 기준으로 병렬 생성
+  resource_auto: 1
+  self_label_parallel: auto
+  self_label_parallel_workers: 0
+  self_label_parallel_device: auto
+  self_label_worker_threads: 0
+  self_label_parallel_min_candidates: 8
+  # 병목 확인이 필요하면 true로 바꿔 후보별 시간을 출력
+  perf_timing: false
+  # 위반 페널티 가중치
+  violation_penalty_weight: 1.0
+  # 론지 부하 균형 가중치
+  longi_balance_weight: 0.1
+  # 시작일 오프셋 (조립착수일 기준)
+  start_date_offset: 3
+  # 로그 출력 간격
+  log_interval: 1
+  # 평가 간격
+  eval_interval: 100
+  # [AGENT-ADD] 학습 중 평가도 self-label 후보 생성과 같은 샘플 수/profile 조건을 사용
+  eval_sampling: 50
+  eval_use_self_label_profiles: true
+  # 모델 저장 간격
+  save_interval: 100
+  # 위반 로그 출력 제한 (0이면 전체)
+  violation_print_limit: 0
+  # 학습 시드
+  seed: 42
+
+eval:
+  # PPO/comprehensive_evaluation.py 로 넘길 인자
+  # 예: ["--some-flag", "value"]
+  cli_args: []
+  # 평가 방법 선택 (없으면 기존 기본값)
+  # - SPT | LPT | SEAM_MIN | GA | RL | 엑셀 | 착수일
+  # 예) RL과 LPT만 보고 싶다면
+  #   methods: [RL, LPT]
+  methods: [SPT, LPT, SEAM_MIN, GA, RL, 엑셀, 착수일]
+
+evaluation:
+  # eval 섹션과 동일하게 동작 (evaluation이 있으면 evaluation이 우선)
+  # methods: [SPT, SEAM_MIN, RL]
+  # methods: [엑셀, 착수일, RL]
+  mode : 2
+  # mode: 1  # 생성 데이터
+  # mode: 2  # SNU 데이터
+  # MODE 1 생성 범위/분포 설정
+  # 생성 데이터 개수
+  num_gen: 50
+  # [AGENT-ADD] 생성 데이터 실험 모드: random 또는 grid
+  generation_mode: grid
+  # [AGENT-ADD] grid 모드에서는 블록수 x 분포 x 반복 조합을 모두 평가
+  grid_repeats: 1
+  grid_block_counts: [20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200]
+  grid_distribution_profiles:
+    - name: base
+      util_target: 1.0
+      ps_ratio: 0.0
+      sub_ratio: 0.0
+      seam_scale: 1.0
+      tact_scale: 1.0
+      length_scale: 1.0
+      width_scale: 1.0
+      thickness_scale: 1.0
+    - name: ps_heavy
+      util_target: 1.0
+      ps_ratio: 0.1
+      sub_ratio: 0.0
+      seam_scale: 1.0
+      tact_scale: 1.0
+      length_scale: 1.0
+      width_scale: 1.0
+      thickness_scale: 1.0
+    - name: sub_heavy
+      util_target: 1.0
+      ps_ratio: 0.0
+      sub_ratio: 0.1
+      seam_scale: 1.0
+      tact_scale: 1.0
+      length_scale: 1.0
+      width_scale: 1.0
+      thickness_scale: 1.0
+    - name: mixed_ps_sub
+      util_target: 1.0
+      ps_ratio: 0.1
+      sub_ratio: 0.1
+      seam_scale: 1.0
+      tact_scale: 1.0
+      length_scale: 1.0
+      width_scale: 1.0
+      thickness_scale: 1.0
+    - name: heavy_work
+      util_target: 1.0
+      ps_ratio: 0.05
+      sub_ratio: 0.05
+      seam_scale: 1.2
+      tact_scale: 1.2
+      length_scale: 1.05
+      width_scale: 1.05
+      thickness_scale: 1.2
+    - name: overload
+      util_target: 1.25
+      ps_ratio: 0.05
+      sub_ratio: 0.05
+      seam_scale: 1.1
+      tact_scale: 1.1
+      length_scale: 1.0
+      width_scale: 1.0
+      thickness_scale: 1.0
+  # 블록 수 범위
+  block_count_range: [50, 200]
+  # P/S 비율 범위
+  ps_ratio_range: [0.0, 0.1]
+  # 별판 그룹 비율 범위
+  sub_ratio_range: [0.0, 0.1]
+  # 심수 스케일 범위
+  seam_scale_range: [1.0, 1.2]
+  # 처리시간 스케일 범위
+  tact_scale_range: [1.0, 1.2]
+  # 길이 스케일 범위
+  length_scale_range: [0.9, 1.1]
+  # 폭 스케일 범위
+  width_scale_range: [0.9, 1.1]
+  # 두께 스케일 범위
+  thickness_scale_range: [0.9, 1.2]
+  # 하루 최대 블록 수 (생성용)
+  max_daily_blocks: 17
+  # 조립착수일 분산 정도 (작을수록 몰림)
+  min_spread_days: 3
+  # RL 샘플링 횟수
+  sampling: 50
+  # [AGENT-ADD] 실적 평가에서도 self-label식 profile 후보를 방법별 50개 평가
+  use_self_label_profiles: true
+  profile_sampling: true
+  # [AGENT-ADD] RL 3200개 후보를 학습처럼 병렬 평가
+  eval_parallel: auto
+  eval_parallel_workers: 0
+  eval_parallel_device: auto
+  eval_worker_threads: 1
+  # [AGENT-ADD] 0이면 CPU/GPU/RAM을 보고 자동 최대 워커 수를 잡음
+  eval_max_gpu_workers: 0
+  # [AGENT-ADD] 자동 워커 산정용 보수적 메모리 추정값
+  eval_gpu_gb_per_worker: 0.75
+  eval_ram_gb_per_worker: 1.0
+  eval_progress_interval: 100
+  # [AGENT-EDIT] LPT/SPT/SEAM은 랜덤 반복이 아니라 profile 조합별 1회씩 평가
+  heuristic_sampling: profiles
+  heuristic_profile_sampling: true
+  # [AGENT-ADD] SPT/LPT/SEAM_MIN은 best 외에 마스킹 전부 해제 결과를 별도 저장
+  save_heuristic_all_mask_off: true
+  rl_selection_mode: best_pm
+  save_rl_samples_summary: true
+  # [AGENT-ADD] GA baseline은 비교용 경량 설정입니다. 생성은 순열 기반이고, 평가는 DES final audit을 통과합니다.
+  ga_population: 8
+  ga_generations: 4
+  ga_elite: 2
+  ga_mutation_rate: 0.25
+  ga_seed: 42
+  # [AGENT-ADD] GA 후보 fitness 평가를 CPU/RAM 기준으로 자동 병렬화
+  ga_parallel: auto
+  ga_parallel_workers: 0
+  ga_worker_threads: 1
+  ga_ram_gb_per_worker: 0.75
+  ga_progress_interval: 10
+  # 고정 시드 사용 여부
+  use_fixed_seed: true
+  # 기본 시드
+  default_seed: 42
+  # 멀티 시드 목록
+  seeds: [42, 142, 242, 342, 442]
+
+replay:
+  # 실적 재현 실행 시 추가 인자
+  # 예: ["--some-flag", "value"]
+  cli_args: []
+
+replay_start_date:
+  # 실적 재현 + 착수일 휴리스틱 연속 실행 시 인자
+  # excel_cli_args: 실적 재현 쪽에만 전달
+  # start_date_cli_args: 착수일 휴리스틱 쪽에만 전달
+  excel_cli_args: []
+  start_date_cli_args: []

@@ -1,0 +1,13 @@
+﻿type,date,total_blocks,block_id,assembly_start_date,width_m,longi_count,seam_count,c_seam_count,has_curved_plate,assigned_bay,final_reason,material_type,P7#2_result,P7#3_4_result,P7#7_8_result,P7#10_result,P7#11_result,P7#1_result,bay_35a_worktime_before,bay_36b_worktime_before,bay_35a_worktime_after,bay_36b_worktime_after
+METADATA,20251102,11,,,,,,,,,Assembly Decoding 베이 선택 분석: 11개 블록,,,,,,,,,,,
+BLOCK_DETAIL,20251102,11,23.0,2025-11-08,9.8,7.0,,,False,35A,P7#1 부하균등(론지): 35A(0ea) ≤ 36B(0ea) → A베이 선택,NORMAL,PASS,PASS,PASS,PASS,PASS,BALANCE_DECISION,0.0,0.0,8.96,0.0
+BLOCK_DETAIL,20251102,11,33.0,2025-11-09,16.7,18.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,17.92,0.0,17.92,9.38
+BLOCK_DETAIL,20251102,11,10.0,2025-11-05,18.9,15.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,17.92,18.75,28.44,18.75
+BLOCK_DETAIL,20251102,11,2.0,2025-11-05,15.7,12.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,38.97,18.75,38.97,26.91
+BLOCK_DETAIL,20251102,11,54.0,2025-11-08,14.5,16.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,38.97,35.06,46.46,35.06
+BLOCK_DETAIL,20251102,11,51.0,2025-11-09,8.3,5.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,53.96,35.06,53.96,39.82
+BLOCK_DETAIL,20251102,11,59.0,2025-11-08,6.3,7.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,53.96,44.58,59.48,44.58
+BLOCK_DETAIL,20251102,11,49.0,2025-11-08,12.7,6.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,65.0,44.58,65.0,48.16
+BLOCK_DETAIL,20251102,11,55.0,2025-11-07,19.9,20.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,65.0,51.74,76.48,51.74
+BLOCK_DETAIL,20251102,11,29.0,2025-11-08,28.9,28.0,,,False,36B,P7#2 물리적 제약: 폭 28.9m > 21m → B베이 강제,NORMAL,FORCE_B,PASS,,,,,87.95,51.74,87.95,61.87
+BLOCK_DETAIL,20251102,11,48.0,2025-11-03,12.5,16.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,87.95,72.0,96.66,72.0

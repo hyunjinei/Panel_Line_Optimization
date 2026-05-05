@@ -29,118 +29,9 @@ class SawValidationMixin:
         Returns:
             SAW 제약조건 위반 리스트
         """
-        violations: List[ConstraintViolation] = []
-
-        # ✅ P6#1,2,3: 오후 3시 착수 제약 실시간 검증 (실제 머신 스케줄 기반)
-        if block.needs_afternoon_start():
-            # 🆕 실제 머신 2번(전면SAW) 시작 시간 사용 (이미 계산된 경우) 또는 계산
-            if actual_machine_2_start_time is None:
-                actual_machine_2_start_time = self._calculate_actual_machine_2_start_time(
-                    block, current_time
-                )
-
-            # 🆕 시퀀싱 날짜 기준 15:00 비교 (날짜 넘어감 고려)
-            sequencing_date = current_time.date()  # 시퀀싱된 날짜
-            sequencing_date_3pm = datetime.combine(sequencing_date, time(15, 0))
-
-            # 날짜가 넘어갔으면 제약조건 자동 만족
-            if actual_machine_2_start_time.date() > sequencing_date:
-                # 날짜 넘어감으로 제약조건 만족 (위반 없음)
-                pass
-            elif actual_machine_2_start_time < sequencing_date_3pm:
-                # 실제 머신 2번 시작 시점이 당일 15:00 이전임
-                constraint_id = self._get_afternoon_constraint_id(block)
-
-                violations.append(
-                    ConstraintViolation(
-                        constraint_id=constraint_id,
-                        message=(
-                            "실제머신2(SAW) 시작 "
-                            f"{actual_machine_2_start_time.strftime('%Y-%m-%d %H:%M')} < 15:00 "
-                            "(오후 3시 착수 필요) [선점고려]"
-                        ),
-                        severity="WARNING",  # 경고만 하고 계속 진행
-                        block_id=block.block_id,
-                    )
-                )
-
-                # 제약 유형별 세부 메시지 추가
-                if block.is_draft:
-                    violations.append(
-                        ConstraintViolation(
-                            constraint_id="P6#1_DETAIL",
-                            message=(
-                                "Draft 블록 실제머신2 오후 3시 이전 처리: "
-                                f"{actual_machine_2_start_time.strftime('%H:%M')}"
-                            ),
-                            severity="INFO",
-                            block_id=block.block_id,
-                        )
-                    )
-                elif block.is_cross_seam:
-                    violations.append(
-                        ConstraintViolation(
-                            constraint_id="P6#2_DETAIL",
-                            message=(
-                                "Cross seam 블록 실제머신2 오후 3시 이전 처리: "
-                                f"{actual_machine_2_start_time.strftime('%H:%M')}"
-                            ),
-                            severity="INFO",
-                            block_id=block.block_id,
-                        )
-                    )
-                elif block.main_plate_count > 10:
-                    violations.append(
-                        ConstraintViolation(
-                            constraint_id="P6#3_DETAIL",
-                            message=(
-                                f"주판 {block.main_plate_count}장 (>10장) 블록 실제머신2 "
-                                f"오후 3시 이전 처리: {actual_machine_2_start_time.strftime('%H:%M')}"
-                            ),
-                            severity="INFO",
-                            block_id=block.block_id,
-                        )
-                    )
-            else:
-                # 🆕 제약조건 만족 시에도 INFO 메시지 추가
-                if block.is_draft:
-                    violations.append(
-                        ConstraintViolation(
-                            constraint_id="P6#1_DETAIL",
-                            message=(
-                                "Draft 블록 실제머신2 시작: "
-                                f"{actual_machine_2_start_time.strftime('%H:%M')} (15:00 제약 만족)"
-                            ),
-                            severity="INFO",
-                            block_id=block.block_id,
-                        )
-                    )
-                elif block.is_cross_seam:
-                    violations.append(
-                        ConstraintViolation(
-                            constraint_id="P6#2_DETAIL",
-                            message=(
-                                "Cross seam 블록 실제머신2 시작: "
-                                f"{actual_machine_2_start_time.strftime('%H:%M')} (15:00 제약 만족)"
-                            ),
-                            severity="INFO",
-                            block_id=block.block_id,
-                        )
-                    )
-                elif block.main_plate_count > 10:
-                    violations.append(
-                        ConstraintViolation(
-                            constraint_id="P6#3_DETAIL",
-                            message=(
-                                f"주판 {block.main_plate_count}장 (>10장) 블록 실제머신2 시작: "
-                                f"{actual_machine_2_start_time.strftime('%H:%M')} (15:00 제약 만족)"
-                            ),
-                            severity="INFO",
-                            block_id=block.block_id,
-                        )
-                    )
-
-        return violations
+        _ = (block, current_time, actual_machine_2_start_time)
+        # [AGENT-EDIT] 논문 실험 기준으로 P6#1,#2,#3 시간 제약 제거.
+        return []
 
     def _calculate_actual_machine_2_start_time(
         self, block: EnhancedBlock, current_time: datetime
@@ -163,16 +54,16 @@ class SawValidationMixin:
             for block_id in test_sequence:
                 if block_id in self.blocks_dict:
                     test_block = self.blocks_dict[block_id]
-                    # 환경의 베이 할당 로직 사용
-                    if self.env is not None and hasattr(self.env, "_auto_assign_bay"):
-                        assigned_bay, _ = self.env._auto_assign_bay(
-                            test_block, return_analysis=False
+                    # [AGENT-EDIT] 검증용 예측 경로에서는 preview_assign_bay만 사용한다.
+                    # _auto_assign_bay는 상태를 갱신하므로 사후 검증 중 tracker를 오염시킬 수 있다.
+                    if not (self.env is not None and hasattr(self.env, "_preview_assign_bay")):
+                        raise RuntimeError(
+                            f"P6 validator preview_assign_bay 사용 불가: block_id={block_id}"
                         )
-                        test_bay_assignments[block_id] = assigned_bay
-                    else:
-                        from enhanced_environment.models import BayType
-
-                        test_bay_assignments[block_id] = BayType.BAY_35A
+                    assigned_bay = self.env._preview_assign_bay(
+                        test_block, return_analysis=False
+                    )
+                    test_bay_assignments[block_id] = assigned_bay
 
             # 🎯 makespan_calculator를 활용한 실제 시간 계산
             from enhanced_environment.bay.makespan import calculate_makespan
@@ -203,51 +94,11 @@ class SawValidationMixin:
 
             return machine_2_start_time
 
-        except Exception:
-            # Fallback: 기존 단순 계산 방식
-            return self._fallback_machine_2_time_calculation(block, current_time)
-
-    def _fallback_machine_2_time_calculation(
-        self, block: EnhancedBlock, current_time: datetime
-    ) -> datetime:
-        """Fallback 머신 2번 시간 계산"""
-        simulated_time = current_time
-        print("fallback_constraint_validator")
-        for step in self.completed_steps:
-            if hasattr(step, "block_id") and step.block_id in self.blocks_dict:
-                prev_block = self.blocks_dict[step.block_id]
-                machine_1_processing_time = prev_block.processing_times[0]
-                old_time = simulated_time
-                simulated_time = simulated_time + timedelta(
-                    minutes=machine_1_processing_time
-                )
-
-                if simulated_time.date() > old_time.date() or simulated_time.hour >= 22:
-                    next_date = simulated_time.date()
-                    if simulated_time.hour >= 22 and simulated_time.date() == old_time.date():
-                        next_date = old_time.date() + timedelta(days=1)
-                    simulated_time = datetime.combine(
-                        next_date, datetime.min.time().replace(hour=8)
-                    )
-
-        machine_1_processing_time = block.processing_times[0]
-        old_time = simulated_time
-        machine_2_start_time = simulated_time + timedelta(
-            minutes=machine_1_processing_time
-        )
-
-        if machine_2_start_time.date() > old_time.date() or machine_2_start_time.hour >= 22:
-            next_date = machine_2_start_time.date()
-            if (
-                machine_2_start_time.hour >= 22
-                and machine_2_start_time.date() == old_time.date()
-            ):
-                next_date = old_time.date() + timedelta(days=1)
-            machine_2_start_time = datetime.combine(
-                next_date, datetime.min.time().replace(hour=8)
-            )
-
-        return machine_2_start_time
+        except Exception as exc:
+            # [AGENT-EDIT] P6는 hard 제약이므로 validator 시간 계산 실패를 숨기지 않는다.
+            raise RuntimeError(
+                f"P6 validator 머신2 시작시간 계산 실패: block_id={block.block_id}"
+            ) from exc
 
     def _get_afternoon_constraint_id(self, block: EnhancedBlock) -> str:
         """

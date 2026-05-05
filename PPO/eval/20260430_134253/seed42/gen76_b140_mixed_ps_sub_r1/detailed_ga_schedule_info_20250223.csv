@@ -1,0 +1,30 @@
+﻿type,date,total_blocks,total_steps,step,block_id,assembly_start_date,assembly_type,port_starboard,status,reason,assembly_masking_stage,three_bay_check,ps_forced,selected_block,available_count,excluded_count,emergency_mode,relax_level,relax_stage,relax_constraints,relax_target_count,relax_targets,relaxed_block_count,relax_target_total,final_choice_flag,final_violation_count,final_violation_list,seam_count,c_seam_count,has_curved_plate
+METADATA,20250223,133,13,,,,,,,,,,,,,,,,,,,,,,,,,,,
+STEP_SUMMARY,20250223,133,13,74,선택: 60,2025-02-26,fixed,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 74 선택,,,False,60,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250223,133,13,74,92,2025-02-21,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250223,133,13,75,선택: 48,2025-02-26,line,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 75 선택,,,False,48,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250223,133,13,75,92,2025-02-21,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250223,133,13,76,선택: 8,2025-02-26,line,P,"가용: 1, 제외: 0",Assembly Decoding 스텝 76 선택,,,False,8,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250223,133,13,76,92,2025-02-21,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250223,133,13,77,선택: 51,2025-02-26,line,P,"가용: 1, 제외: 0",Assembly Decoding 스텝 77 선택,,,False,51,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250223,133,13,77,92,2025-02-21,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250223,133,13,78,선택: 55,2025-02-26,fixed,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 78 선택,,,False,55,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250223,133,13,78,92,2025-02-21,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250223,133,13,79,선택: 58,2025-02-26,fixed,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 79 선택,,,False,58,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250223,133,13,79,92,2025-02-21,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250223,133,13,80,선택: 66,2025-02-26,fixed,P,"가용: 1, 제외: 0",Assembly Decoding 스텝 80 선택,,,False,66,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250223,133,13,80,92,2025-02-21,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250223,133,13,81,선택: 61,2025-02-26,fixed,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 81 선택,,,False,61,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250223,133,13,81,92,2025-02-21,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250223,133,13,82,선택: 129,2025-02-26,fixed,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 82 선택,,,False,129,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250223,133,13,82,92,2025-02-21,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250223,133,13,83,선택: 92,2025-02-21,fixed,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 83 선택,,,False,92,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250223,133,13,83,92,2025-02-21,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250223,133,13,84,선택: 65,2025-02-26,fixed,P,"가용: 2, 제외: 0",Assembly Decoding 스텝 84 선택,,,False,65,2,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250223,133,13,84,37,2025-02-23,line,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250223,133,13,84,49,2025-02-23,line,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250223,133,13,85,선택: 37,2025-02-23,line,P,"가용: 2, 제외: 0",Assembly Decoding 스텝 85 선택,,,False,37,2,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250223,133,13,85,37,2025-02-23,line,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250223,133,13,85,49,2025-02-23,line,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250223,133,13,86,선택: 70,2025-02-26,fixed,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 86 선택,,,False,70,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250223,133,13,86,49,2025-02-23,line,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False

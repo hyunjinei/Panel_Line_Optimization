@@ -1,0 +1,9 @@
+﻿file,rows,columns
+excel_long_no_mask_off.csv,570,21
+excel_block_count_summary_no_mask_off.csv,95,18
+excel_size_bucket_summary_no_mask_off.csv,15,18
+excel_distribution_profile_summary_no_mask_off.csv,30,18
+excel_box_makespan_hours_by_block_count_wide_no_mask_off.csv,6,96
+excel_mean_makespan_hours_by_block_count_pivot_no_mask_off.csv,19,6
+excel_box_violations_by_block_count_wide_no_mask_off.csv,6,96
+excel_mean_violations_by_block_count_pivot_no_mask_off.csv,19,6

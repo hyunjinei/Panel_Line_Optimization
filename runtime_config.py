@@ -5,9 +5,17 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Any, Dict, Optional, Iterable
 
 _RUNTIME_CONFIG: Dict[str, Any] = {}
+
+# [AGENT-ADD] Bias components are candidate-reduction toggles, not hard constraints.
+BIAS_COMPONENT_FIELD_MAP: Dict[int, str] = {
+    1: "enable_workshop_head_masking",
+    2: "enable_assembly_start_leadtime_layers",
+    3: "enable_assembly_start_window_filter",
+}
 
 
 def set_runtime_config(config: Optional[Dict[str, Any]]) -> None:
@@ -19,6 +27,77 @@ def set_runtime_config(config: Optional[Dict[str, Any]]) -> None:
 def get_runtime_config() -> Dict[str, Any]:
     """Return runtime configuration (empty dict if not set)."""
     return _RUNTIME_CONFIG or {}
+
+
+def parse_bias_components(raw_value: Any) -> Optional[list[int]]:
+    """Parse bias component selector from config/CLI.
+
+    Supported forms:
+    - None -> None
+    - [] / [1, 3]
+    - "1,3"
+    - "{1,3}"
+    - "1.3" / "{1.3}"
+    """
+    if raw_value is None:
+        return None
+
+    tokens: list[Any]
+    if isinstance(raw_value, (list, tuple, set)):
+        tokens = list(raw_value)
+    elif isinstance(raw_value, int):
+        tokens = [raw_value]
+    else:
+        text = str(raw_value).strip()
+        if not text:
+            return []
+        text = text.translate(str.maketrans({
+            "{": " ",
+            "}": " ",
+            "[": " ",
+            "]": " ",
+            "(": " ",
+            ")": " ",
+            ";": ",",
+            "/": ",",
+            ".": ",",
+        }))
+        tokens = [part for part in re.split(r"[\s,]+", text) if part]
+
+    parsed: list[int] = []
+    for token in tokens:
+        try:
+            value = int(str(token).strip())
+        except Exception as exc:
+            raise ValueError(f"bias_components에 숫자가 아닌 값이 포함됨: {token}") from exc
+        if value not in BIAS_COMPONENT_FIELD_MAP:
+            raise ValueError(f"bias_components는 1,2,3만 허용됨: {value}")
+        parsed.append(value)
+    return sorted(set(parsed))
+
+
+def apply_bias_components_to_constraints(constraints: Dict[str, Any], raw_value: Any) -> Dict[str, Any]:
+    """Apply parsed bias component selector to the three bias flags."""
+    components = parse_bias_components(raw_value)
+    if components is None:
+        return dict(constraints)
+
+    updated = dict(constraints)
+    enabled = set(components)
+    for component_id, field_name in BIAS_COMPONENT_FIELD_MAP.items():
+        updated[field_name] = component_id in enabled
+    updated["bias_components"] = list(components)
+    return updated
+
+
+def describe_bias_components(constraints: Dict[str, Any]) -> str:
+    """Return human-readable bias selector like 'off', '1,3', or '1,2,3'."""
+    enabled = [
+        str(component_id)
+        for component_id, field_name in BIAS_COMPONENT_FIELD_MAP.items()
+        if bool((constraints or {}).get(field_name, False))
+    ]
+    return ",".join(enabled) if enabled else "off"
 
 
 def load_runtime_config(path: str) -> Dict[str, Any]:
@@ -131,6 +210,11 @@ def build_calendar_overrides(config: Optional[Dict[str, Any]] = None) -> Dict[st
 
     overrides: Dict[str, Any] = {}
 
+    # [AGENT-ADD] Explicit work dates override GUI-defined closed/partial-shutdown days.
+    work_dates = _expand_date_items(calendar_cfg.get("work_dates") or calendar_cfg.get("open_dates") or [])
+    if work_dates:
+        overrides["work_dates"] = work_dates
+
     # [AGENT-EDIT] 휴무/반일/점심 설정은 enable 플래그를 우선 적용
     enable_closed = calendar_cfg.get("enable_holidays_off")
     if enable_closed is not False:
@@ -205,3 +289,12 @@ def get_constraint_overrides(config: Optional[Dict[str, Any]] = None) -> Dict[st
     _apply_enable_flag("enable_daily_seam_cap_scales", "daily_seam_cap_scales")
 
     return overrides
+
+
+def get_audit_constraint_overrides(config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Return audit-only constraint overrides from runtime config."""
+    config = config or get_runtime_config()
+    overrides = (config or {}).get("audit_constraints", {}) or {}
+    if not isinstance(overrides, dict):
+        return {}
+    return dict(overrides)

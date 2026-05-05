@@ -57,6 +57,52 @@ def _update_bay_state_after_assignment(
             bay_tracker.bay_36b_worktime += processing_time_seconds
             bay_tracker.bay_36b_block_count += 1
 
+
+def assign_fixed_bay(
+    block: EnhancedBlock,
+    assigned_bay: BayType,
+    bay_tracker: BayStateTracker,
+    blocks_dict: dict,
+    logger,
+    return_analysis: bool = False,
+    update_tracker: bool = True,
+    final_reason: str = "MANUAL_FIXED_BAY",
+):
+    """
+    # [AGENT-EDIT] Explicit bay assignment helper for interactive/manual scheduling.
+    # 원본 자동 배정 로직은 유지하고, 외부 협상 결과를 env.step 경로에 안전하게 주입할 때만 사용한다.
+    """
+    analysis = {
+        'block_id': block.block_id,
+        'assembly_type': block.assembly_type.value,
+        'port_starboard': block.port_starboard.value,
+        'width_m': round(block.width, 1),
+        'longi_count': block.longi_count,
+        'seam_count': block.seam_count,
+        'c_seam_count': getattr(block, 'c_seam_count', 0),
+        'main_plate_count': block.main_plate_count,
+        'has_curved_plate': getattr(block, 'has_curved_plate', False),
+        'material_type': block.material_type.value,
+        'is_fab': block.is_fab,
+        'is_draft': block.is_draft,
+        'is_cross_seam': block.is_cross_seam,
+        'constraint_checks': {},
+        'assigned_bay': assigned_bay.value,
+        'final_reason': final_reason,
+        'bay_35a_worktime_before': bay_tracker.bay_35a_worktime,
+        'bay_36b_worktime_before': bay_tracker.bay_36b_worktime,
+        'bay_35a_longi_total_before': bay_tracker.bay_35a_longi_total,
+        'bay_36b_longi_total_before': bay_tracker.bay_36b_longi_total,
+        'bay_35a_count_before': bay_tracker.bay_35a_block_count,
+        'bay_36b_count_before': bay_tracker.bay_36b_block_count,
+        'manual_assignment': True,
+    }
+    _update_bay_state_after_assignment(block, assigned_bay, bay_tracker, logger, update_tracker)
+    if return_analysis:
+        _finalize_analysis(analysis, bay_tracker, blocks_dict)
+        return assigned_bay, analysis
+    return assigned_bay
+
 def auto_assign_bay(
     block: EnhancedBlock,
     constraint_config: ConstraintConfig,
@@ -180,6 +226,21 @@ def auto_assign_bay(
         'result': 'FORCE_PAIR' if required_bay else 'PASS',
         'reason': f"P/S small 쌍 동일베이 → {required_bay.value}베이" if required_bay else "P/S small 쌍 조건 미충족"
     }
+
+    # ==== [AGENT-EDIT BEGIN: enforce P7#3,#4 before soft bay preferences] ====
+    if required_bay and (
+        constraint_config.is_constraint_enabled("P7#3")
+        or constraint_config.is_constraint_enabled("P7#4")
+    ):
+        assigned_bay = required_bay
+        analysis['assigned_bay'] = assigned_bay.value
+        analysis['final_reason'] = f"P7#3,#4 P/S small 쌍 동일베이 강제 → {assigned_bay.value}"
+        _update_bay_state_after_assignment(block, assigned_bay, bay_tracker, logger, update_tracker)
+        if return_analysis:
+            _finalize_analysis(analysis, bay_tracker, blocks_dict)
+            return assigned_bay, analysis
+        return assigned_bay
+    # ==== [AGENT-EDIT END] ====
     
     # ✅ 2순위: P7#2 물리적 제약 (21m 초과 → B베이)
     p7_2_check = constraint_config.is_constraint_enabled("P7#2") and block.width > 21.0

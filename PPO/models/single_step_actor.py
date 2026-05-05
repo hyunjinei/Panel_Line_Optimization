@@ -16,6 +16,8 @@ from PPO.models.feature_specs import (
     REDUCED_ENV_STATE_DIM,
     CONSTRAINT_BLOCK_FEATURE_DIM,
     CONSTRAINT_ENV_STATE_DIM,
+    DIFF_BLOCK_FEATURE_DIM,
+    DIFF_ENV_STATE_DIM,
     BLOCK_FEATURE_DIM,
     ENV_STATE_DIM,
     FULL_BLOCK_BINARY_DIM,
@@ -27,6 +29,9 @@ from PPO.models.feature_specs import (
     CONSTRAINT_BLOCK_BINARY_INDICES,
     CONSTRAINT_BLOCK_LOG1P_INDICES,
     CONSTRAINT_BLOCK_SIGNED_LOG1P_INDICES,
+    DIFF_BLOCK_BINARY_INDICES,
+    DIFF_BLOCK_LOG1P_INDICES,
+    DIFF_BLOCK_SIGNED_LOG1P_INDICES,
 )
 
 
@@ -73,12 +78,17 @@ class SingleStepPtrNet(nn.Module):
         elif self.feature_mode == "constraint":
             self.feature_dim = CONSTRAINT_BLOCK_FEATURE_DIM
             self.env_state_dim = CONSTRAINT_ENV_STATE_DIM
+        elif self.feature_mode == "diff":
+            self.feature_dim = DIFF_BLOCK_FEATURE_DIM
+            self.env_state_dim = DIFF_ENV_STATE_DIM
 
         # [AGENT-EDIT] Binary feature indices align with extract_block_features_single ordering.
         if self.feature_mode == "reduced":
             binary_idx_list = list(REDUCED_BLOCK_BINARY_INDICES)
         elif self.feature_mode == "constraint":
             binary_idx_list = list(CONSTRAINT_BLOCK_BINARY_INDICES)
+        elif self.feature_mode == "diff":
+            binary_idx_list = list(DIFF_BLOCK_BINARY_INDICES)
         else:
             binary_idx_list = list(range(FULL_BLOCK_BINARY_DIM))
         self.register_buffer("binary_feature_indices", torch.tensor(binary_idx_list, dtype=torch.long))
@@ -91,6 +101,9 @@ class SingleStepPtrNet(nn.Module):
         elif self.feature_mode == "constraint":
             log1p_indices = CONSTRAINT_BLOCK_LOG1P_INDICES
             signed_indices = CONSTRAINT_BLOCK_SIGNED_LOG1P_INDICES
+        elif self.feature_mode == "diff":
+            log1p_indices = DIFF_BLOCK_LOG1P_INDICES
+            signed_indices = DIFF_BLOCK_SIGNED_LOG1P_INDICES
         else:
             log1p_indices = FULL_BLOCK_LOG1P_INDICES
             signed_indices = FULL_BLOCK_SIGNED_LOG1P_INDICES
@@ -404,8 +417,7 @@ class SingleStepPtrNet(nn.Module):
 
         # [AGENT-EDIT] logit_feature_bias_head 제거됨
 
-        # 🔍 로짓 분석 및 경고 시스템
-        top_logits, top_indices = torch.topk(logits, min(3, logits.size(-1)), dim=-1)
+        # [AGENT-EDIT] Debug-only top-k 계산은 매 rollout step에서 누적 비용이 커서 기본 경로에서 제거한다.
 
         # if self._debug_logit_prints < 5:
         #     sample_idx = self._debug_logit_prints + 1
@@ -436,7 +448,7 @@ class SingleStepPtrNet(nn.Module):
                 mask = torch.zeros_like(probs)
                 mask.scatter_(1, top_indices, top_probs)
                 probs = mask / (mask.sum(dim=-1, keepdim=True) + 1e-8)
-            top_probs, top_prob_indices = torch.topk(probs, min(3, probs.size(-1)), dim=-1)
+            # [AGENT-EDIT] Debug-only top-k 확률 계산은 로그가 꺼진 기본 학습 경로에서 수행하지 않는다.
 
             # if self._debug_prob_prints < 5:
             #     sample_idx = self._debug_prob_prints + 1
@@ -704,6 +716,103 @@ def extract_block_features_single(
             )
         return features
 
+    # ==== [AGENT-EDIT] Diff features (40 dims, leakage/duplicate reduced + domain features) ====
+    if feature_mode == "diff":
+        has_ps_pair = 1.0 if getattr(block, 'pair_block_id', None) else 0.0
+        port_state = getattr(block, 'port_starboard', None)
+        port_value = getattr(port_state, 'value', str(port_state)).upper() if port_state is not None else ""
+        is_port = 1.0 if port_value == 'P' else 0.0
+        is_starboard = 1.0 if port_value == 'S' else 0.0
+        is_center = 1.0 if port_value == 'C' else 0.0
+
+        has_curved_plate = 1.0 if getattr(block, 'has_curved_plate', False) else 0.0
+        is_cross_seam = 1.0 if getattr(block, 'is_cross_seam', False) else 0.0
+        is_main_plate_only = 1.0 if getattr(block, 'is_main_plate_only', False) else 0.0
+
+        material_type = getattr(block, 'material_type', None)
+        material_name = getattr(material_type, 'value', str(material_type)).upper() if material_type is not None else ""
+        material_is_outsourcing = 1.0 if 'OUT' in material_name else 0.0
+        material_is_lt = 1.0 if 'LT' in material_name else 0.0
+        is_subassembly = 1.0 if getattr(block, 'is_subassembly', False) else 0.0
+
+        try:
+            needs_pm_flag = 1.0 if block.needs_afternoon_start() else 0.0
+        except Exception as exc:
+            raise RuntimeError(
+                f"block feature P6 계산 실패(diff): block_id={getattr(block, 'block_id', 'unknown')}"
+            ) from exc
+
+        bay_35a_feasible = 1.0 if float(kwargs.get('bay_35a_feasible', 0.0) or 0.0) > 0.0 else 0.0
+        bay_36b_feasible = 1.0 if float(kwargs.get('bay_36b_feasible', 0.0) or 0.0) > 0.0 else 0.0
+        is_workshop_head = 1.0 if float(kwargs.get('is_workshop_head', 0.0) or 0.0) > 0.0 else 0.0
+        line_is_fixed = 1.0 if float(kwargs.get('line_is_fixed', 0.0) or 0.0) > 0.0 else 0.0
+        line_is_line = 1.0 if float(kwargs.get('line_is_line', 0.0) or 0.0) > 0.0 else 0.0
+        pair_already_selected = 1.0 if float(kwargs.get('pair_already_selected', 0.0) or 0.0) > 0.0 else 0.0
+        pair_remaining = 1.0 if float(kwargs.get('pair_remaining', 0.0) or 0.0) > 0.0 else 0.0
+        pair_available = 1.0 if float(kwargs.get('pair_available', 0.0) or 0.0) > 0.0 else 0.0
+
+        features.extend([
+            has_ps_pair,
+            is_port,
+            is_starboard,
+            is_center,
+            has_curved_plate,
+            is_cross_seam,
+            is_main_plate_only,
+            material_is_outsourcing,
+            material_is_lt,
+            is_subassembly,
+            needs_pm_flag,
+            bay_35a_feasible,
+            bay_36b_feasible,
+            is_workshop_head,
+            line_is_fixed,
+            line_is_line,
+            pair_already_selected,
+            pair_remaining,
+            pair_available,
+        ])
+
+        seam_count = float(getattr(block, 'seam_count', 0.0) or 0.0)
+        c_seam_count = float(getattr(block, 'c_seam_count', 0.0) or 0.0)
+        longi_count = float(getattr(block, 'longi_count', 0.0) or 0.0)
+        width = float(getattr(block, 'width', 0.0) or 0.0)
+        length = float(getattr(block, 'length', 0.0) or 0.0)
+        max_thickness = float(getattr(block, 'max_thickness', 0.0) or 0.0)
+        main_plate_count = float(getattr(block, 'main_plate_count', 0.0) or 0.0)
+        angle_count = float(getattr(block, 'angle_count', 0.0) or 0.0)
+        buildup_count = float(getattr(block, 'buildup_count', 0.0) or 0.0)
+        processing_times = getattr(block, 'processing_times', None)
+        total_processing_time = float(sum(processing_times)) if processing_times else 0.0
+
+        features.extend([
+            seam_count,
+            c_seam_count,
+            longi_count,
+            width,
+            length,
+            max_thickness,
+            main_plate_count,
+            angle_count,
+            buildup_count,
+            total_processing_time,
+            float(slack_days),
+            float(deadline_urgency),
+            float(kwargs.get('workshop_backlog_ratio', 0.0) or 0.0),
+            float(kwargs.get('line_backlog_ratio', 0.0) or 0.0),
+            float(kwargs.get('processing_time_rank', 0.0) or 0.0),
+            float(kwargs.get('seam_rank', 0.0) or 0.0),
+            float(kwargs.get('workshop_rank', 0.0) or 0.0),
+            float(kwargs.get('workshop_head_gap_days', 0.0) or 0.0),
+            float(kwargs.get('candidate_seam_capacity_ratio', 0.0) or 0.0),
+            float(kwargs.get('candidate_block_slot_ratio', 0.0) or 0.0),
+            float(kwargs.get('slack_rank', 0.0) or 0.0),
+        ])
+
+        if len(features) != DIFF_BLOCK_FEATURE_DIM:
+            raise ValueError(f"block feature length mismatch (diff): expected {DIFF_BLOCK_FEATURE_DIM}, got {len(features)}")
+        return features
+
     # ==== Binary features (0~17) ====
     has_ps_pair = 1.0 if getattr(block, 'pair_block_id', None) else 0.0
     port_state = getattr(block, 'port_starboard', None)
@@ -728,8 +837,11 @@ def extract_block_features_single(
     needs_pm = False
     try:
         needs_pm = block.needs_afternoon_start()
-    except Exception:
-        needs_pm = False
+    except Exception as exc:
+        # [AGENT-EDIT] P6 관련 블록 피처 생성 실패를 기본값으로 덮지 않는다.
+        raise RuntimeError(
+            f"block feature P6 계산 실패: block_id={getattr(block, 'block_id', 'unknown')}"
+        ) from exc
     needs_pm_flag = 1.0 if needs_pm else 0.0
 
     candidate_branch_35a = 1.0 if float(kwargs.get('candidate_branch_35a', 0.0) or 0.0) > 0.0 else 0.0

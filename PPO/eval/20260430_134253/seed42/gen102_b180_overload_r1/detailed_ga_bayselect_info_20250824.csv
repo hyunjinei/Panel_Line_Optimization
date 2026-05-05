@@ -1,0 +1,13 @@
+﻿type,date,total_blocks,block_id,assembly_start_date,width_m,longi_count,seam_count,c_seam_count,has_curved_plate,assigned_bay,final_reason,material_type,P7#2_result,P7#3_4_result,P7#7_8_result,P7#10_result,P7#11_result,P7#1_result,bay_35a_worktime_before,bay_36b_worktime_before,bay_35a_worktime_after,bay_36b_worktime_after
+METADATA,20250824,11,,,,,,,,,Assembly Decoding 베이 선택 분석: 11개 블록,,,,,,,,,,,
+BLOCK_DETAIL,20250824,11,17.0,2025-08-24,8.3,9.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,63.13,72.91,66.87,72.91
+BLOCK_DETAIL,20250824,11,18.0,2025-08-24,18.1,23.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,70.61,72.91,70.61,83.6
+BLOCK_DETAIL,20250824,11,2.0,2025-08-24,17.4,18.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,70.61,94.29,75.73,94.29
+BLOCK_DETAIL,20250824,11,29.0,2025-08-24,12.3,18.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,80.85,94.29,80.85,101.38
+BLOCK_DETAIL,20250824,11,101.0,2025-08-24,10.1,14.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,80.85,108.48,85.08,108.48
+BLOCK_DETAIL,20250824,11,33.0,2025-08-24,13.9,12.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,89.3,108.48,89.3,116.42
+BLOCK_DETAIL,20250824,11,111.0,2025-08-24,7.4,15.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,89.3,124.35,94.06,124.35
+BLOCK_DETAIL,20250824,11,121.0,2025-08-24,14.0,18.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,98.82,124.35,98.82,131.53
+BLOCK_DETAIL,20250824,11,14.0,2025-08-24,9.9,7.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,98.82,138.7,102.2,138.7
+BLOCK_DETAIL,20250824,11,21.0,2025-08-25,21.5,24.0,,,False,36B,P7#2 물리적 제약: 폭 21.5m > 21m → B베이 강제,NORMAL,FORCE_B,PASS,,,,,105.57,138.7,105.57,145.15
+BLOCK_DETAIL,20250824,11,22.0,2025-08-25,12.6,11.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,105.57,151.6,109.72,151.6

@@ -12,13 +12,18 @@ import random
 import os
 from pathlib import Path
 import math
+import time
 import pandas as pd
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
 
 import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# [AGENT-EDIT] Direct script execution needs the repository root for absolute
+# package imports such as `PPO.train...`, `utils...`, and `enhanced_environment...`.
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 from PPO.train.assembly_rollout import AssemblyPPORollout
 from utils.optimized_block_generator import OptimizedBlockGenerator
@@ -29,7 +34,9 @@ from PPO.models.single_step_actor import (
     REDUCED_ENV_STATE_DIM,
     REDUCED_BLOCK_FEATURE_DIM,
     CONSTRAINT_ENV_STATE_DIM,
-    CONSTRAINT_BLOCK_FEATURE_DIM
+    CONSTRAINT_BLOCK_FEATURE_DIM,
+    DIFF_ENV_STATE_DIM,
+    DIFF_BLOCK_FEATURE_DIM,
 )
 from runtime_config import get_runtime_config  # [AGENT-ADD] config.yaml 기반 학습 파라미터 반영
 # [AGENT-EDIT] 분리된 유틸 모듈 import
@@ -71,6 +78,9 @@ def get_actor_params(args):
     elif feature_mode == "constraint":
         feature_dim = CONSTRAINT_BLOCK_FEATURE_DIM
         env_state_dim = CONSTRAINT_ENV_STATE_DIM
+    elif feature_mode == "diff":
+        feature_dim = DIFF_BLOCK_FEATURE_DIM
+        env_state_dim = DIFF_ENV_STATE_DIM
     else:
         feature_dim = BLOCK_FEATURE_DIM
         env_state_dim = ENV_STATE_DIM
@@ -90,6 +100,162 @@ def get_actor_params(args):
         'env_state_dim': env_state_dim,
         'use_norm': args.use_norm
     }
+
+
+RESUME_RESTORE_KEYS = [
+    'mode', 'embedding_dim', 'hidden_dim', 'n_layers', 'n_heads', 'use_norm',
+    'dropout', 'temperature', 'optimizer', 'lr', 'epsilon', 'ppo_iterations',
+    'grad_clip', 'baseline_update_interval', 'statistical_alpha', 'entropy_coeff',
+    'entropy_decay', 'min_entropy_coeff', 'entropy_decay_interval',
+    'initial_entropy_coeff', 'entropy_warmup_episodes', 'num_blocks',
+    'train_distribution', 'num_blocks_min', 'num_blocks_max', 'max_daily_blocks',
+    'min_spread_days', 'use_snu', 'use_env_state', 'feature_mode',
+    'use_positional_encoding', 'fixed_norm_stats', 'fixed_norm_warmup_episodes',
+    'self_label_samples', 'self_label_mode', 'self_label_selection_strategy',
+    'self_label_lpt_teacher_policy', 'self_label_lpt_warmup_episodes',
+    'self_label_lpt_teacher_bias_on', 'self_label_profile_expansion',
+    'self_label_heuristic_profile_expansion', 'self_label_print_best_updates',
+    'violation_penalty_weight', 'longi_balance_weight', 'start_date_offset'
+]
+
+
+def _extract_actor_state_dict_from_checkpoint(checkpoint: Dict[str, Any]) -> Dict[str, Any]:
+    if isinstance(checkpoint, dict):
+        if 'actor_state_dict' in checkpoint:
+            return checkpoint['actor_state_dict']
+        if 'model_state_dict' in checkpoint:
+            return checkpoint['model_state_dict']
+    return checkpoint if isinstance(checkpoint, dict) else {}
+
+
+def _infer_feature_mode_from_dim(dim: Optional[int]) -> str:
+    if dim == REDUCED_BLOCK_FEATURE_DIM:
+        return 'reduced'
+    if dim == CONSTRAINT_BLOCK_FEATURE_DIM:
+        return 'constraint'
+    if dim == DIFF_BLOCK_FEATURE_DIM:
+        return 'diff'
+    if dim == BLOCK_FEATURE_DIM:
+        return 'full'
+    return 'constraint'
+
+
+def _infer_resume_args_from_actor_state(state_dict: Dict[str, Any]) -> Dict[str, Any]:
+    inferred: Dict[str, Any] = {}
+    embed_w = state_dict.get('embedding.0.weight')
+    embed2_w = state_dict.get('embedding.2.weight')
+    if embed_w is not None:
+        inferred['embedding_dim'] = int(embed_w.shape[0])
+        inferred['feature_dim'] = int(embed_w.shape[1])
+    if embed2_w is not None:
+        inferred['hidden_dim'] = int(embed2_w.shape[0])
+    inferred['use_env_state'] = 'env_state_mean' in state_dict
+    inferred['use_positional_encoding'] = 'positional_encoding' in state_dict
+    if 'feature_dim' in inferred:
+        inferred['feature_mode'] = _infer_feature_mode_from_dim(inferred['feature_dim'])
+    return inferred
+
+
+def _collect_explicit_cli_dests(parser: argparse.ArgumentParser, cli_argv: List[str]) -> set:
+    explicit = set()
+    option_map = getattr(parser, '_option_string_actions', {})
+    for token in cli_argv:
+        if not isinstance(token, str) or not token.startswith('--'):
+            continue
+        option = token.split('=', 1)[0]
+        action = option_map.get(option)
+        if action is not None:
+            explicit.add(action.dest)
+    return explicit
+
+
+def _load_resume_defaults_from_checkpoint(path_str: str) -> Tuple[Dict[str, Any], str, int]:
+    checkpoint = torch.load(path_str, map_location='cpu')
+    restored: Dict[str, Any] = {}
+    source = 'checkpoint_inferred'
+    metadata = checkpoint.get('resume_metadata') if isinstance(checkpoint, dict) else None
+    if isinstance(metadata, dict) and metadata:
+        source = 'checkpoint_metadata'
+        meta_args = metadata.get('args') or {}
+        if isinstance(meta_args, dict):
+            restored.update(meta_args)
+        actor_meta = metadata.get('actor_params') or {}
+        if isinstance(actor_meta, dict):
+            restored.setdefault('embedding_dim', actor_meta.get('embedding_dim'))
+            restored.setdefault('hidden_dim', actor_meta.get('hidden_dim'))
+            restored.setdefault('n_layers', actor_meta.get('n_layers'))
+            restored.setdefault('n_heads', actor_meta.get('n_heads'))
+            restored.setdefault('dropout', actor_meta.get('dropout'))
+            restored.setdefault('temperature', actor_meta.get('T'))
+            restored.setdefault('feature_mode', actor_meta.get('feature_mode'))
+            restored.setdefault('use_positional_encoding', actor_meta.get('use_positional_encoding'))
+            restored.setdefault('use_env_state', actor_meta.get('use_env_state'))
+            restored.setdefault('use_norm', actor_meta.get('use_norm'))
+    if not restored:
+        actor_state = _extract_actor_state_dict_from_checkpoint(checkpoint)
+        inferred = _infer_resume_args_from_actor_state(actor_state)
+        restored.update({
+            'embedding_dim': inferred.get('embedding_dim'),
+            'hidden_dim': inferred.get('hidden_dim'),
+            'feature_mode': inferred.get('feature_mode'),
+            'use_env_state': inferred.get('use_env_state'),
+            'use_positional_encoding': inferred.get('use_positional_encoding'),
+        })
+    if isinstance(checkpoint, dict) and checkpoint.get('optimizer_type'):
+        restored.setdefault('optimizer', checkpoint.get('optimizer_type'))
+    saved_episode = int(checkpoint.get('episode', 0)) if isinstance(checkpoint, dict) else 0
+    return restored, source, saved_episode
+
+
+def _apply_resume_defaults_from_checkpoint(parsed_args, parser: argparse.ArgumentParser, cli_argv: List[str]) -> None:
+    load_model = str(getattr(parsed_args, 'load_model', '') or '').strip()
+    if not load_model or not os.path.exists(load_model):
+        return
+    try:
+        restored, source, saved_episode = _load_resume_defaults_from_checkpoint(load_model)
+    except Exception as exc:
+        print(f"⚠️ 이어학습 메타데이터 로드 실패: {exc}")
+        return
+
+    explicit_dests = _collect_explicit_cli_dests(parser, cli_argv)
+    restored_keys: List[str] = []
+    for key, value in restored.items():
+        if value is None or not hasattr(parsed_args, key):
+            continue
+        if key in explicit_dests:
+            continue
+        if key == 'mode' and value == 'self-label':
+            value = 'self_label'
+        setattr(parsed_args, key, value)
+        restored_keys.append(key)
+
+    parsed_args._resume_source = source
+    parsed_args._resume_saved_episode = saved_episode
+    if restored_keys:
+        print(f"📦 이어학습 설정 복원: {load_model}")
+        print(f"   - source: {source}")
+        print(f"   - saved episode: {saved_episode}")
+        print(f"   - restored: {', '.join(restored_keys)}")
+        if source != 'checkpoint_metadata':
+            print("   - note: 구형 체크포인트라 일부 값은 추론으로 복원했습니다.")
+
+
+def _build_resume_metadata(args, actor_params: Dict[str, Any]) -> Dict[str, Any]:
+    arg_snapshot: Dict[str, Any] = {}
+    for key in RESUME_RESTORE_KEYS:
+        if hasattr(args, key):
+            arg_snapshot[key] = getattr(args, key)
+    actor_snapshot = dict(actor_params or {})
+    actor_snapshot['use_env_state'] = bool(getattr(args, 'use_env_state', False))
+    actor_snapshot['use_norm'] = bool(getattr(args, 'use_norm', False))
+    return {
+        'version': 1,
+        'saved_at': datetime.now().isoformat(timespec='seconds'),
+        'command': ' '.join(sys.argv),
+        'args': arg_snapshot,
+        'actor_params': actor_snapshot,
+    }
+
 
 def _extract_assembly_date_range(df: Optional[pd.DataFrame]) -> Tuple[Optional[str], Optional[str]]:
     """[AGENT-ADD] Extract min/max assembly date tokens for distribution logging."""
@@ -204,12 +370,44 @@ def main(args):
     if getattr(args, "masking_debug_verbose", False):
         os.environ["PBS_DEBUG_VERBOSE"] = "1"
         os.environ.setdefault("PBS_FORCE_DEBUG", "1")
+    # [AGENT-ADD] Torch CPU thread controls for server experiments. Candidate parallelism uses
+    # process workers, so the parent PyTorch thread count is auto-capped to avoid oversubscription.
+    cpu_count = os.cpu_count() or 1
+    if getattr(args, "torch_num_threads", 0):
+        try:
+            torch.set_num_threads(max(1, int(args.torch_num_threads)))
+        except Exception as exc:
+            print(f"⚠️ torch_num_threads 설정 실패: {exc}")
+    elif bool(getattr(args, "resource_auto", 1)):
+        try:
+            torch.set_num_threads(max(1, min(8, cpu_count // 4 or 1)))
+        except Exception as exc:
+            print(f"⚠️ torch_num_threads 자동 설정 실패: {exc}")
+    if getattr(args, "torch_num_interop_threads", 0):
+        try:
+            torch.set_num_interop_threads(max(1, int(args.torch_num_interop_threads)))
+        except Exception as exc:
+            print(f"⚠️ torch_num_interop_threads 설정 실패: {exc}")
+    elif bool(getattr(args, "resource_auto", 1)):
+        try:
+            torch.set_num_interop_threads(max(1, min(4, cpu_count // 12 or 1)))
+        except Exception as exc:
+            print(f"⚠️ torch_num_interop_threads 자동 설정 실패: {exc}")
     # 시드 설정
     set_seed(args.seed)
     
     # 디바이스 설정
     device = torch.device('cuda' if torch.cuda.is_available() and not args.cpu else 'cpu')
     print(f"🖥️ Device: {device}")
+    print(
+        f"🧵 CPU/Torch threads: os_cpu={os.cpu_count()}, "
+        f"torch={torch.get_num_threads()}, interop={torch.get_num_interop_threads()}"
+    )
+    if torch.cuda.is_available() and not args.cpu:
+        try:
+            print(f"🎮 CUDA device: {torch.cuda.get_device_name(0)}")
+        except Exception:
+            pass
     
     # 결과 폴더 생성
     from datetime import datetime
@@ -227,13 +425,17 @@ def main(args):
     
     # 🆕 실행별 모델 폴더 생성 (models/실행날짜_time_옵티마이저_env_state/)
     env_state_suffix = "envTrue" if args.use_env_state else "envFalse"
-    session_folder_name = f"{timestamp}_{args.optimizer}_{env_state_suffix}"
+    # [AGENT-EDIT] feature_mode를 모델 폴더명에 포함해 full/diff 새 학습 결과를 혼동하지 않게 한다.
+    session_folder_name = f"{timestamp}_{args.optimizer}_{args.feature_mode}_{env_state_suffix}"
     session_model_dir = os.path.join(result_dir, 'models', session_folder_name)
     os.makedirs(session_model_dir, exist_ok=True)
     
     # 🆕 실행별 평가 폴더 생성 (evaluation/실행날짜_time/)
     session_eval_dir = os.path.join(eval_dir, timestamp)
     os.makedirs(session_eval_dir, exist_ok=True)
+    profiler_dir = args.torch_profile_dir or os.path.join(result_dir, 'profiler', timestamp)
+    if args.torch_profile_episodes > 0:
+        os.makedirs(profiler_dir, exist_ok=True)
     
     # CSV 파일 경로
     csv_paths = {
@@ -338,10 +540,25 @@ def main(args):
         mode=args.mode,
         self_label_samples=args.self_label_samples,
         self_label_mode=args.self_label_mode,
+        self_label_selection_strategy=args.self_label_selection_strategy,
+        self_label_lpt_teacher_policy=args.self_label_lpt_teacher_policy,
+        self_label_lpt_warmup_episodes=args.self_label_lpt_warmup_episodes,
+        self_label_lpt_teacher_bias_on=bool(args.self_label_lpt_teacher_bias_on),
+        self_label_profile_expansion=bool(args.self_label_profile_expansion),
+        self_label_heuristic_profile_expansion=bool(args.self_label_heuristic_profile_expansion),
+        self_label_print_best_updates=bool(args.self_label_print_best_updates),
         violation_penalty_weight=args.violation_penalty_weight,
         longi_balance_weight=args.longi_balance_weight,
         fixed_norm_stats=bool(args.fixed_norm_stats),
-        fixed_norm_warmup_episodes=args.fixed_norm_warmup_episodes
+        fixed_norm_warmup_episodes=args.fixed_norm_warmup_episodes,
+        perf_timing=bool(args.perf_timing),
+        perf_top_k=args.perf_top_k,
+        self_label_parallel=args.self_label_parallel,
+        self_label_parallel_workers=args.self_label_parallel_workers,
+        self_label_parallel_device=args.self_label_parallel_device,
+        self_label_worker_threads=args.self_label_worker_threads,
+        self_label_parallel_min_candidates=args.self_label_parallel_min_candidates,
+        resume_metadata=_build_resume_metadata(args, actor_params)
     )
     
     # 모델 로드 (있으면)
@@ -349,6 +566,18 @@ def main(args):
     if args.load_model and os.path.exists(args.load_model):
         start_episode = trainer.load_model(args.load_model)
         print(f"📂 모델 로드 완료: {args.load_model} (Episode {start_episode}부터 시작)")
+    # [AGENT-EDIT] 이어학습에서 --episodes는 기본적으로 "추가 학습 횟수"로 해석한다.
+    # 예: ep2600 로드 + --episodes 5000 => 최종 ep7600까지 학습.
+    resume_episode_mode = str(getattr(args, "resume_episode_mode", "additional")).lower()
+    if args.load_model and resume_episode_mode == "additional":
+        end_episode = start_episode + max(0, int(args.episodes))
+    else:
+        end_episode = int(args.episodes)
+    if args.train and end_episode <= start_episode:
+        print(
+            f"⚠️ 학습 목표 에피소드가 시작점보다 작거나 같습니다: "
+            f"start={start_episode}, end={end_episode}"
+        )
     
     # 블록 생성기
     generator = OptimizedBlockGenerator.load_from_saved_values()
@@ -382,6 +611,7 @@ def main(args):
         print(f"   - Use Env State: {args.use_env_state}")
         print(f"   - Feature Mode: {args.feature_mode}")
         print(f"   - Positional Encoding: {args.use_positional_encoding}")
+        print(f"   - Episode Range: {start_episode + 1} -> {end_episode} (mode={resume_episode_mode})")
         # [AGENT-ADD] 마스킹 디버그 환경변수 상태 출력
         print(f"   - Masking Debug: {os.environ.get('PBS_FORCE_DEBUG', '')} (verbose={os.environ.get('PBS_DEBUG_VERBOSE', '')})")
         print(f"   - Model Folder: {session_folder_name}")
@@ -392,7 +622,9 @@ def main(args):
         all_advantages = []  # 🔥 전체 advantage 기록
         all_entropy_losses = []  # 🔥 전체 엔트로피 Loss 기록
         
-        for episode in range(start_episode, args.episodes):
+        for episode in range(start_episode, end_episode):
+            # [AGENT-ADD] 사용자 출력/평가 주기는 1-based episode 기준으로 통일한다.
+            display_episode = episode + 1
             # 학습 시에는 항상 랜덤 블록 생성
             util_bucket = None
             util_target = None
@@ -451,15 +683,15 @@ def main(args):
                 spread_days = generator.assembly_date_config.get('spread_days')
             if args.train_distribution == "eval_like":
                 print(
-                    f"[DEBUG] Episode {episode}: blocks={total_blocks}, bucket={util_bucket}, util={util_target:.2f} "
+                    f"[DEBUG] Episode {display_episode}: blocks={total_blocks}, bucket={util_bucket}, util={util_target:.2f} "
                     f"(range {util_range[0]:.2f}-{util_range[1]:.2f}), spread_days={spread_days}, "
                     f"ps_ratio={ps_ratio_target:.2f}, sub_ratio={sub_ratio_target:.2f}, "
                     f"scales(seam/tact/len/width/thick)={seam_scale:.2f}/{tact_time_scale:.2f}/"
                     f"{length_scale:.2f}/{width_scale:.2f}/{thickness_scale:.2f}"
                 )
-            print(f"[DEBUG] Episode {episode}: generated dataframe rows = {len(blocks_data)}")
+            print(f"[DEBUG] Episode {display_episode}: generated dataframe rows = {len(blocks_data)}")
             blocks, metadata = DataConverter.dataframe_to_blocks_with_metadata(blocks_data)
-            print(f"[DEBUG] Episode {episode}: converted blocks = {len(blocks)}")
+            print(f"[DEBUG] Episode {display_episode}: converted blocks = {len(blocks)}")
 
             # [AGENT-ADD] Distribution logging
             assembly_min, assembly_max = _extract_assembly_date_range(blocks_data)
@@ -489,12 +721,43 @@ def main(args):
                 ])
             
             # 에피소드 학습 (mode에 따라 PPO / self-label 분기)
-            if args.mode == "self_label":
-                print(f"[DEBUG] Episode {episode}: invoking train_episode_self_label with {len(blocks)} blocks (samples={args.self_label_samples}, mode={args.self_label_mode})")
-                stats = trainer.train_episode_self_label(blocks, metadata)
+            # [AGENT-ADD] Optional wall-clock and torch profiler diagnostics around the whole training episode.
+            episode_wall_t0 = time.perf_counter()
+
+            def _run_train_episode():
+                if args.mode == "self_label":
+                    print(f"[DEBUG] Episode {display_episode}: invoking train_episode_self_label with {len(blocks)} blocks (samples={args.self_label_samples}, mode={args.self_label_mode})")
+                    return trainer.train_episode_self_label(blocks, metadata)
+                print(f"[DEBUG] Episode {display_episode}: invoking train_episode_ppo with {len(blocks)} blocks")
+                return trainer.train_episode_ppo(blocks, metadata)
+
+            profile_this_episode = bool(args.torch_profile_episodes > 0 and len(all_makespans) < args.torch_profile_episodes)
+            if profile_this_episode:
+                from torch.profiler import ProfilerActivity, profile
+                activities = [ProfilerActivity.CPU]
+                if torch.cuda.is_available() and not args.cpu:
+                    activities.append(ProfilerActivity.CUDA)
+                with profile(
+                    activities=activities,
+                    record_shapes=True,
+                    profile_memory=True,
+                    with_stack=False,
+                ) as prof:
+                    stats = _run_train_episode()
+                if torch.cuda.is_available() and not args.cpu:
+                    torch.cuda.synchronize()
+                trace_path = os.path.join(profiler_dir, f"episode_{display_episode}.json")
+                prof.export_chrome_trace(trace_path)
+                sort_key = "self_cuda_time_total" if torch.cuda.is_available() and not args.cpu else "self_cpu_time_total"
+                print(f"[Profiler] trace saved: {trace_path}")
+                print(prof.key_averages().table(sort_by=sort_key, row_limit=20))
             else:
-                print(f"[DEBUG] Episode {episode}: invoking train_episode_ppo with {len(blocks)} blocks")
-                stats = trainer.train_episode_ppo(blocks, metadata)
+                stats = _run_train_episode()
+                if torch.cuda.is_available() and not args.cpu:
+                    torch.cuda.synchronize()
+
+            if args.perf_timing:
+                print(f"[Perf] episode_wall={time.perf_counter() - episode_wall_t0:.2f}s")
             
             # CSV 저장 - train
             # [AGENT-ADD] LPT 대비 개선치/론지 로그 계산
@@ -572,7 +835,7 @@ def main(args):
             all_entropy_losses.append(stats['entropy_loss'])  # 🔥 엔트로피 Loss 누적
             
             # 로깅
-            if episode % args.log_interval == 0:
+            if episode == start_episode or display_episode % args.log_interval == 0:
                 diagnostics = stats.get('diagnostics') or {}
                 actor_diag = diagnostics.get('actor') or {}
                 baseline_diag = diagnostics.get('baseline') or {}
@@ -623,11 +886,18 @@ def main(args):
                 except (TypeError, ValueError):
                     delta_longi_log = 0.0
 
-                print(f"\n Episode {episode}/{args.episodes}")
+                print(f"\n Episode {display_episode}/{end_episode}")
                 print(f"  Advantage: {stats['advantage']:.2f}")
                 print(f"  Actor Loss: {stats['actor_loss']:.4f}")
                 print(f"  Entropy Loss: {stats['entropy_loss']:.4f}")  # 🔥 엔트로피 Loss 출력
                 print(f"  Violations: {stats['violations']}")
+                # [AGENT-ADD] 단일 라인 요약을 추가해 학습 추이를 빠르게 비교한다.
+                print(
+                    f"[SingleTrain] ep={display_episode} actor_score={float(stats.get('actor_score', 0.0)):.3f} "
+                    f"baseline_score={float(stats.get('baseline_score', 0.0)):.3f} "
+                    f"makespan={float(stats.get('real_makespan', 0.0)):.2f}h "
+                    f"primary={int(stats.get('violations', 0))}"
+                )
                 
                 # 🔥 전체 평균 출력
                 if len(all_makespans) >= 1:
@@ -674,7 +944,7 @@ def main(args):
                 print(f"  PPO Update Applied: {update_applied}")
             
             # Baseline 업데이트 체크
-            if episode % args.baseline_update_interval == 0 and episode > 0:
+            if display_episode % args.baseline_update_interval == 0:
                 updated = trainer.should_update_baseline(
                     baseline_test_blocks, 
                     baseline_test_metadata,
@@ -683,12 +953,18 @@ def main(args):
                 if updated:
                     print(f"🔄 Baseline 업데이트 #{trainer.baseline_update_count}")
             
-            # 평가
-            if episode % args.eval_interval == 0 and episode > 0:
+            # [AGENT-EDIT] single-agent의 comprehensive evaluation은 매우 무겁다.
+            # 첫 에피소드부터 full evaluation을 돌리면 학습 시작이 과도하게 느려지므로,
+            # 기본적으로 eval_interval 시점과 마지막 에피소드에서만 full eval을 수행한다.
+            should_eval = (
+                not bool(getattr(args, "disable_eval", 0))
+                and ((display_episode % args.eval_interval == 0) or (display_episode == end_episode))
+            )
+            if should_eval:
                 from PPO.eval.train_evaluation import comprehensive_evaluation
                 
                 # 🆕 에포크별 평가 폴더 생성 (evaluation/실행날짜_time/에포크번호/)
-                episode_eval_dir = os.path.join(session_eval_dir, str(episode))
+                episode_eval_dir = os.path.join(session_eval_dir, str(display_episode))
                 os.makedirs(episode_eval_dir, exist_ok=True)
                 
                 # 종합 평가 실행
@@ -696,26 +972,37 @@ def main(args):
                     trainer=trainer,
                     device=device,
                     generator=generator,
-                    episode=episode,
+                    episode=display_episode,
                     csv_path=csv_paths['evaluation'],
                     eval_dir=episode_eval_dir  # 🆕 에포크별 폴더로 변경
                 )
                 
+                # [AGENT-ADD] RL/LPT/SPT/SEAM 기준 한 줄 요약
+                print(
+                    f"[SingleEval] ep={display_episode} rl={float(eval_results['avg_rl']):.2f}h "
+                    f"lpt={float(eval_results['avg_lpt']):.2f}h "
+                    f"spt={float(eval_results['avg_spt']):.2f}h "
+                    f"seam={float(eval_results['avg_seam']):.2f}h "
+                    f"random={float(eval_results['avg_random']):.2f}h"
+                )
+
                 # 베스트 모델 저장
                 if eval_results['avg_rl'] < best_makespan:
                     best_makespan = eval_results['avg_rl']
-                    save_path = os.path.join(session_model_dir, f"best_ppo_rollout_ep{episode}.pth")
+                    save_path = os.path.join(session_model_dir, f"best_ppo_rollout_ep{display_episode}.pth")
                     trainer.save_model(save_path)
                     print(f"🏆 새로운 베스트 RL: {best_makespan:.2f}h")
             
             # 정기 저장
-            if episode % args.save_interval == 0 and episode > 0:
-                save_path = os.path.join(session_model_dir, f"ppo_rollout_ep{episode}.pth")
+            if display_episode % args.save_interval == 0:
+                save_path = os.path.join(session_model_dir, f"ppo_rollout_ep{display_episode}.pth")
                 trainer.save_model(save_path)
         
         print("\n" + "="*60)
         print("✅ PPO Rollout 학습 완료!")
-        print(f"   Total Episodes: {args.episodes}")
+        print(f"   Start Episode: {start_episode}")
+        print(f"   End Episode: {end_episode}")
+        print(f"   New Episodes This Run: {max(0, end_episode - start_episode)}")
         print(f"   Best Makespan: {best_makespan:.2f}h")
         print(f"   Baseline Updates: {trainer.baseline_update_count}")
         print("="*60)
@@ -770,6 +1057,8 @@ if __name__ == "__main__":
     # 모드
     parser.add_argument('--train', action='store_true', help='학습 모드')
     parser.add_argument('--eval', action='store_true', help='평가 모드')
+    # [AGENT-ADD] main.py가 runtime config 경로를 전달해도 single-agent runner가 실패하지 않도록 수용한다.
+    parser.add_argument('--config', type=str, help='런타임 설정 파일 경로 (main.py 전달용)')
     
     # 학습 파라미터
     parser.add_argument('--episodes', type=int, default=150001, help='학습 에피소드 수')
@@ -821,7 +1110,7 @@ if __name__ == "__main__":
     parser.add_argument('--use_snu', action='store_true', help='SNU 데이터셋 사용')
     parser.add_argument('--use_env_state', action='store_true', help='🆕 환경 상태 벡터 사용 (full=31 / reduced=4)')
     # [AGENT-ADD] Feature mode switch (full vs reduced)
-    parser.add_argument('--feature_mode', choices=['full', 'reduced', 'constraint'], default='constraint',
+    parser.add_argument('--feature_mode', choices=['full', 'reduced', 'constraint', 'diff'], default='constraint',
                         help='피처 모드: full(기존 34/31) / reduced(총 10개) / constraint(제약 연동)')
     parser.add_argument('--use_positional_encoding', action='store_true',
                         help='포지셔널 인코딩 사용 (기본: 사용 안 함)')
@@ -833,11 +1122,54 @@ if __name__ == "__main__":
     # [AGENT-ADD] 고정 통계 정규화 설정
     parser.add_argument('--fixed_norm_stats', type=int, default=0, help='고정 통계 정규화 사용 여부 (1/0)')
     parser.add_argument('--fixed_norm_warmup_episodes', type=int, default=5, help='고정 통계 워밍업 에피소드 수')
+    # [AGENT-ADD] 서버 병목 진단/프로파일링 옵션
+    parser.add_argument('--perf_timing', action='store_true',
+                        help='에피소드, self-label 후보, teacher update wall-clock timing 출력')
+    parser.add_argument('--perf_top_k', type=int, default=8,
+                        help='--perf_timing 사용 시 느린 후보를 몇 개 출력할지')
+    parser.add_argument('--torch_profile_episodes', type=int, default=0,
+                        help='처음 N개 학습 에피소드에 torch profiler trace 저장')
+    parser.add_argument('--torch_profile_dir', type=str, default='',
+                        help='torch profiler trace 저장 디렉토리 (기본: PPO/train/result/profiler/<timestamp>)')
+    parser.add_argument('--resource_auto', type=int, choices=[0, 1], default=1,
+                        help='CPU/GPU/RAM 기준 자동 리소스 설정 사용 여부 (1/0)')
+    parser.add_argument('--torch_num_threads', type=int, default=0,
+                        help='torch.set_num_threads 값 (0이면 PyTorch 기본값)')
+    parser.add_argument('--torch_num_interop_threads', type=int, default=0,
+                        help='torch.set_num_interop_threads 값 (0이면 PyTorch 기본값)')
     parser.add_argument('--mode', choices=['ppo', 'self_label', 'self-label'], default='self-label',
                         help='학습 모드 (ppo/self_label)')
-    parser.add_argument('--self_label_samples', type=int, default=64, help='self-label 모드 샘플 수')
+    parser.add_argument('--self_label_samples', type=int, default=4, help='self-label 모드 SLIM/RL 후보 샘플 수')
     parser.add_argument('--self_label_mode', type=int, choices=[1, 2], default=1,
-                        help='self-label 선택 기준: 1=score 우선, 2=score 후 위반 우선')
+                        help='legacy self-label tie-breaker: 1=score 후 makespan, 2=score 후 위반')
+    parser.add_argument('--self_label_selection_strategy',
+                        choices=['legacy_score', 'primary_first', 'feasible_first', 'makespan_first'],
+                        default='primary_first',
+                        help='self-label teacher 선택 기준: legacy_score / primary_first / feasible_first / makespan_first')
+    parser.add_argument('--self_label_lpt_teacher_policy',
+                        choices=['candidate_only', 'legacy', 'warmup_only', 'disabled'],
+                        default='candidate_only',
+                        help='LPT teacher 사용 정책: candidate_only(후보군 경쟁만) / legacy / warmup_only / disabled')
+    parser.add_argument('--self_label_lpt_warmup_episodes', type=int, default=0,
+                        help='warmup_only일 때 LPT teacher를 허용할 에피소드 수')
+    parser.add_argument('--self_label_lpt_teacher_bias_on', type=int, choices=[0, 1], default=0,
+                        help='teacher LPT만 bias on override 적용 여부 (1/0)')
+    parser.add_argument('--self_label_profile_expansion', type=int, choices=[0, 1], default=1,
+                        help='self-label RL 후보 profile 확장 여부: 8 bias x 8 hard profiles (1/0)')
+    parser.add_argument('--self_label_heuristic_profile_expansion', type=int, choices=[0, 1], default=1,
+                        help='self-label LPT/SEAM_MIN 후보 bias profile 확장 여부: 각 8개 (1/0)')
+    parser.add_argument('--self_label_print_best_updates', type=int, choices=[0, 1], default=1,
+                        help='후보군 best 갱신 시 [시퀀스 갱신] 로그 출력 여부 (1/0)')
+    parser.add_argument('--self_label_parallel', choices=['auto', 'on', 'off'], default='auto',
+                        help='self-label 후보 스케줄 병렬 생성: auto/on/off')
+    parser.add_argument('--self_label_parallel_workers', type=int, default=0,
+                        help='self-label 후보 생성 worker 수 (0이면 CPU/GPU/RAM 기준 자동)')
+    parser.add_argument('--self_label_parallel_device', choices=['auto', 'cuda', 'cpu'], default='auto',
+                        help='self-label worker의 actor forward 장치: auto/cuda/cpu')
+    parser.add_argument('--self_label_worker_threads', type=int, default=0,
+                        help='self-label worker별 torch thread 수 (0이면 자동, 병렬 후보에서는 보통 1)')
+    parser.add_argument('--self_label_parallel_min_candidates', type=int, default=8,
+                        help='self-label 후보 수가 이 값 이상일 때 병렬화')
     # [AGENT-ADD] 통합 스코어 가중치 (시간 단위)
     parser.add_argument('--violation_penalty_weight', type=float, default=1.0,
                         help='통합 스코어에서 위반 1건당 가산(시간) 가중치')
@@ -849,6 +1181,8 @@ if __name__ == "__main__":
     # 로깅
     parser.add_argument('--log_interval', type=int, default=1, help='로그 출력 주기')
     parser.add_argument('--eval_interval', type=int, default=100, help='평가 주기')
+    parser.add_argument('--disable_eval', type=int, choices=[0, 1], default=0,
+                        help='학습 중 종합 평가를 비활성화 (빠른 학습/스모크 테스트용)')
     parser.add_argument('--save_interval', type=int, default=100, help='모델 저장 주기')
     parser.add_argument('--violation_print_limit', type=int, default=0,
                         help='학습 로그에 출력할 제약 위반 최대 개수 (0이면 전체 출력)')
@@ -857,6 +1191,8 @@ if __name__ == "__main__":
     parser.add_argument('--seed', type=int, default=42, help='랜덤 시드')
     parser.add_argument('--cpu', action='store_true', help='CPU 사용')
     parser.add_argument('--load_model', type=str, help='로드할 모델 경로')
+    parser.add_argument('--resume_episode_mode', choices=['additional', 'total'], default='additional',
+                        help='이어학습 episodes 해석: additional=추가 학습 횟수, total=최종 에피소드 번호')
     
     args = parser.parse_args()
 
@@ -891,6 +1227,9 @@ if __name__ == "__main__":
                 elif dev.startswith("cuda"):
                     merged_cfg["cpu"] = False
             _apply_config_defaults(args, merged_cfg)
+
+    # [AGENT-ADD] 이어학습은 checkpoint 메타데이터를 우선 복원한다.
+    _apply_resume_defaults_from_checkpoint(args, parser, sys.argv[1:])
 
     # [AGENT-ADD] mode 별칭 정규화 (self-label -> self_label)
     if args.mode == 'self-label':

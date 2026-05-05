@@ -1,0 +1,13 @@
+﻿type,date,total_blocks,block_id,assembly_start_date,width_m,longi_count,seam_count,c_seam_count,has_curved_plate,assigned_bay,final_reason,material_type,P7#2_result,P7#3_4_result,P7#7_8_result,P7#10_result,P7#11_result,P7#1_result,bay_35a_worktime_before,bay_36b_worktime_before,bay_35a_worktime_after,bay_36b_worktime_after
+METADATA,20251227,11,,,,,,,,,Assembly Decoding 베이 선택 분석: 11개 블록,,,,,,,,,,,
+BLOCK_DETAIL,20251227,11,20.0,2026-01-02,15.4,25.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,309.51,352.38,309.51,357.75
+BLOCK_DETAIL,20251227,11,60.0,2025-12-24,16.4,9.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,309.51,363.13,313.19,363.13
+BLOCK_DETAIL,20251227,11,72.0,2026-01-02,14.0,23.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,316.87,363.13,316.87,371.63
+BLOCK_DETAIL,20251227,11,29.0,2025-12-27,19.5,24.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,316.87,380.14,322.85,380.14
+BLOCK_DETAIL,20251227,11,75.0,2025-12-27,21.2,22.0,,,False,36B,P7#2 물리적 제약: 폭 21.2m > 21m → B베이 강제,NORMAL,FORCE_B,PASS,,,,,328.82,380.14,328.82,385.0
+BLOCK_DETAIL,20251227,11,76.0,2026-01-01,12.7,15.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,328.82,389.87,335.54,389.87
+BLOCK_DETAIL,20251227,11,52.0,2026-01-02,18.9,17.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,342.26,389.87,342.26,394.35
+BLOCK_DETAIL,20251227,11,73.0,2025-12-31,6.4,8.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,342.26,398.82,347.89,398.82
+BLOCK_DETAIL,20251227,11,13.0,2025-12-27,21.2,22.0,,,False,36B,P7#2 물리적 제약: 폭 21.2m > 21m → B베이 강제,NORMAL,FORCE_B,PASS,,,,,353.51,398.82,353.51,403.69
+BLOCK_DETAIL,20251227,11,53.0,2025-12-31,15.4,18.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,353.51,408.56,358.18,408.56
+BLOCK_DETAIL,20251227,11,15.0,2025-12-31,11.8,18.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,362.84,408.56,362.84,415.86

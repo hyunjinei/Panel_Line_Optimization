@@ -1,0 +1,50 @@
+﻿type,date,total_blocks,total_steps,step,block_id,assembly_start_date,assembly_type,port_starboard,status,reason,assembly_masking_stage,three_bay_check,ps_forced,selected_block,available_count,excluded_count,emergency_mode,relax_level,relax_stage,relax_constraints,relax_target_count,relax_targets,relaxed_block_count,relax_target_total,final_choice_flag,final_violation_count,final_violation_list,seam_count,c_seam_count,has_curved_plate
+METADATA,20250730,98,24,,,,,,,,,,,,,,,,,,,,,,,,,,,
+STEP_SUMMARY,20250730,98,24,20,선택: 41,2025-07-31,fixed,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 20 선택,,,False,41,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250730,98,24,20,80,2025-07-29,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250730,98,24,21,선택: 51,2025-07-31,fixed,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 21 선택,,,False,51,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250730,98,24,21,80,2025-07-29,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250730,98,24,22,선택: 81,2025-07-31,fixed,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 22 선택,,,False,81,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250730,98,24,22,80,2025-07-29,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250730,98,24,23,선택: 91,2025-07-31,fixed,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 23 선택,,,False,91,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250730,98,24,23,80,2025-07-29,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250730,98,24,24,선택: 98,2025-07-31,line,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 24 선택,,,False,98,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250730,98,24,24,80,2025-07-29,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250730,98,24,25,선택: 15,2025-08-01,line,P,"가용: 1, 제외: 0",Assembly Decoding 스텝 25 선택,,,False,15,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250730,98,24,25,80,2025-07-29,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250730,98,24,26,선택: 21,2025-08-01,line,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 26 선택,,,False,21,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250730,98,24,26,80,2025-07-29,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250730,98,24,27,선택: 61,2025-07-31,fixed,P,"가용: 1, 제외: 0",Assembly Decoding 스텝 27 선택,,,False,61,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250730,98,24,27,80,2025-07-29,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250730,98,24,28,선택: 23,2025-08-01,line,P,"가용: 1, 제외: 0",Assembly Decoding 스텝 28 선택,,,False,23,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250730,98,24,28,80,2025-07-29,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250730,98,24,29,선택: 71,2025-08-01,fixed,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 29 선택,,,False,71,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250730,98,24,29,80,2025-07-29,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250730,98,24,30,선택: 27,2025-08-01,line,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 30 선택,,,False,27,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250730,98,24,30,80,2025-07-29,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250730,98,24,31,선택: 29,2025-08-01,line,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 31 선택,,,False,29,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250730,98,24,31,80,2025-07-29,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250730,98,24,32,선택: 94,2025-08-04,fixed,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 32 선택,,,False,94,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250730,98,24,32,80,2025-07-29,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250730,98,24,33,선택: 31,2025-08-01,line,P,"가용: 1, 제외: 0",Assembly Decoding 스텝 33 선택,,,False,31,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250730,98,24,33,80,2025-07-29,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250730,98,24,34,선택: 35,2025-08-01,line,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 34 선택,,,False,35,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250730,98,24,34,80,2025-07-29,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250730,98,24,35,선택: 6,2025-08-02,line,P,"가용: 1, 제외: 0",Assembly Decoding 스텝 35 선택,,,False,6,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250730,98,24,35,80,2025-07-29,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250730,98,24,36,선택: 37,2025-08-01,line,P,"가용: 1, 제외: 0",Assembly Decoding 스텝 36 선택,,,False,37,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250730,98,24,36,80,2025-07-29,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250730,98,24,37,선택: 47,2025-08-04,fixed,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 37 선택,,,False,47,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250730,98,24,37,80,2025-07-29,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250730,98,24,38,선택: 25,2025-08-01,line,P,"가용: 1, 제외: 0",Assembly Decoding 스텝 38 선택,,,False,25,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250730,98,24,38,80,2025-07-29,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250730,98,24,39,선택: 82,2025-08-01,fixed,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 39 선택,,,False,82,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250730,98,24,39,80,2025-07-29,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250730,98,24,40,선택: 14,2025-08-02,line,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 40 선택,,,False,14,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250730,98,24,40,80,2025-07-29,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250730,98,24,41,선택: 2,2025-08-02,line,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 41 선택,,,False,2,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250730,98,24,41,80,2025-07-29,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250730,98,24,42,선택: 4,2025-08-02,line,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 42 선택,,,False,4,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250730,98,24,42,80,2025-07-29,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250730,98,24,43,선택: 17,2025-08-01,line,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 43 선택,,,False,17,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250730,98,24,43,80,2025-07-29,fixed,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False

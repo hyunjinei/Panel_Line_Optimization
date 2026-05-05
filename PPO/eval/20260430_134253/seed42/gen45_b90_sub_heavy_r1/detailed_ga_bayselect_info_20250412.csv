@@ -1,0 +1,13 @@
+﻿type,date,total_blocks,block_id,assembly_start_date,width_m,longi_count,seam_count,c_seam_count,has_curved_plate,assigned_bay,final_reason,material_type,P7#2_result,P7#3_4_result,P7#7_8_result,P7#10_result,P7#11_result,P7#1_result,bay_35a_worktime_before,bay_36b_worktime_before,bay_35a_worktime_after,bay_36b_worktime_after
+METADATA,20250412,11,,,,,,,,,Assembly Decoding 베이 선택 분석: 11개 블록,,,,,,,,,,,
+BLOCK_DETAIL,20250412,11,7.0,2025-04-17,16.8,22.0,,,False,35A,P7#1 부하균등(론지): 35A(0ea) ≤ 36B(0ea) → A베이 선택,NORMAL,PASS,PASS,PASS,PASS,PASS,BALANCE_DECISION,0.0,0.0,5.08,0.0
+BLOCK_DETAIL,20250412,11,42.0,2025-04-19,15.7,17.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,10.16,0.0,10.16,7.92
+BLOCK_DETAIL,20250412,11,37.0,2025-04-15,5.4,11.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,10.16,15.85,17.34,15.85
+BLOCK_DETAIL,20250412,11,75.0,2025-04-21,15.6,18.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,24.52,15.85,24.52,24.91
+BLOCK_DETAIL,20250412,11,20.0,2025-04-17,9.9,6.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,24.52,33.96,27.57,33.96
+BLOCK_DETAIL,20250412,11,74.0,2025-04-21,17.2,15.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,30.63,33.96,30.63,40.2
+BLOCK_DETAIL,20250412,11,52.0,2025-04-19,12.3,8.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,30.63,46.43,34.69,46.43
+BLOCK_DETAIL,20250412,11,6.0,2025-04-12,18.1,21.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,38.75,46.43,38.75,52.2
+BLOCK_DETAIL,20250412,11,57.0,2025-04-15,13.6,9.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,38.75,57.98,47.8,57.98
+BLOCK_DETAIL,20250412,11,49.0,2025-04-18,19.9,11.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,56.84,57.98,56.84,61.91
+BLOCK_DETAIL,20250412,11,38.0,2025-04-17,20.0,26.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,56.84,65.84,64.39,65.84

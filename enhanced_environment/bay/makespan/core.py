@@ -18,9 +18,9 @@ def _apply_afternoon_guard_shift(
     afternoon_guard_blocks: Set[int]
 ) -> None:
     """
-    리드타임 강제 선택된 P6(15시 필요) 블록을 15:00 이후로 밀어주기 위한 보정.
-    - 판계 완료시간(ct_common[i+1,1])이 15:00 이전이면 delta를 계산해 동일 블록 행을 밀고,
-      이후 블록의 ESD 계산에 자연히 반영되도록 테이블 값을 직접 수정한다.
+    [AGENT-EDIT] legacy no-op helper.
+    P6#1,#2,#3 제거 이후 afternoon_guard_blocks는 빈 집합으로 유지되므로,
+    인터페이스 호환을 위해서만 남긴다.
     """
     if not afternoon_guard_blocks or block.block_id not in afternoon_guard_blocks:
         return

@@ -1,0 +1,30 @@
+﻿type,date,total_blocks,total_steps,step,block_id,assembly_start_date,assembly_type,port_starboard,status,reason,assembly_masking_stage,three_bay_check,ps_forced,selected_block,available_count,excluded_count,emergency_mode,relax_level,relax_stage,relax_constraints,relax_target_count,relax_targets,relaxed_block_count,relax_target_total,final_choice_flag,final_violation_count,final_violation_list,seam_count,c_seam_count,has_curved_plate
+METADATA,20251029,39,14,,,,,,,,,,,,,,,,,,,,,,,,,,,
+STEP_SUMMARY,20251029,39,14,19,선택: 29,2025-11-01,fixed,P,"가용: 1, 제외: 0",Assembly Decoding 스텝 19 선택,,,False,29,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251029,39,14,19,28,2025-10-28,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251029,39,14,20,선택: 24,2025-11-01,fixed,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 20 선택,,,False,24,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251029,39,14,20,28,2025-10-28,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251029,39,14,21,선택: 27,2025-10-30,fixed,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 21 선택,,,False,27,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251029,39,14,21,28,2025-10-28,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251029,39,14,22,선택: 31,2025-10-30,fixed,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 22 선택,,,False,31,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251029,39,14,22,28,2025-10-28,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251029,39,14,23,선택: 26,2025-11-03,fixed,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 23 선택,,,False,26,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251029,39,14,23,28,2025-10-28,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251029,39,14,24,선택: 11,2025-11-01,line,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 24 선택,,,False,11,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251029,39,14,24,28,2025-10-28,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251029,39,14,25,선택: 36,2025-11-03,fixed,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 25 선택,,,False,36,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251029,39,14,25,28,2025-10-28,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251029,39,14,26,선택: 19,2025-11-01,fixed,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 26 선택,,,False,19,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251029,39,14,26,28,2025-10-28,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251029,39,14,27,선택: 20,2025-10-30,fixed,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 27 선택,,,False,20,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251029,39,14,27,28,2025-10-28,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251029,39,14,28,선택: 22,2025-11-01,fixed,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 28 선택,,,False,22,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251029,39,14,28,28,2025-10-28,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251029,39,14,29,선택: 35,2025-11-03,fixed,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 29 선택,,,False,35,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251029,39,14,29,28,2025-10-28,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251029,39,14,30,선택: 13,2025-10-29,line,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 30 선택,,,False,13,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251029,39,14,30,28,2025-10-28,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251029,39,14,31,선택: 15,2025-11-01,line,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 31 선택,,,False,15,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251029,39,14,31,28,2025-10-28,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20251029,39,14,32,선택: 1,2025-10-29,line,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 32 선택,,,False,1,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20251029,39,14,32,28,2025-10-28,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False

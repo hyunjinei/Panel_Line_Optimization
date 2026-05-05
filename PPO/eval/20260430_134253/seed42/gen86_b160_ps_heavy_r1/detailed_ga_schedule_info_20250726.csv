@@ -1,0 +1,14 @@
+﻿type,date,total_blocks,total_steps,step,block_id,assembly_start_date,assembly_type,port_starboard,status,reason,assembly_masking_stage,three_bay_check,ps_forced,selected_block,available_count,excluded_count,emergency_mode,relax_level,relax_stage,relax_constraints,relax_target_count,relax_targets,relaxed_block_count,relax_target_total,final_choice_flag,final_violation_count,final_violation_list,seam_count,c_seam_count,has_curved_plate
+METADATA,20250726,160,6,,,,,,,,,,,,,,,,,,,,,,,,,,,
+STEP_SUMMARY,20250726,160,6,155,선택: 148,2025-07-24,fixed,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 155 선택,,,False,148,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250726,160,6,155,59,2025-07-23,line,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250726,160,6,156,선택: 149,2025-07-24,fixed,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 156 선택,,,False,149,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250726,160,6,156,59,2025-07-23,line,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250726,160,6,157,선택: 80,2025-07-24,fixed,P,"가용: 1, 제외: 0",Assembly Decoding 스텝 157 선택,,,False,80,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250726,160,6,157,59,2025-07-23,line,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250726,160,6,158,선택: 40,2025-07-24,line,P,"가용: 1, 제외: 0",Assembly Decoding 스텝 158 선택,,,False,40,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250726,160,6,158,59,2025-07-23,line,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250726,160,6,159,선택: 158,2025-07-24,fixed,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 159 선택,,,False,158,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250726,160,6,159,59,2025-07-23,line,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250726,160,6,160,선택: 59,2025-07-23,line,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 160 선택,,,False,59,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250726,160,6,160,59,2025-07-23,line,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False

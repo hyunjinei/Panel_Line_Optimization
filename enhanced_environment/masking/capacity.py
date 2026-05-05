@@ -84,32 +84,13 @@ class CapacityMixin:
     
 
     def _check_afternoon_start_time(self, block: EnhancedBlock, current_time: datetime) -> bool:
-        """P6#1,2,3: 오후 3시 착수 체크"""
-        if not block.needs_afternoon_start():
-            return True
-    
-        # 현재 시간이 오후 3시 이후인지 확인
-        afternoon_3pm = time(15, 0)
-        current_time_only = current_time.time()
-    
-        # P6#3: 주판 10장 이상인 경우 오후 3시 엄격 적용
-        if block.main_plate_count > 10:
-            return current_time_only >= afternoon_3pm
-    
-        # Draft와 Cross seam은 오후 3시 유지
-        return current_time_only >= afternoon_3pm
+        """[AGENT-EDIT] P6#1,#2,#3 제거 이후 legacy 인터페이스 호환용 no-op."""
+        return True
     
 
     def _get_afternoon_constraint_id(self, block: EnhancedBlock) -> str:
-        """오후 3시 제약조건 ID 반환"""
-        if block.is_draft:
-            return "P6#1"
-        elif block.is_cross_seam:
-            return "P6#2"
-        elif block.main_plate_count > 10:
-            return "P6#3"
-        else:
-            return "P6#1"
+        """[AGENT-EDIT] P6#1,#2,#3 제거 이후 legacy ID 유지."""
+        return "P6#1"
     
 
     def _check_holiday_eve_constraint(self, block: EnhancedBlock, current_time: datetime) -> Tuple[bool, str]:
@@ -203,15 +184,18 @@ class CapacityMixin:
         # 2단계: 기본 용량 한계 계산 (혹서기 자동 반영)
         # ===============================================
         base_limit = self.capacity_tracker.get_capacity_limits(is_weekend, is_hot_season, current_time=capacity_time)
+        weekday_capacity_enabled = self.constraint_config.is_constraint_enabled("P5#8")
+        weekend_capacity_enabled = self.constraint_config.is_constraint_enabled("P5#10")
+        hot_season_capacity_enabled = self.constraint_config.is_constraint_enabled("P5#16")
     
         # 제약조건 ID 생성
         constraint_ids = []
-        if is_weekend:
+        if is_weekend and weekend_capacity_enabled:
             constraint_ids.append("P5#10")  # 주말 제약
-        else:
+        elif (not is_weekend) and weekday_capacity_enabled:
             constraint_ids.append("P5#8")   # 평일 제약
     
-        if is_hot_season:
+        if is_hot_season and hot_season_capacity_enabled:
             constraint_ids.append("P5#16")  # 혹서기 제약
     
         # ===============================================
@@ -242,15 +226,18 @@ class CapacityMixin:
         # ===============================================
         # 6단계: 일반적인 용량 초과 (P5#9 적용 불가)
         # ===============================================
+        if not constraint_ids:
+            return True, f"용량 제약 비활성: {predicted_seam}/{base_limit}심"
+
         constraint_id_str = "+".join(constraint_ids)
         overflow_reason = f"{constraint_id_str}: 용량 초과 {predicted_seam}/{base_limit}심"
     
         # 추가 정보 제공
-        if is_hot_season and is_weekend:
+        if is_hot_season and hot_season_capacity_enabled and is_weekend:
             overflow_reason += " (혹서기 주말)"
-        elif is_hot_season:
+        elif is_hot_season and hot_season_capacity_enabled:
             overflow_reason += " (혹서기 평일)"
-        elif is_weekend:
+        elif is_weekend and weekend_capacity_enabled:
             overflow_reason += " (주말)"
     
         return False, overflow_reason

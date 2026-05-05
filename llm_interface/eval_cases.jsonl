@@ -1,0 +1,8 @@
+{"case_id":"fixed_position_ko","request":"11번 블록은 세 번째로 해줘","expected_constraints":[{"type":"fixed_position","block_id":11,"position":2}]}
+{"case_id":"precedence_ko","request":"11번은 4번보다 먼저","expected_constraints":[{"type":"precedence","before_block_id":11,"after_block_id":4}]}
+{"case_id":"manual_bay_ko","request":"11번 블록은 35A로 배정","expected_constraints":[{"type":"manual_bay_assignment","block_id":11,"bay":"35A"}]}
+{"case_id":"combo_position_bay_ko","request":"11번 블록은 세 번째로 하고 35A로 배정","expected_constraints":[{"type":"manual_bay_assignment","block_id":11,"bay":"35A"},{"type":"fixed_position","block_id":11,"position":2}]}
+{"case_id":"daily_block_cap_ko","request":"12일에는 10개 블록까지만 해야해. 최대.","expected_constraints":[{"type":"date_specific_daily_block_cap","date_token":"DAY:12","max_blocks":10}]}
+{"case_id":"daily_seam_cap_ko","request":"12일에는 72심 이하로 제한해줘","expected_constraints":[{"type":"date_specific_daily_seam_cap","date_token":"DAY:12","seam_limit":72}]}
+{"case_id":"constraint_toggle_runtime_ko","request":"C-Seam runtime만 꺼줘 audit는 유지","expected_constraints":[{"type":"constraint_toggle","target":"enable_c_seam_spacing","enabled":false,"scope":"runtime"},{"type":"constraint_toggle","target":"enable_c_seam_spacing","enabled":true,"scope":"audit"}]}
+{"case_id":"bias_off_ko","request":"후보축소마스킹 꺼줘","expected_constraints":[{"type":"bias_components","components":[]}]}

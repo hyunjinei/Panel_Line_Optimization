@@ -43,7 +43,7 @@ class ValidationRewardMixin:
         current_time: datetime,
         actual_machine_2_start_time: datetime = None,
         capacity_time_override: datetime = None,
-        current_in_history: bool = True,
+        current_in_history: bool = False,
     ) -> List[ConstraintViolation]:
         return self.validator.validate_all_constraints_realtime_action(
             block,
@@ -53,7 +53,46 @@ class ValidationRewardMixin:
             capacity_time_override,
             current_in_history
         )
-    
+
+
+
+    def _validate_and_commit_constraints_action(
+        self,
+        block: EnhancedBlock,
+        assigned_bay: BayType,
+        current_time: datetime,
+        *,
+        actual_machine_2_start_time: datetime = None,
+        capacity_time_override: datetime = None,
+        processing_time_seconds: float = 0.0,
+        step_start_time: datetime = None,
+        step_end_time: datetime = None,
+        current_in_history: bool = False,
+    ) -> List[ConstraintViolation]:
+        """[AGENT-ADD] canonical runtime 검사 + 상태 반영을 한 곳에서 수행한다."""
+        violations = self._validate_all_constraints_realtime_action(
+            block,
+            assigned_bay,
+            current_time,
+            actual_machine_2_start_time=actual_machine_2_start_time,
+            capacity_time_override=capacity_time_override,
+            current_in_history=current_in_history,
+        )
+        violations.extend(self.bay_tracker.assign_bay(block, assigned_bay, processing_time_seconds))
+        violations.extend(self.ps_manager.process_block(block, assigned_bay, current_time))
+        if step_start_time is not None and step_end_time is not None:
+            self.completed_steps.append(
+                ProcessStep(
+                    block_id=block.block_id,
+                    process_num=1,
+                    bay_type=assigned_bay,
+                    start_time=step_start_time,
+                    end_time=step_end_time,
+                    processing_time=processing_time_seconds,
+                    completion_time=processing_time_seconds,
+                )
+            )
+        return violations
 
     def _validate_saw_constraints_realtime(self, block: EnhancedBlock, current_time: datetime,
                                           actual_machine_2_start_time: datetime = None) -> List[ConstraintViolation]:

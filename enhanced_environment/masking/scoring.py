@@ -50,7 +50,6 @@ class ScoringMixin:
             ("ROUTING_HIGH_SEAM_SPACING", "고심수 간격"),
             ("P5#15", "명절 전날 차단"),
             ("P5#8,9,10,16", "용량"),
-            ("P6#1,2,3", "SAW 시간"),
             ("ROUTING_C_SEAM_SPACING", "C/Seam 간격"),
             ("P5#11,12", "Assembly 타입"),
             ("P5#3,4", "P/S 순서")
@@ -104,21 +103,6 @@ class ScoringMixin:
                 relaxed_failures.append("P5#8,9,10,16")
             elif any(c in constraints_to_relax for c in ["P5#8","P5#9","P5#10","P5#16"]):
                 relaxed_failures.append("P5#8,9,10,16")
-    
-            saw_pass, saw_reason = self._check_saw_time_constraint(
-                block,
-                current_time,
-                previous_machine_state=previous_machine_state,
-                current_bay_assignments=current_bay_assignments,
-                current_day_selected_blocks=current_day_selected_blocks
-            )
-            if not saw_pass and not {'P6#1','P6#2','P6#3'}.intersection(set(constraints_to_relax or [])):
-                passes_all = False
-                failed_constraints.append("P6#1,2,3")
-            elif not saw_pass:
-                relaxed_failures.append("P6#1,2,3")
-            elif {'P6#1','P6#2','P6#3'}.intersection(set(constraints_to_relax or [])):
-                relaxed_failures.append("P6#1,2,3")
     
             c_seam_pass, c_seam_reason = self._check_c_seam_spacing(block, selected_blocks)
             if not c_seam_pass and "ROUTING_C_SEAM_SPACING" not in constraints_to_relax:
@@ -242,16 +226,6 @@ class ScoringMixin:
         capacity_ok, _ = self._check_integrated_capacity_constraints(block, current_time)
         if not capacity_ok:
             failed_constraints.append("P5#8,9,10,16")
-    
-        saw_ok, _ = self._check_saw_time_constraint(
-            block,
-            current_time,
-            previous_machine_state=previous_machine_state,
-            current_bay_assignments=current_bay_assignments,
-            current_day_selected_blocks=current_day_selected_blocks
-        )
-        if not saw_ok:
-            failed_constraints.append("P6#1,2,3")
     
         c_seam_ok, _ = self._check_c_seam_spacing(block, selected_blocks)
         if not c_seam_ok:
@@ -379,7 +353,7 @@ class ScoringMixin:
         selected_blocks: List[int],
         all_blocks: List[EnhancedBlock]
     ) -> Tuple[bool, str]:
-        """P6#4: Cross seam 혼합 배치 제약 체크"""
+        """[AGENT-EDIT] P6#4: pure cross seam 혼합 배치 제약 체크"""
         if not self.constraint_config.is_constraint_enabled("P6#4"):
             return True, "P6#4 제약조건 비활성화"
     
@@ -387,9 +361,7 @@ class ScoringMixin:
         cross_seam_blocks = set(self.metadata.get('cross_seam_mixing_control', {}).get('cross_seam_blocks', []))
         is_special_block = (
             block.block_id in cross_seam_blocks or
-            block.is_cross_seam or 
-            block.is_draft or 
-            (block.main_plate_count > 10)
+            block.is_cross_seam
         )
     
         if not is_special_block:
@@ -412,9 +384,7 @@ class ScoringMixin:
             if recent_block:
                 recent_is_special = (
                     recent_block_id in cross_seam_blocks or
-                    recent_block.is_cross_seam or 
-                    recent_block.is_draft or 
-                    (recent_block.main_plate_count > 10)
+                    recent_block.is_cross_seam
                 )
                 if recent_is_special:
                     recent_special_count += 1

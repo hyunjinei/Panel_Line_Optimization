@@ -14,8 +14,54 @@ import glob
 import os
 from collections import defaultdict
 
-# 한글 폰트 설정
-plt.rcParams['font.family'] = 'Malgun Gothic'  # Windows
+# [AGENT-EDIT] 한글 폰트 설정 — WSL/Linux/macOS/Windows 어디서 실행하든 한글을 렌더링할 수 있도록 자동 탐지.
+import matplotlib.font_manager as _font_manager
+import os as _os
+
+
+def _register_fallback_font_files() -> None:
+    """시스템 폰트 검색 경로 외에 추가로 훑어볼 폰트 파일을 matplotlib에 등록한다.
+
+    WSL에서는 /mnt/c/Windows/Fonts의 Malgun Gothic을 그대로 쓸 수 있다.
+    """
+    candidate_files = [
+        '/mnt/c/Windows/Fonts/malgun.ttf',
+        '/mnt/c/Windows/Fonts/malgunbd.ttf',
+        '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
+        '/usr/share/fonts/truetype/nanum/NanumGothic.ttf',
+        '/Library/Fonts/AppleGothic.ttf',
+    ]
+    for path in candidate_files:
+        if _os.path.exists(path):
+            try:
+                _font_manager.fontManager.addfont(path)
+            except Exception:
+                pass
+
+
+def _auto_select_korean_font() -> str:
+    """설치된 폰트 중에서 한글을 렌더링할 수 있는 첫 번째 후보를 선택한다."""
+    _register_fallback_font_files()
+    preferred = [
+        'Malgun Gothic',        # Windows / WSL에 마운트된 Windows Fonts
+        'AppleGothic',          # macOS
+        'Apple SD Gothic Neo',  # macOS newer
+        'Noto Sans CJK KR',     # Linux (fonts-noto-cjk)
+        'Noto Sans KR',
+        'NanumGothic',
+        'Nanum Gothic',
+        'UnDotum',
+        'Baekmuk Dotum',
+        'Source Han Sans KR',
+    ]
+    available = {font.name for font in _font_manager.fontManager.ttflist}
+    for name in preferred:
+        if name in available:
+            return name
+    return 'DejaVu Sans'
+
+
+plt.rcParams['font.family'] = _auto_select_korean_font()
 plt.rcParams['axes.unicode_minus'] = False
 
 # 🆕 결과 폴더 설정 (최상단으로 이동)
@@ -242,11 +288,19 @@ def get_enhanced_color_and_style(row):
     
     return color, hatch, edgecolor, alpha, linewidth
 
-def create_enhanced_gantt_chart(combined_df, method_name, chart_title, save_path=None):
-    """향상된 간트차트 생성"""
+def create_enhanced_gantt_chart(combined_df, method_name, chart_title, save_path=None, return_fig=False):
+    """향상된 간트차트 생성.
+
+    Parameters
+    ----------
+    return_fig : bool
+        True이면 ``plt.close()`` 대신 ``fig``를 반환한다.
+        Streamlit 같은 외부 렌더러에서 재사용할 때 사용.
+    """
+    # [AGENT-EDIT] return_fig 옵션 추가: Streamlit 대시보드에서 st.pyplot(fig) 로 재사용하기 위함.
     if combined_df.empty:
         print(f"{method_name}에 데이터가 없습니다.")
-        return
+        return None
     
     # 기계 매핑
     machine_mapping = create_machine_mapping()
@@ -390,10 +444,15 @@ def create_enhanced_gantt_chart(combined_df, method_name, chart_title, save_path
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
         print(f"📊 간트차트 저장: {save_path}")
-    
+
+    # [AGENT-EDIT] return_fig=True일 때 fig를 반환하고 close하지 않는다.
+    if return_fig:
+        return fig
+
     # 자동 표시 제거 (사용자 요청)
     # plt.show()  # 제거됨
     plt.close()  # 메모리 절약을 위해 닫기
+    return None
 
 def calculate_method_stats(data_by_method):
     """방법론별 통계 계산"""

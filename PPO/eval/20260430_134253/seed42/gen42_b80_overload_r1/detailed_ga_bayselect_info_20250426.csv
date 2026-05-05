@@ -1,0 +1,13 @@
+﻿type,date,total_blocks,block_id,assembly_start_date,width_m,longi_count,seam_count,c_seam_count,has_curved_plate,assigned_bay,final_reason,material_type,P7#2_result,P7#3_4_result,P7#7_8_result,P7#10_result,P7#11_result,P7#1_result,bay_35a_worktime_before,bay_36b_worktime_before,bay_35a_worktime_after,bay_36b_worktime_after
+METADATA,20250426,11,,,,,,,,,Assembly Decoding 베이 선택 분석: 11개 블록,,,,,,,,,,,
+BLOCK_DETAIL,20250426,11,58.0,2025-05-01,21.4,22.0,,,False,36B,P7#2 물리적 제약: 폭 21.4m > 21m → B베이 강제,NORMAL,FORCE_B,PASS,,,,,184.18,271.84,184.18,280.81
+BLOCK_DETAIL,20250426,11,31.0,2025-05-01,5.4,5.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,184.18,289.78,186.88,289.78
+BLOCK_DETAIL,20250426,11,5.0,2025-04-24,12.3,5.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,189.57,289.78,189.57,292.89
+BLOCK_DETAIL,20250426,11,8.0,2025-05-01,18.3,19.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,189.57,296.0,196.59,296.0
+BLOCK_DETAIL,20250426,11,35.0,2025-04-30,8.2,11.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,203.6,296.0,203.6,303.49
+BLOCK_DETAIL,20250426,11,21.0,2025-04-25,15.3,17.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,203.6,310.97,208.56,310.97
+BLOCK_DETAIL,20250426,11,53.0,2025-05-02,13.9,9.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,213.52,310.97,213.52,314.63
+BLOCK_DETAIL,20250426,11,14.0,2025-04-28,19.9,27.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,213.52,318.3,224.06,318.3
+BLOCK_DETAIL,20250426,11,75.0,2025-05-01,8.5,8.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,234.61,318.3,234.61,321.96
+BLOCK_DETAIL,20250426,11,49.0,2025-05-02,13.6,17.0,,,False,35A,P7#7 연속성 제약: B베이 연속 제한 → A베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,234.61,325.63,239.54,325.63
+BLOCK_DETAIL,20250426,11,12.0,2025-05-01,19.0,13.0,,,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,244.47,325.63,244.47,330.16

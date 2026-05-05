@@ -1,0 +1,14 @@
+﻿type,date,total_blocks,total_steps,step,block_id,assembly_start_date,assembly_type,port_starboard,status,reason,assembly_masking_stage,three_bay_check,ps_forced,selected_block,available_count,excluded_count,emergency_mode,relax_level,relax_stage,relax_constraints,relax_target_count,relax_targets,relaxed_block_count,relax_target_total,final_choice_flag,final_violation_count,final_violation_list,seam_count,c_seam_count,has_curved_plate
+METADATA,20250815,114,5,,,,,,,,,,,,,,,,,,,,,,,,,,,
+STEP_SUMMARY,20250815,114,5,110,선택: 102,2025-08-16,fixed,C,"가용: 1, 제외: 0",Assembly Decoding 스텝 110 선택,,,False,102,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250815,114,5,110,102,2025-08-16,fixed,C,AVAILABLE,[EMERGENCY] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250815,114,5,111,선택: 31,2025-08-12,line,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 111 선택,,,False,31,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250815,114,5,111,31,2025-08-12,line,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250815,114,5,112,선택: 16,2025-08-16,line,P,"가용: 2, 제외: 0",Assembly Decoding 스텝 112 선택,,,False,16,2,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250815,114,5,112,12,2025-08-16,line,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250815,114,5,112,16,2025-08-16,line,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250815,114,5,113,선택: 12,2025-08-16,line,P,"가용: 2, 제외: 0",Assembly Decoding 스텝 113 선택,,,False,12,2,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250815,114,5,113,12,2025-08-16,line,P,AVAILABLE,[EMERGENCY] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250815,114,5,113,112,2025-08-16,fixed,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250815,114,5,114,선택: 112,2025-08-16,fixed,S,"가용: 1, 제외: 0",Assembly Decoding 스텝 114 선택,,,False,112,1,0,False,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250815,114,5,114,112,2025-08-16,fixed,S,AVAILABLE,[EMERGENCY] 기본 통과,,,False,★,,,,0,,,0,,,,False,0,,,,False
