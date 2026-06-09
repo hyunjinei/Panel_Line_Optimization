@@ -15,6 +15,7 @@ class EditConstraint:
 
     type: str
     block_id: Optional[int] = None
+    block_ids: List[int] = field(default_factory=list)
     position: Optional[int] = None
     before_block_id: Optional[int] = None
     after_block_id: Optional[int] = None

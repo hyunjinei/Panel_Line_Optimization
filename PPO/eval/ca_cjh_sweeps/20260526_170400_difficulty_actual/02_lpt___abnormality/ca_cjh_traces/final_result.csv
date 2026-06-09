@@ -1,0 +1,2 @@
+﻿method,number_of_blocks,total_evaluations,workers,parallel,total_runtime_sec,makespan_hours,hard_violation_count,soft_violation_count,total_violation_count,longi_35a,longi_36b,longi_abs_diff,runtime_sec,feature_mode,trim_ratio,w_cos,w_jac,alpha,objective_mode,priority_mode,beta_load,w_load,w_abnormal,w_shape_dev,w_urgency,w_risk,evaluations,beam_width
+CA_CJH,68,2346,48,True,27.22331560216844,89.83333333333333,17,8,25,498.0,461.0,37.0,27.22331560216844,process_plus_core,0.1,0.5,0.5,0.0,strict_lexicographic,difficulty_cjh,0.7,0.7,0.3,0.0,0.0,0.0,2346,

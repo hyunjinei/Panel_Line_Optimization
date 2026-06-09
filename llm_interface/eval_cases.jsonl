@@ -6,3 +6,7 @@
 {"case_id":"daily_seam_cap_ko","request":"12일에는 72심 이하로 제한해줘","expected_constraints":[{"type":"date_specific_daily_seam_cap","date_token":"DAY:12","seam_limit":72}]}
 {"case_id":"constraint_toggle_runtime_ko","request":"C-Seam runtime만 꺼줘 audit는 유지","expected_constraints":[{"type":"constraint_toggle","target":"enable_c_seam_spacing","enabled":false,"scope":"runtime"},{"type":"constraint_toggle","target":"enable_c_seam_spacing","enabled":true,"scope":"audit"}]}
 {"case_id":"bias_off_ko","request":"후보축소마스킹 꺼줘","expected_constraints":[{"type":"bias_components","components":[]}]}
+{"case_id":"freeze_prefix_ko","request":"3번과 2번 블록은 이미 작업 중이니까 순서를 고정해줘","expected_constraints":[{"type":"freeze_prefix","block_ids":[3,2]}]}
+{"case_id":"priority_after_recovery_ko","request":"설비 복구 후 1번 블록을 가장 먼저 투입해줘","expected_constraints":[{"type":"priority_block","block_id":1,"target":"next_after_recovery"}]}
+{"case_id":"delayed_block_ko","request":"4번 블록은 고장 때문에 바로 다음 투입에서 제외해줘","expected_constraints":[{"type":"delayed_block","block_id":4,"target":"not_immediate_next"}]}
+{"case_id":"emergency_combo_ko","request":"현재 3번과 2번 블록은 이미 작업 중이니까 순서를 고정하고, 설비 복구 후 1번 블록을 가장 먼저 투입해줘. 4번 블록은 고장 때문에 바로 다음 투입에서 제외하고, 15번 블록은 36B 베이에 배정해줘.","expected_constraints":[{"type":"freeze_prefix","block_ids":[3,2]},{"type":"priority_block","block_id":1,"target":"next_after_recovery"},{"type":"delayed_block","block_id":4,"target":"not_immediate_next"},{"type":"manual_bay_assignment","block_id":15,"bay":"36B"}]}

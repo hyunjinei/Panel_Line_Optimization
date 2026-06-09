@@ -1,0 +1,29 @@
+﻿type,date,total_blocks,total_steps,step,block_id,assembly_type,port_starboard,status,reason,P5#11_check,P5#3_check,P6#4_check,P6#time_check,selected_block,available_count,excluded_count,primary_constraint,relax_level,relax_stage,relax_constraints,relax_target_count,relax_targets,relaxed_block_count,relax_target_total,final_choice_flag,final_violation_count,final_violation_list,seam_count,c_seam_count,has_curved_plate
+METADATA,20250613,6,6,,,,,,,,,,,,,,,,,,,,,,,,,,,
+STEP_SUMMARY,20250613,6,6,0,선택: 67,fixed,,"가용: 6, 제외: 0","available_types: {'fixed': 4, 'line': 2}, excluded_types: {}",,,,,67,6,0,없음,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250613,6,6,0,67,fixed,S,AVAILABLE,모든 제약조건 통과,,,,,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250613,6,6,0,68,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250613,6,6,0,69,fixed,S,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250613,6,6,0,70,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250613,6,6,0,71,line,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250613,6,6,0,72,line,S,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250613,6,6,1,선택: 70,fixed,,"가용: 1, 제외: 4","available_types: {'fixed': 1}, excluded_types: {'fixed': 2, 'line': 2}",,,,,70,1,4,없음,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250613,6,6,1,68,fixed,P,EXCLUDED,ROUTING_C_SEAM_SPACING 위반,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250613,6,6,1,69,fixed,S,EXCLUDED,ROUTING_C_SEAM_SPACING 위반,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250613,6,6,1,70,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250613,6,6,1,71,line,P,EXCLUDED,ROUTING_C_SEAM_SPACING 위반,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250613,6,6,1,72,line,S,EXCLUDED,ROUTING_C_SEAM_SPACING 위반,,,,,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250613,6,6,2,선택: 71,line,,"가용: 4, 제외: 0","available_types: {'fixed': 2, 'line': 2}, excluded_types: {}",,,,,71,4,0,없음,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250613,6,6,2,68,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250613,6,6,2,69,fixed,S,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250613,6,6,2,71,line,P,AVAILABLE,모든 제약조건 통과,,,,,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250613,6,6,2,72,line,S,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250613,6,6,3,선택: 72,line,,"가용: 3, 제외: 0","available_types: {'fixed': 2, 'line': 1}, excluded_types: {}",,,,,72,3,0,없음,,,,,,3,3,0,,,,,
+BLOCK_DETAIL,20250613,6,6,3,68,fixed,P,AVAILABLE,[RELAX] 착수일고정-C/Seam 완화: ROUTING_C_SEAM_SPACING,,,,,,,,,0,착수일고정-C/Seam 완화,ROUTING_C_SEAM_SPACING,1,ROUTING_C_SEAM_SPACING,,,False,0,,,,False
+BLOCK_DETAIL,20250613,6,6,3,69,fixed,S,AVAILABLE,[RELAX] 착수일고정-C/Seam 완화: ROUTING_C_SEAM_SPACING,,,,,,,,,0,착수일고정-C/Seam 완화,ROUTING_C_SEAM_SPACING,1,ROUTING_C_SEAM_SPACING,,,False,0,,,,False
+BLOCK_DETAIL,20250613,6,6,3,72,line,S,AVAILABLE,[RELAX] 착수일고정-C/Seam 완화: ROUTING_C_SEAM_SPACING,,,,,★,,,,0,착수일고정-C/Seam 완화,ROUTING_C_SEAM_SPACING,1,ROUTING_C_SEAM_SPACING,,,False,0,,,,False
+STEP_SUMMARY,20250613,6,6,4,선택: 68,fixed,,"가용: 2, 제외: 0","available_types: {'fixed': 2}, excluded_types: {}",,,,,68,2,0,없음,,,,,,2,2,0,,,,,
+BLOCK_DETAIL,20250613,6,6,4,68,fixed,P,AVAILABLE,[RELAX] 착수일고정-C/Seam 완화: ROUTING_C_SEAM_SPACING,,,,,★,,,,0,착수일고정-C/Seam 완화,ROUTING_C_SEAM_SPACING,1,ROUTING_C_SEAM_SPACING,,,False,0,,,,False
+BLOCK_DETAIL,20250613,6,6,4,69,fixed,S,AVAILABLE,[RELAX] 착수일고정-C/Seam 완화: ROUTING_C_SEAM_SPACING,,,,,,,,,0,착수일고정-C/Seam 완화,ROUTING_C_SEAM_SPACING,1,ROUTING_C_SEAM_SPACING,,,False,0,,,,False
+STEP_SUMMARY,20250613,6,6,5,선택: 69,fixed,,"가용: 1, 제외: 0","available_types: {'fixed': 1}, excluded_types: {}",,,,,69,1,0,없음,,,,,,1,1,0,,,,,
+BLOCK_DETAIL,20250613,6,6,5,69,fixed,S,AVAILABLE,[RELAX] 착수일고정-C/Seam 완화: ROUTING_C_SEAM_SPACING,,,,,★,,,,0,착수일고정-C/Seam 완화,ROUTING_C_SEAM_SPACING,1,ROUTING_C_SEAM_SPACING,,,False,0,,,,False

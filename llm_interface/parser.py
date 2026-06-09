@@ -46,6 +46,16 @@ _CONSTRAINT_TARGET_ALIASES: Dict[str, str] = {
 }
 
 
+def _extract_block_mentions(text: str) -> List[int]:
+    """[AGENT-ADD] Return block ids in the order mentioned by the user."""
+    block_ids: List[int] = []
+    for raw_block_id in re.findall(r"(\d+)\s*번(?:\s*블록)?", text):
+        block_id = int(raw_block_id)
+        if block_id not in block_ids:
+            block_ids.append(block_id)
+    return block_ids
+
+
 def _extract_position(text: str) -> Optional[int]:
     """Return zero-based position if the request specifies one."""
     lowered = text.replace(" ", "")
@@ -57,6 +67,63 @@ def _extract_position(text: str) -> Optional[int]:
     if numeric_match:
         return max(int(numeric_match.group(1)) - 1, 0)
     return None
+
+
+def _extract_freeze_prefix_request(text: str) -> Optional[EditConstraint]:
+    """Parse already-started/frozen prefix requests."""
+    lowered = text.replace(" ", "")
+    if not any(token in lowered for token in ["작업중", "이미투입", "이미작업", "순서고정", "고정"]):
+        return None
+    # [AGENT-ADD] Explicit ordinal requests belong to fixed_position, not freeze_prefix.
+    if _extract_position(text) is not None:
+        return None
+    block_ids = _extract_block_mentions(text)
+    if not block_ids:
+        return None
+    return EditConstraint(
+        type="freeze_prefix",
+        block_ids=block_ids,
+        note="natural-language already-started prefix freeze request",
+    )
+
+
+def _extract_priority_block_request(text: str) -> Optional[EditConstraint]:
+    """Parse urgent/next-after-recovery insertion requests."""
+    lowered = text.replace(" ", "")
+    if "보다먼저" in lowered:
+        return None
+    if any(token in lowered for token in ["제외", "지연", "후순위", "나중", "고장"]):
+        return None
+    if not any(token in lowered for token in ["가장먼저", "우선투입", "먼저투입", "최우선", "다음투입"]):
+        return None
+    block_ids = _extract_block_mentions(text)
+    if len(block_ids) != 1:
+        return None
+    target = "next_after_recovery" if any(token in lowered for token in ["복구후", "정상화후"]) else "immediate_next"
+    return EditConstraint(
+        type="priority_block",
+        block_id=block_ids[0],
+        target=target,
+        note="natural-language priority insertion request",
+    )
+
+
+def _extract_delayed_block_request(text: str) -> Optional[EditConstraint]:
+    """Parse requests that remove a block from the immediate next insertion."""
+    lowered = text.replace(" ", "")
+    if not any(token in lowered for token in ["바로다음", "다음투입", "후순위", "나중", "지연", "제외"]):
+        return None
+    if not any(token in lowered for token in ["고장", "지연", "제외", "후순위", "나중"]):
+        return None
+    block_ids = _extract_block_mentions(text)
+    if len(block_ids) != 1:
+        return None
+    return EditConstraint(
+        type="delayed_block",
+        block_id=block_ids[0],
+        target="not_immediate_next",
+        note="natural-language delayed block request",
+    )
 
 
 def _extract_move_block_request(text: str) -> Optional[EditConstraint]:
@@ -280,10 +347,11 @@ def _extract_bias_component_request(text: str) -> Optional[EditConstraint]:
 def _split_request_fragments(text: str) -> List[str]:
     """# [AGENT-ADD] Split multi-line UI-composed requests into parseable fragments."""
     fragments: List[str] = []
-    for raw in re.split(r"[\n;]+", text):
-        fragment = raw.strip()
-        if fragment:
-            fragments.append(fragment)
+    for raw in re.split(r"[\n;。.!?]+|그리고", text):
+        for sub_raw in re.split(r",", raw):
+            fragment = sub_raw.strip()
+            if fragment:
+                fragments.append(fragment)
     return fragments
 
 
@@ -292,6 +360,9 @@ def _parse_fragment(fragment: str) -> List[EditConstraint]:
     """# [AGENT-ADD] Parse one fragment so UI can submit multiple lines safely."""
     matched_constraints: List[EditConstraint] = []
     extractor_results = [
+        _extract_freeze_prefix_request(fragment),
+        _extract_priority_block_request(fragment),
+        _extract_delayed_block_request(fragment),
         _extract_precedence_request(fragment),
         _extract_bay_assignment_request(fragment),
         _extract_daily_block_cap_request(fragment),
@@ -302,6 +373,12 @@ def _parse_fragment(fragment: str) -> List[EditConstraint]:
     matched_constraints.extend([item for item in extractor_results if item is not None])
     matched_constraints.extend(_extract_constraint_toggle_requests(fragment))
     return matched_constraints
+
+
+def _is_filler_fragment(fragment: str) -> bool:
+    """[AGENT-ADD] Ignore short emphasis fragments created by sentence splitting."""
+    compact = fragment.replace(" ", "").strip(".。!?")
+    return compact in {"최대", "해줘", "해주세요", "부탁", "반드시"}
 
 
 
@@ -323,7 +400,7 @@ def parse_natural_language_request(text: str) -> ScheduleEditRequest:
     for fragment in fragments:
         matched_constraints = _parse_fragment(fragment)
         request.constraints.extend(matched_constraints)
-        if not matched_constraints:
+        if not matched_constraints and not _is_filler_fragment(fragment):
             request.unparsed_fragments.append(fragment)
 
     return request

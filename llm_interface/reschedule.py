@@ -8,6 +8,16 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 from .schemas import ScheduleEditRequest
 
 
+def _append_unique_block_id(target: List[Optional[int]], block_id: Optional[int]) -> None:
+    """[AGENT-ADD] Preserve request order while avoiding duplicate forced steps."""
+    if block_id is None:
+        return
+    normalized = int(block_id)
+    if normalized in {int(value) for value in target if value is not None}:
+        return
+    target.append(normalized)
+
+
 def _normalize_date_key(raw_key: Any) -> Optional[str]:
     if raw_key is None:
         return None
@@ -47,15 +57,32 @@ def build_forced_prefix_plan(request: ScheduleEditRequest) -> List[Optional[int]
     - "4번 블록은 세 번째" -> [None, None, 4]
 
     # [AGENT-ADD] v1 converts fixed-position requests into prefix-resume plans.
+    # [AGENT-EDIT] freeze_prefix and priority_block now map onto the same
+    # scheduler-side forced prefix path used by fixed_position.
     """
 
     fixed_constraints = [c for c in request.constraints if c.type == "fixed_position"]
+    prefix_plan: List[Optional[int]] = []
+
+    for constraint in request.constraints:
+        if constraint.type == "freeze_prefix":
+            block_ids = list(constraint.block_ids or [])
+            if not block_ids and constraint.block_id is not None:
+                block_ids = [int(constraint.block_id)]
+            for block_id in block_ids:
+                _append_unique_block_id(prefix_plan, block_id)
+
+    for constraint in request.constraints:
+        if constraint.type == "priority_block":
+            _append_unique_block_id(prefix_plan, constraint.block_id)
+
     if not fixed_constraints:
-        return []
+        return prefix_plan
 
     max_position = max(c.position or 0 for c in fixed_constraints)
-    plan: List[Optional[int]] = [None] * (max_position + 1)
-
+    plan: List[Optional[int]] = list(prefix_plan)
+    if len(plan) <= max_position:
+        plan.extend([None] * (max_position + 1 - len(plan)))
     for constraint in fixed_constraints:
         if constraint.position is None or constraint.block_id is None:
             continue
@@ -68,6 +95,16 @@ def build_forced_prefix_plan(request: ScheduleEditRequest) -> List[Optional[int]
 def build_precedence_rules(request: ScheduleEditRequest) -> List[Tuple[int, int]]:
     """Build `(before, after)` precedence rules from the parsed request."""
     rules: List[Tuple[int, int]] = []
+    priority_ids = [
+        int(constraint.block_id)
+        for constraint in request.constraints
+        if constraint.type == "priority_block" and constraint.block_id is not None
+    ]
+    delayed_ids = [
+        int(constraint.block_id)
+        for constraint in request.constraints
+        if constraint.type == "delayed_block" and constraint.block_id is not None
+    ]
     for constraint in request.constraints:
         if constraint.type != "precedence":
             continue
@@ -78,6 +115,12 @@ def build_precedence_rules(request: ScheduleEditRequest) -> List[Tuple[int, int]
         if before_block_id == after_block_id:
             continue
         rules.append((before_block_id, after_block_id))
+    # [AGENT-ADD] A delayed block is represented in the existing scheduler by
+    # requiring the urgent block to be selected before the delayed one.
+    for priority_id in priority_ids:
+        for delayed_id in delayed_ids:
+            if priority_id != delayed_id:
+                rules.append((priority_id, delayed_id))
     return rules
 
 

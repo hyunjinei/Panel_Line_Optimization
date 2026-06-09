@@ -104,6 +104,59 @@ def _parse_cli_overrides() -> argparse.Namespace:
     parser.add_argument("--ga_worker_threads", type=int)
     parser.add_argument("--ga_ram_gb_per_worker", type=float)
     parser.add_argument("--ga_progress_interval", type=int)
+    # [AGENT-ADD] CP-SAT/OR-Tools comparison baseline controls.
+    parser.add_argument("--cp_time_limit_sec", type=float)
+    parser.add_argument("--cp_workers", type=int)
+    parser.add_argument("--cp_ram_gb_per_worker", type=float)
+    parser.add_argument("--cp_seed", type=int)
+    parser.add_argument("--cp_time_scale", type=int)
+    parser.add_argument("--cp_makespan_weight", type=int)
+    parser.add_argument("--cp_enforce_basic_bay_rules")
+    parser.add_argument("--cp_model_mode")
+    parser.add_argument("--cp_exact_max_blocks", type=int)
+    parser.add_argument("--cp_candidates", type=int)
+    parser.add_argument("--cp_solver_time_slice_sec", type=float)
+    parser.add_argument("--cp_bay_balance_weight", type=int)
+    parser.add_argument("--cp_full_cpu")
+    parser.add_argument("--cp_parallel")
+    parser.add_argument("--cp_parallel_workers", type=int)
+    parser.add_argument("--cp_candidate_threads", type=int)
+    parser.add_argument("--cp_audit_max_rejections", type=int)
+    parser.add_argument("--cp_audit_continue_after_zero")
+    parser.add_argument("--cp_masking_hint")
+    parser.add_argument("--cp_feasibility_weight", type=int)
+    parser.add_argument("--cp_profile_replay")
+    parser.add_argument("--cp_profile_replay_top_k", type=int)
+    parser.add_argument("--cp_native_prefix_balance")
+    # [AGENT-ADD] CA-CJH-Insertion comparison baseline controls.
+    parser.add_argument("--ca_cjh_feature_mode")
+    parser.add_argument("--ca_cjh_trim_ratio", type=float)
+    parser.add_argument("--ca_cjh_w_cos", type=float)
+    parser.add_argument("--ca_cjh_w_jac", type=float)
+    parser.add_argument("--ca_cjh_alpha", type=float)
+    parser.add_argument("--ca_cjh_objective_mode")
+    parser.add_argument("--ca_cjh_priority_mode")
+    parser.add_argument("--ca_cjh_beta_load", type=float)
+    parser.add_argument("--ca_cjh_feasible_priority")
+    parser.add_argument("--ca_cjh_respect_workshop_order")
+    parser.add_argument("--ca_cjh_allow_forced_prefix_override")
+    parser.add_argument("--ca_cjh_w_load", type=float)
+    parser.add_argument("--ca_cjh_w_abnormal", type=float)
+    parser.add_argument("--ca_cjh_w_shape_dev", type=float)
+    parser.add_argument("--ca_cjh_w_urgency", type=float)
+    parser.add_argument("--ca_cjh_w_risk", type=float)
+    parser.add_argument("--ca_cjh_load_amplifier", type=float)
+    parser.add_argument("--ca_cjh_completion_policy")
+    parser.add_argument("--ca_cjh_trace_enabled")
+    parser.add_argument("--ca_cjh_trace_output_dir")
+    parser.add_argument("--ca_cjh_parallel")
+    parser.add_argument("--ca_cjh_workers", type=int)
+    parser.add_argument("--ca_cjh_chunksize")
+    parser.add_argument("--ca_cjh_use_all_insertion_positions")
+    parser.add_argument("--ca_cjh_max_blocks_for_full_insertion", type=int)
+    parser.add_argument("--ca_cjh_beam_width")
+    parser.add_argument("--ca_cjh_enable_beam_search")
+    parser.add_argument("--ca_cjh_auto_beam_width", type=int)
     parser.add_argument("--methods")
     parser.add_argument("--mode", type=int, choices=[1, 2])
     args, _ = parser.parse_known_args()
@@ -311,7 +364,9 @@ from PPO.eval.methods import (
     run_spt_heuristic,
     run_lpt_heuristic,
     run_seam_min_heuristic,
+    run_ca_cjh_insertion_baseline,
     run_ga_metaheuristic,
+    run_cp_sat_baseline,
     run_rl_evaluation,
 )
 from PPO.eval.files import (
@@ -632,7 +687,7 @@ def main():
         "feature_mode": FEATURE_MODE,
         "use_positional_encoding": USE_POSITIONAL_ENCODING,
     }
-    # [AGENT-ADD] 평가 메서드별 세부 설정 전달 (GA 포함)
+    # [AGENT-ADD] 평가 메서드별 세부 설정 전달 (GA/CP-SAT 포함)
     _runtime_for_methods = get_runtime_config() or {}
     _eval_cfg_for_methods = {}
     if isinstance(_runtime_for_methods, dict):
@@ -642,10 +697,19 @@ def main():
             _eval_cfg_for_methods.update(_eval_fallback_for_methods)
         if isinstance(_eval_primary_for_methods, dict):
             _eval_cfg_for_methods.update(_eval_primary_for_methods)
+        # [AGENT-ADD] Keep method-specific CA-CJH config available to methods.py.
+        if isinstance(_runtime_for_methods.get("ca_cjh"), dict):
+            _eval_cfg_for_methods["ca_cjh"] = _runtime_for_methods.get("ca_cjh")
     for _key in (
         "ga_population", "ga_generations", "ga_elite", "ga_mutation_rate", "ga_seed",
         "ga_parallel", "ga_parallel_workers", "ga_worker_threads",
         "ga_ram_gb_per_worker", "ga_progress_interval",
+        "cp_time_limit_sec", "cp_workers", "cp_ram_gb_per_worker", "cp_seed",
+        "cp_time_scale", "cp_makespan_weight", "cp_enforce_basic_bay_rules",
+        "cp_model_mode", "cp_exact_max_blocks", "cp_candidates",
+        "cp_solver_time_slice_sec", "cp_bay_balance_weight",
+        "cp_full_cpu", "cp_parallel", "cp_parallel_workers", "cp_candidate_threads",
+        "cp_audit_max_rejections", "cp_audit_continue_after_zero",
         "sampling", "use_self_label_profiles", "eval_use_self_label_profiles",
         "profile_sampling", "rl_selection_mode", "save_rl_samples_summary",
         "heuristic_sampling", "heuristic_profile_sampling",
@@ -654,6 +718,20 @@ def main():
         "eval_ram_gb_per_worker", "eval_gpu_gb_per_worker",
         "eval_gpu_mem_per_worker_gb", "eval_max_gpu_workers",
         "save_heuristic_all_mask_off",
+        "ca_cjh",
+        "ca_cjh_feature_mode", "ca_cjh_trim_ratio", "ca_cjh_w_cos", "ca_cjh_w_jac",
+        "ca_cjh_alpha", "ca_cjh_objective_mode", "ca_cjh_priority_mode",
+        "ca_cjh_beta_load", "ca_cjh_feasible_priority", "ca_cjh_respect_workshop_order",
+        "ca_cjh_allow_forced_prefix_override",
+        "ca_cjh_w_load", "ca_cjh_w_abnormal",
+        "ca_cjh_w_shape_dev", "ca_cjh_w_urgency", "ca_cjh_w_risk",
+        "ca_cjh_load_amplifier",
+        "ca_cjh_completion_policy",
+        "ca_cjh_trace_enabled", "ca_cjh_trace_output_dir",
+        "ca_cjh_parallel", "ca_cjh_workers", "ca_cjh_chunksize",
+        "ca_cjh_use_all_insertion_positions",
+        "ca_cjh_max_blocks_for_full_insertion", "ca_cjh_beam_width",
+        "ca_cjh_enable_beam_search", "ca_cjh_auto_beam_width",
     ):
         if _key in _eval_cfg_for_methods:
             method_settings[_key] = _eval_cfg_for_methods[_key]
@@ -683,6 +761,37 @@ def main():
     ):
         if getattr(_CLI_OVERRIDES, _ga_key, None) is not None:
             method_settings[_ga_key] = getattr(_CLI_OVERRIDES, _ga_key)
+    # [AGENT-ADD] CLI wiring for CP-SAT comparison baseline.
+    for _cp_key in (
+        "cp_time_limit_sec", "cp_workers", "cp_ram_gb_per_worker", "cp_seed",
+        "cp_time_scale", "cp_makespan_weight", "cp_enforce_basic_bay_rules",
+        "cp_model_mode", "cp_exact_max_blocks", "cp_candidates",
+        "cp_solver_time_slice_sec", "cp_bay_balance_weight",
+        "cp_full_cpu", "cp_parallel", "cp_parallel_workers", "cp_candidate_threads",
+        "cp_audit_max_rejections", "cp_audit_continue_after_zero",
+        "cp_masking_hint", "cp_feasibility_weight",
+        "cp_profile_replay", "cp_profile_replay_top_k", "cp_native_prefix_balance",
+    ):
+        if getattr(_CLI_OVERRIDES, _cp_key, None) is not None:
+            method_settings[_cp_key] = getattr(_CLI_OVERRIDES, _cp_key)
+    # [AGENT-ADD] CLI wiring for CA-CJH-Insertion comparison baseline.
+    for _ca_cjh_key in (
+        "ca_cjh_feature_mode", "ca_cjh_trim_ratio", "ca_cjh_w_cos", "ca_cjh_w_jac",
+        "ca_cjh_alpha", "ca_cjh_objective_mode", "ca_cjh_priority_mode",
+        "ca_cjh_beta_load", "ca_cjh_feasible_priority", "ca_cjh_respect_workshop_order",
+        "ca_cjh_allow_forced_prefix_override",
+        "ca_cjh_w_load", "ca_cjh_w_abnormal",
+        "ca_cjh_w_shape_dev", "ca_cjh_w_urgency", "ca_cjh_w_risk",
+        "ca_cjh_load_amplifier",
+        "ca_cjh_completion_policy",
+        "ca_cjh_trace_enabled", "ca_cjh_trace_output_dir",
+        "ca_cjh_parallel", "ca_cjh_workers", "ca_cjh_chunksize",
+        "ca_cjh_use_all_insertion_positions",
+        "ca_cjh_max_blocks_for_full_insertion", "ca_cjh_beam_width",
+        "ca_cjh_enable_beam_search", "ca_cjh_auto_beam_width",
+    ):
+        if getattr(_CLI_OVERRIDES, _ca_cjh_key, None) is not None:
+            method_settings[_ca_cjh_key] = getattr(_CLI_OVERRIDES, _ca_cjh_key)
     if getattr(_CLI_OVERRIDES, "eval_parallel", None) is not None:
         method_settings["eval_parallel"] = _CLI_OVERRIDES.eval_parallel
     if getattr(_CLI_OVERRIDES, "eval_parallel_workers", None) is not None:
@@ -965,6 +1074,46 @@ def main():
                             date_keys_ga = list(set([r.get('date', '20250101') for r in ga_results if r.get('date')]))
                             rename_detailed_csv_files('ga', date_keys_ga, result_folder_path)
 
+                    if _should_run("CA_CJH", default=False):
+                        print(f"\n{'='*60}")
+                        print(" CA-CJH-Insertion 평가")
+                        print(f"{'='*60}")
+                        ca_cjh_results, ca_cjh_stats, ca_cjh_episode_data, ca_cjh_env = run_ca_cjh_insertion_baseline(
+                            blocks,
+                            metadata,
+                            start_date,
+                            result_folder_path,
+                            settings=method_settings,
+                        )
+                        results['CA_CJH'] = {
+                            'results': ca_cjh_results,
+                            'statistics': ca_cjh_stats,
+                            'makespan': ca_cjh_stats.get('makespan_hours', 0)
+                        }
+                        if ca_cjh_results:
+                            date_keys_ca_cjh = list(set([r.get('date', '20250101') for r in ca_cjh_results if r.get('date')]))
+                            rename_detailed_csv_files('ca_cjh', date_keys_ca_cjh, result_folder_path)
+
+                    if _should_run("CP_SAT", default=False):
+                        print(f"\n{'='*60}")
+                        print(" CP-SAT baseline 평가")
+                        print(f"{'='*60}")
+                        cp_results, cp_stats, cp_episode_data, cp_env = run_cp_sat_baseline(
+                            blocks,
+                            metadata,
+                            start_date,
+                            result_folder_path,
+                            settings=method_settings,
+                        )
+                        results['CP_SAT'] = {
+                            'results': cp_results,
+                            'statistics': cp_stats,
+                            'makespan': cp_stats.get('makespan_hours', 0)
+                        }
+                        if cp_results:
+                            date_keys_cp = list(set([r.get('date', '20250101') for r in cp_results if r.get('date')]))
+                            rename_detailed_csv_files('cp_sat', date_keys_cp, result_folder_path)
+
                     # RL                                                                                                                                                                                          
                     if _should_run("RL"):
                         print(f"\n{'='*60}")                                                                                                                                                                          
@@ -1146,6 +1295,46 @@ def main():
                             date_keys_ga = list(set([r.get('date', '20250101') for r in ga_results if r.get('date')]))
                             rename_detailed_csv_files('ga', date_keys_ga, result_folder_path)
 
+                    if _should_run("CA_CJH", default=False):
+                        print(f"\n{'='*60}")
+                        print(" CA-CJH-Insertion 평가")
+                        print(f"{'='*60}")
+                        ca_cjh_results, ca_cjh_stats, ca_cjh_episode_data, ca_cjh_env = run_ca_cjh_insertion_baseline(
+                            blocks,
+                            metadata,
+                            start_date,
+                            result_folder_path,
+                            settings=method_settings,
+                        )
+                        results['CA_CJH'] = {
+                            'results': ca_cjh_results,
+                            'statistics': ca_cjh_stats,
+                            'makespan': ca_cjh_stats.get('makespan_hours', 0)
+                        }
+                        if ca_cjh_results:
+                            date_keys_ca_cjh = list(set([r.get('date', '20250101') for r in ca_cjh_results if r.get('date')]))
+                            rename_detailed_csv_files('ca_cjh', date_keys_ca_cjh, result_folder_path)
+
+                    if _should_run("CP_SAT", default=False):
+                        print(f"\n{'='*60}")
+                        print(" CP-SAT baseline 평가")
+                        print(f"{'='*60}")
+                        cp_results, cp_stats, cp_episode_data, cp_env = run_cp_sat_baseline(
+                            blocks,
+                            metadata,
+                            start_date,
+                            result_folder_path,
+                            settings=method_settings,
+                        )
+                        results['CP_SAT'] = {
+                            'results': cp_results,
+                            'statistics': cp_stats,
+                            'makespan': cp_stats.get('makespan_hours', 0)
+                        }
+                        if cp_results:
+                            date_keys_cp = list(set([r.get('date', '20250101') for r in cp_results if r.get('date')]))
+                            rename_detailed_csv_files('cp_sat', date_keys_cp, result_folder_path)
+
                     if _should_run("RL"):
                         print(f"\n{'='*60}")
                         print(" RL 모델 평가")
@@ -1208,6 +1397,8 @@ def main():
                 _add_method_summary("LPT", results.get("LPT"))
                 _add_method_summary("SEAM_MIN", results.get("SEAM_MIN"))
                 _add_method_summary("GA", results.get("GA"))
+                _add_method_summary("CA_CJH", results.get("CA_CJH"))
+                _add_method_summary("CP_SAT", results.get("CP_SAT"))
                 _add_method_summary("RL", results.get("RL"))
                 
                 if MODE == 2:
@@ -1245,6 +1436,58 @@ def main():
                             "ga_parallel_enabled": (item.get("statistics") or {}).get("ga_parallel_enabled", ""),
                             "ga_parallel_workers": (item.get("statistics") or {}).get("ga_parallel_workers", ""),
                             "ga_worker_threads": (item.get("statistics") or {}).get("ga_worker_threads", ""),
+                            # [AGENT-ADD] CA-CJH constructive insertion trace metadata.
+                            "ca_cjh_feature_mode": (item.get("statistics") or {}).get("ca_cjh_feature_mode", ""),
+                            "ca_cjh_objective_mode": (item.get("statistics") or {}).get("ca_cjh_objective_mode", ""),
+                            "ca_cjh_priority_mode": (item.get("statistics") or {}).get("ca_cjh_priority_mode", ""),
+                            "ca_cjh_beta_load": (item.get("statistics") or {}).get("ca_cjh_beta_load", ""),
+                            "ca_cjh_feasible_priority": (item.get("statistics") or {}).get("ca_cjh_feasible_priority", ""),
+                            "ca_cjh_respect_workshop_order": (item.get("statistics") or {}).get("ca_cjh_respect_workshop_order", ""),
+                            "ca_cjh_allow_forced_prefix_override": (item.get("statistics") or {}).get("ca_cjh_allow_forced_prefix_override", ""),
+                            "ca_cjh_w_load": (item.get("statistics") or {}).get("ca_cjh_w_load", ""),
+                            "ca_cjh_w_abnormal": (item.get("statistics") or {}).get("ca_cjh_w_abnormal", ""),
+                            "ca_cjh_w_shape_dev": (item.get("statistics") or {}).get("ca_cjh_w_shape_dev", ""),
+                            "ca_cjh_w_urgency": (item.get("statistics") or {}).get("ca_cjh_w_urgency", ""),
+                            "ca_cjh_w_risk": (item.get("statistics") or {}).get("ca_cjh_w_risk", ""),
+                            "ca_cjh_load_amplifier": (item.get("statistics") or {}).get("ca_cjh_load_amplifier", ""),
+                            "ca_cjh_alpha": (item.get("statistics") or {}).get("ca_cjh_alpha", ""),
+                            "ca_cjh_evaluations": (item.get("statistics") or {}).get("ca_cjh_evaluations", ""),
+                            "ca_cjh_total_violation_count": (item.get("statistics") or {}).get("ca_cjh_total_violation_count", ""),
+                            "ca_cjh_parallel": (item.get("statistics") or {}).get("ca_cjh_parallel", ""),
+                            "ca_cjh_workers": (item.get("statistics") or {}).get("ca_cjh_workers", ""),
+                            "ca_cjh_beam_width": (item.get("statistics") or {}).get("ca_cjh_beam_width", ""),
+                            "ca_cjh_beam_reason": (item.get("statistics") or {}).get("ca_cjh_beam_reason", ""),
+                            "cp_status": (item.get("statistics") or {}).get("cp_status", ""),
+                            "cp_model_mode": (item.get("statistics") or {}).get("cp_model_mode", ""),
+                            "cp_audit_status": (item.get("statistics") or {}).get("cp_audit_status", ""),
+                            "cp_audit_attempts": (item.get("statistics") or {}).get("cp_audit_attempts", ""),
+                            "cp_candidates_evaluated": (item.get("statistics") or {}).get("cp_candidates_evaluated", ""),
+                            "cp_parallel_enabled": (item.get("statistics") or {}).get("cp_parallel_enabled", ""),
+                            "cp_parallel_workers": (item.get("statistics") or {}).get("cp_parallel_workers", ""),
+                            "cp_candidate_threads": (item.get("statistics") or {}).get("cp_candidate_threads", ""),
+                            "cp_time_limit_sec": (item.get("statistics") or {}).get("cp_time_limit_sec", ""),
+                            "cp_workers": (item.get("statistics") or {}).get("cp_workers", ""),
+                            "cp_wall_time": (item.get("statistics") or {}).get("cp_wall_time", ""),
+                            "cp_solver_wall_time_total": (item.get("statistics") or {}).get("cp_solver_wall_time_total", ""),
+                            # [AGENT-ADD] Persist CP-SAT exact proof/objective metadata for result analysis.
+                            "cp_objective_value": (item.get("statistics") or {}).get("cp_objective_value", ""),
+                            "cp_best_bound": (item.get("statistics") or {}).get("cp_best_bound", ""),
+                            "cp_gap": (item.get("statistics") or {}).get("cp_gap", ""),
+                            "cp_selection_score_order": (item.get("statistics") or {}).get("cp_selection_score_order", ""),
+                            "cp_internal_makespan_minutes": (item.get("statistics") or {}).get("cp_internal_makespan_minutes", ""),
+                            "cp_selected_candidate_label": (item.get("statistics") or {}).get("cp_selected_candidate_label", ""),
+                            "cp_masking_hint": (item.get("statistics") or {}).get("cp_masking_hint", ""),
+                            "cp_feasibility_weight": (item.get("statistics") or {}).get("cp_feasibility_weight", ""),
+                            "cp_profile_replay": (item.get("statistics") or {}).get("cp_profile_replay", ""),
+                            "cp_profile_replay_top_k": (item.get("statistics") or {}).get("cp_profile_replay_top_k", ""),
+                            "cp_selected_allow_forced_prefix_override": (item.get("statistics") or {}).get("cp_selected_allow_forced_prefix_override", ""),
+                            "cp_selected_hard_profile": (item.get("statistics") or {}).get("cp_selected_hard_profile", ""),
+                            "cp_native_primary_terms": (item.get("statistics") or {}).get("cp_native_primary_terms", ""),
+                            "cp_native_raw_terms": (item.get("statistics") or {}).get("cp_native_raw_terms", ""),
+                            "cp_native_constraint_counts": (item.get("statistics") or {}).get("cp_native_constraint_counts", ""),
+                            "cp_native_objective_order": (item.get("statistics") or {}).get("cp_native_objective_order", ""),
+                            "cp_native_prefix_balance": (item.get("statistics") or {}).get("cp_native_prefix_balance", ""),
+                            "cp_basic_bay_repair_count": (item.get("statistics") or {}).get("cp_basic_bay_repair_count", ""),
                             "total_blocks": gen_context.get("total_blocks"),
                             "spread_days": gen_context.get("spread_days"),
                             "util_bucket": gen_context.get("util_bucket"),
@@ -1315,6 +1558,10 @@ def main():
                     print(f"   SEAM_MIN 휴리스틱 결과: seam_min_evaluation_results.csv")
                 if results.get("GA", {}).get("results"):
                     print(f"   GA baseline 결과: ga_evaluation_results.csv")
+                if results.get("CA_CJH", {}).get("results"):
+                    print(f"   CA-CJH-Insertion 결과: ca_cjh_evaluation_results.csv")
+                if results.get("CP_SAT", {}).get("results"):
+                    print(f"   CP-SAT baseline 결과: cp_sat_evaluation_results.csv")
                 if results.get("RL", {}).get("results"):
                     print(f"   RL 모델 결과: rl_best_results.csv")
                 
@@ -1604,7 +1851,7 @@ def main():
                         plot_df = plot_df[~plot_df["method"].astype(str).str.endswith("_ALL_MASK_OFF")].copy()
 
                         # [AGENT-EDIT] LPT 포함 (MODE 1에서도 선택 가능)
-                        method_order_default = ["SPT", "LPT", "SEAM_MIN", "GA", "RL", "착수일기준휴리스틱"]
+                        method_order_default = ["SPT", "LPT", "SEAM_MIN", "GA", "CA_CJH", "CP_SAT", "RL", "착수일기준휴리스틱"]
                         available_methods = list(plot_df["method"].unique())
                         method_order = [m for m in method_order_default if m in available_methods]
                         for m in available_methods:
@@ -1685,15 +1932,21 @@ def main():
                         })
                         color_map = {
                             "SPT": "#4C78A8",
+                            "LPT": "#3B5BA5",
                             "SEAM_MIN": "#54A24B",
                             "GA": "#F58518",
+                            "CA_CJH": "#8E6C8A",
+                            "CP_SAT": "#B279A2",
                             "RL": "#E45756",
                             "착수일기준휴리스틱": "#72B7B2",
                         }
                         marker_map = {
                             "SPT": "o",
+                            "LPT": "v",
                             "SEAM_MIN": "^",
                             "GA": "s",
+                            "CA_CJH": "h",
+                            "CP_SAT": "X",
                             "RL": "D",
                             "착수일기준휴리스틱": "P",
                         }

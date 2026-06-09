@@ -1,0 +1,7 @@
+﻿method,sweep,feature_mode,priority_mode,beta_load,objective_mode,alpha,makespan,violations,total_violation_count,runtime,evaluations,workers,parallel,result_folder
+CA_CJH,beta,process_plus_core,lpt_cjh,0.0,strict_lexicographic,0.0,93.03333333333333,21,26,34.87364028766751,2346,48,True,PPO/eval/ca_cjh_sweeps/20260526_163000_beta_actual/beta_0p0
+CA_CJH,beta,process_plus_core,lpt_cjh,0.3,strict_lexicographic,0.0,89.81666666666666,12,17,31.41302537592128,2346,48,True,PPO/eval/ca_cjh_sweeps/20260526_163000_beta_actual/beta_0p3
+CA_CJH,beta,process_plus_core,lpt_cjh,0.5,strict_lexicographic,0.0,90.13333333333334,16,21,31.97147460980341,2346,48,True,PPO/eval/ca_cjh_sweeps/20260526_163000_beta_actual/beta_0p5
+CA_CJH,beta,process_plus_core,lpt_cjh,0.7,strict_lexicographic,0.0,90.45,15,20,31.64717911463231,2346,48,True,PPO/eval/ca_cjh_sweeps/20260526_163000_beta_actual/beta_0p7
+CA_CJH,beta,process_plus_core,lpt_cjh,0.9,strict_lexicographic,0.0,90.65,15,20,32.72383906506002,2346,48,True,PPO/eval/ca_cjh_sweeps/20260526_163000_beta_actual/beta_0p9
+CA_CJH,beta,process_plus_core,lpt_cjh,1.0,strict_lexicographic,0.0,89.78333333333333,16,22,31.953407466877252,2346,48,True,PPO/eval/ca_cjh_sweeps/20260526_163000_beta_actual/beta_1p0

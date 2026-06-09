@@ -1,0 +1,23 @@
+# [AGENT-ADD] 생성 데이터 test instance 표 확인 메모
+
+1. S1, S2, ..., S6 / M1, ..., M6 / L1, ..., L6 라벨은 코드에 직접 정의되어 있지 않습니다.
+   코드와 결과 CSV에는 grid_case_id, distribution_profile, total_blocks, size_bucket이 저장됩니다.
+   따라서 S1/M1/L1은 발표용 label로 정의해서 사용하는 것이 맞습니다.
+
+2. 실제 블록 수 구간은 결과 CSV와 helper 코드 기준으로 다음과 같습니다.
+   - Small: 20, 30, 40, 50, 60, 70, 80
+   - Medium: 90, 100, 110, 120, 130, 140
+   - Large: 150, 160, 170, 180, 190, 200
+
+3. 발표용 test instance 대응은 다음처럼 정의하면 됩니다.
+   - S1 / M1 / L1 = General
+   - S2 / M2 / L2 = Paired Block
+   - S3 / M3 / L3 = Subassembly
+   - S4 / M4 / L4 = Mixed Relation
+   - S5 / M5 / L5 = Heavy Workload
+   - S6 / M6 / L6 = High Utilization
+
+4. 발표 슬라이드에는 내부 profile 이름을 쓰지 않는 것이 좋습니다.
+   내부 이름과 발표용 이름의 대응은 synthetic_test_instance_internal_mapping.csv에만 보관했습니다.
+
+5. 보안과 발표 표현을 위해 paired-block relation 또는 대응 블록 관계라는 표현을 사용합니다.

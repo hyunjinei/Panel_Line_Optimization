@@ -34,19 +34,27 @@
 
 - `fixed_position`
   - 예: `11번 블록은 처음`, `11번 블록은 세 번째`
+- `freeze_prefix`
+  - 예: `3번과 2번 블록은 이미 작업 중이니까 순서를 고정`
+- `priority_block`
+  - 예: `설비 복구 후 1번 블록을 가장 먼저 투입`
+- `delayed_block`
+  - 예: `4번 블록은 고장 때문에 바로 다음 투입에서 제외`
 - `precedence`
   - 예: `11번은 4번보다 먼저`
 - `manual_bay_assignment`
   - 예: `11번 블록은 35A로 배정`
 - 복합 요청
   - 예: `11번 블록은 세 번째로 하고 35A로 배정`
+  - 예: `3번과 2번은 작업 중으로 고정하고, 복구 후 1번을 먼저 투입하고, 4번은 다음 투입에서 제외`
 
 ## 실행 방식
 
 1. 자연어 요청 파싱
 2. 기존 PBS 스케줄러를 rerun
-   - LPT / heuristic: prefix-resume + precedence filter + manual bay override
-   - RL: prefix-resume + precedence filter + manual bay override
+   - LPT / heuristic: prefix-resume + priority/delay precedence filter + manual bay override
+   - RL: prefix-resume + priority/delay precedence filter + manual bay override
+   - [AGENT-EDIT] `freeze_prefix`는 해 변경 요청이 아니라 이미 실행된 현재상태이므로 before baseline에도 동일하게 적용한다.
 3. 결과 CSV 저장
 4. 기존 final audit 결과를 다시 집계
 5. before / after 설명 생성
@@ -93,6 +101,26 @@ python main.py llm --config config_self_label_diff.yaml --yes -- parse \
 ```
 
 `GROQ_MODEL`은 Groq 콘솔에서 현재 사용 가능한 모델명으로 바꾸면 된다.
+
+## Gemini 연결
+
+Google AI Studio에서 발급한 Gemini API key를 쓸 수 있다. 키는 코드에 직접 넣지 말고 `.env` 또는 쉘 환경변수에 둔다.
+
+```bash
+export PBS_LLM_PROVIDER=gemini
+export GEMINI_API_KEY="여기에_Gemini_API_key"
+export GEMINI_MODEL="gemini-2.5-flash-lite"
+```
+
+요청 파싱 확인:
+
+```bash
+python main.py llm --config config_self_label_diff.yaml --yes -- parse \
+  --parser gemini \
+  --request "11번 블록은 세 번째로 하고 35A로 배정"
+```
+
+[AGENT-ADD] `.env` 파일이 repo root에 있으면 `llm_interface`가 자동으로 읽는다. `.env`는 `.gitignore`에 포함되어 있으므로 git에 올라가지 않는다.
 
 ## Open-source 로컬 LLM 연결
 

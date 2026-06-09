@@ -19,6 +19,8 @@ def _classify_request(user_request: str) -> str:
     lowered = raw.lower()
     if "runtime" in lowered or "audit" in lowered or "켜" in raw or "끄" in raw:
         return "constraint_toggle"
+    if any(token in raw for token in ["작업 중", "이미 투입", "복구 후", "정상화 후", "고장", "우선 투입", "긴급"]):
+        return "emergency_reschedule"
     if "35a" in lowered or "36b" in lowered or "배정" in raw:
         if "번째" in raw or "처음" in raw:
             return "combo"
@@ -50,6 +52,8 @@ def _request_intro_line(user_request: str) -> str:
         return "이 요청은 특정 날짜의 일일 심수 상한을 추가한 뒤, 용량을 넘는 작업을 뒤로 미루도록 재스케줄링한 결과입니다."
     if request_type == "constraint_toggle":
         return "이 요청은 runtime 제약과 audit 제약의 적용 범위를 바꾼 뒤, 같은 데이터에 대해 다시 스케줄링하고 사후 검증한 결과입니다."
+    if request_type == "emergency_reschedule":
+        return "이 요청은 이미 작업 중인 prefix를 고정하고, 긴급 블록과 지연 블록 조건을 구조화한 뒤 기존 스케줄러를 다시 실행한 결과입니다."
     return "이 요청은 사용자 조건을 반영한 뒤 기존 스케줄러를 다시 실행한 재스케줄링 결과입니다."
 
 
@@ -170,6 +174,8 @@ def _operational_reasoning_line(before: ResultSummary, after: ResultSummary, use
         return "즉 특정 날짜의 심수 상한을 낮추면 그날 용량은 안정되지만 잔여 심수가 뒤 날짜로 넘어가면서 일정이 늘어날 가능성이 큽니다."
     if request_type == "constraint_toggle":
         return "즉 runtime에서는 더 자유롭게 선택했더라도 audit가 같은 제약을 계속 세기 때문에, 최종 위반 수가 크게 증가하면 이는 마스킹 완화의 직접적인 결과로 해석할 수 있습니다."
+    if request_type == "emergency_reschedule":
+        return "즉 이미 시작된 블록은 되돌리지 않고 고정하며, 긴급 블록은 남은 시퀀스 앞쪽으로 당기고 지연 블록은 우선 블록 뒤로 밀어 전체 상태를 다시 전개한 결과입니다."
     return "즉 요청은 단순 순서 치환이 아니라 상태를 바꾼 뒤 전체 스케줄을 다시 전개한 결과로 이해하는 것이 맞습니다."
 
 

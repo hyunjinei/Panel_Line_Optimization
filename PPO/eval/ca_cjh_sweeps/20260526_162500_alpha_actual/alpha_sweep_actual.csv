@@ -1,0 +1,8 @@
+﻿method,sweep,feature_mode,priority_mode,beta_load,objective_mode,alpha,makespan,violations,total_violation_count,runtime,evaluations,workers,parallel,result_folder
+CA_CJH,alpha,process_plus_core,lpt_cjh,0.7,cost,0.0,90.6,17,25,34.61917906301096,2346,48,True,PPO/eval/ca_cjh_sweeps/20260526_162500_alpha_actual/alpha_0p0
+CA_CJH,alpha,process_plus_core,lpt_cjh,0.7,cost,0.1,87.76666666666667,16,23,32.31790388002992,2346,48,True,PPO/eval/ca_cjh_sweeps/20260526_162500_alpha_actual/alpha_0p1
+CA_CJH,alpha,process_plus_core,lpt_cjh,0.7,cost,0.5,87.76666666666667,16,23,32.03294961107895,2346,48,True,PPO/eval/ca_cjh_sweeps/20260526_162500_alpha_actual/alpha_0p5
+CA_CJH,alpha,process_plus_core,lpt_cjh,0.7,cost,1.0,88.03333333333333,17,27,31.777926485985518,2346,48,True,PPO/eval/ca_cjh_sweeps/20260526_162500_alpha_actual/alpha_1p0
+CA_CJH,alpha,process_plus_core,lpt_cjh,0.7,cost,2.0,88.65,18,23,31.910264150239527,2346,48,True,PPO/eval/ca_cjh_sweeps/20260526_162500_alpha_actual/alpha_2p0
+CA_CJH,alpha,process_plus_core,lpt_cjh,0.7,cost,5.0,89.1,17,27,31.787903645075858,2346,48,True,PPO/eval/ca_cjh_sweeps/20260526_162500_alpha_actual/alpha_5p0
+CA_CJH,alpha,process_plus_core,lpt_cjh,0.7,cost,10.0,90.41666666666667,17,22,33.20619136141613,2346,48,True,PPO/eval/ca_cjh_sweeps/20260526_162500_alpha_actual/alpha_10p0

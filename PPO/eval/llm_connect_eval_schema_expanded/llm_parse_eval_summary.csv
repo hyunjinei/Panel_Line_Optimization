@@ -1,0 +1,2 @@
+﻿cases,parser_mode,llm_provider,validation_pass_rate,parse_exact_match_rate,constraint_f1_mean,constraint_precision_mean,constraint_recall_mean,unparsed_rate,parser_error_rate,latency_ms_mean
+12,deterministic,,1.0,1.0,1.0,1.0,1.0,0.0,0.0,0.12991666666666668

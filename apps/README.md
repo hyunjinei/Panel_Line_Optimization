@@ -29,6 +29,20 @@ streamlit run apps/streamlit_scheduler_chat.py
 bash apps/run_professor_demo.sh
 ```
 
+발표 슬라이드용 LLM 재스케줄링 데모:
+
+```bash
+bash apps/run_llm_presentation_demo.sh
+```
+
+구성:
+- 자연어 긴급 요청
+- LLM 구조화 제약
+- before/after 현재상태 prefix 비교
+- request satisfaction / current-state consistency / final audit 상태
+- makespan, primary violation, raw event 변화
+- audit-grounded explanation
+
 추가 UI 구성:
 - ChatGPT 홈 화면처럼 중앙 시작 화면 제공
 - 상세 실행 설정은 접힌 expander로 숨김

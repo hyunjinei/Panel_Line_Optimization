@@ -1,0 +1,571 @@
+﻿Method,Distribution Group,Block Count,Violation
+SPT,General,20,0
+SPT,General,30,4
+SPT,General,40,3
+SPT,General,50,14
+SPT,General,60,14
+SPT,General,70,15
+SPT,General,80,13
+SPT,General,90,30
+SPT,General,100,26
+SPT,General,110,18
+SPT,General,120,32
+SPT,General,130,33
+SPT,General,140,37
+SPT,General,150,43
+SPT,General,160,43
+SPT,General,170,59
+SPT,General,180,26
+SPT,General,190,60
+SPT,General,200,61
+SPT,Paired Block,20,0
+SPT,Paired Block,30,6
+SPT,Paired Block,40,0
+SPT,Paired Block,50,12
+SPT,Paired Block,60,10
+SPT,Paired Block,70,11
+SPT,Paired Block,80,27
+SPT,Paired Block,90,21
+SPT,Paired Block,100,19
+SPT,Paired Block,110,20
+SPT,Paired Block,120,31
+SPT,Paired Block,130,26
+SPT,Paired Block,140,31
+SPT,Paired Block,150,32
+SPT,Paired Block,160,45
+SPT,Paired Block,170,44
+SPT,Paired Block,180,55
+SPT,Paired Block,190,34
+SPT,Paired Block,200,49
+SPT,Subassembly,20,1
+SPT,Subassembly,30,0
+SPT,Subassembly,40,3
+SPT,Subassembly,50,3
+SPT,Subassembly,60,13
+SPT,Subassembly,70,19
+SPT,Subassembly,80,10
+SPT,Subassembly,90,19
+SPT,Subassembly,100,18
+SPT,Subassembly,110,31
+SPT,Subassembly,120,34
+SPT,Subassembly,130,23
+SPT,Subassembly,140,39
+SPT,Subassembly,150,33
+SPT,Subassembly,160,40
+SPT,Subassembly,170,45
+SPT,Subassembly,180,51
+SPT,Subassembly,190,55
+SPT,Subassembly,200,44
+SPT,Mixed Relation,20,0
+SPT,Mixed Relation,30,2
+SPT,Mixed Relation,40,6
+SPT,Mixed Relation,50,8
+SPT,Mixed Relation,60,16
+SPT,Mixed Relation,70,16
+SPT,Mixed Relation,80,17
+SPT,Mixed Relation,90,16
+SPT,Mixed Relation,100,19
+SPT,Mixed Relation,110,20
+SPT,Mixed Relation,120,19
+SPT,Mixed Relation,130,23
+SPT,Mixed Relation,140,32
+SPT,Mixed Relation,150,29
+SPT,Mixed Relation,160,30
+SPT,Mixed Relation,170,38
+SPT,Mixed Relation,180,46
+SPT,Mixed Relation,190,53
+SPT,Mixed Relation,200,47
+SPT,Heavy Workload,20,0
+SPT,Heavy Workload,30,5
+SPT,Heavy Workload,40,10
+SPT,Heavy Workload,50,11
+SPT,Heavy Workload,60,11
+SPT,Heavy Workload,70,19
+SPT,Heavy Workload,80,19
+SPT,Heavy Workload,90,22
+SPT,Heavy Workload,100,16
+SPT,Heavy Workload,110,13
+SPT,Heavy Workload,120,33
+SPT,Heavy Workload,130,40
+SPT,Heavy Workload,140,38
+SPT,Heavy Workload,150,30
+SPT,Heavy Workload,160,22
+SPT,Heavy Workload,170,54
+SPT,Heavy Workload,180,49
+SPT,Heavy Workload,190,64
+SPT,Heavy Workload,200,57
+SPT,High Utilization,20,1
+SPT,High Utilization,30,3
+SPT,High Utilization,40,9
+SPT,High Utilization,50,5
+SPT,High Utilization,60,8
+SPT,High Utilization,70,20
+SPT,High Utilization,80,14
+SPT,High Utilization,90,13
+SPT,High Utilization,100,25
+SPT,High Utilization,110,33
+SPT,High Utilization,120,41
+SPT,High Utilization,130,23
+SPT,High Utilization,140,36
+SPT,High Utilization,150,34
+SPT,High Utilization,160,35
+SPT,High Utilization,170,44
+SPT,High Utilization,180,20
+SPT,High Utilization,190,53
+SPT,High Utilization,200,54
+MSF,General,20,0
+MSF,General,30,4
+MSF,General,40,3
+MSF,General,50,9
+MSF,General,60,8
+MSF,General,70,11
+MSF,General,80,8
+MSF,General,90,23
+MSF,General,100,10
+MSF,General,110,6
+MSF,General,120,14
+MSF,General,130,11
+MSF,General,140,15
+MSF,General,150,30
+MSF,General,160,18
+MSF,General,170,22
+MSF,General,180,9
+MSF,General,190,13
+MSF,General,200,28
+MSF,Paired Block,20,0
+MSF,Paired Block,30,6
+MSF,Paired Block,40,2
+MSF,Paired Block,50,12
+MSF,Paired Block,60,6
+MSF,Paired Block,70,6
+MSF,Paired Block,80,15
+MSF,Paired Block,90,7
+MSF,Paired Block,100,8
+MSF,Paired Block,110,11
+MSF,Paired Block,120,11
+MSF,Paired Block,130,9
+MSF,Paired Block,140,9
+MSF,Paired Block,150,11
+MSF,Paired Block,160,11
+MSF,Paired Block,170,16
+MSF,Paired Block,180,20
+MSF,Paired Block,190,10
+MSF,Paired Block,200,19
+MSF,Subassembly,20,1
+MSF,Subassembly,30,0
+MSF,Subassembly,40,3
+MSF,Subassembly,50,4
+MSF,Subassembly,60,6
+MSF,Subassembly,70,9
+MSF,Subassembly,80,10
+MSF,Subassembly,90,16
+MSF,Subassembly,100,11
+MSF,Subassembly,110,16
+MSF,Subassembly,120,22
+MSF,Subassembly,130,8
+MSF,Subassembly,140,10
+MSF,Subassembly,150,14
+MSF,Subassembly,160,12
+MSF,Subassembly,170,9
+MSF,Subassembly,180,22
+MSF,Subassembly,190,23
+MSF,Subassembly,200,15
+MSF,Mixed Relation,20,0
+MSF,Mixed Relation,30,4
+MSF,Mixed Relation,40,4
+MSF,Mixed Relation,50,8
+MSF,Mixed Relation,60,14
+MSF,Mixed Relation,70,12
+MSF,Mixed Relation,80,12
+MSF,Mixed Relation,90,16
+MSF,Mixed Relation,100,8
+MSF,Mixed Relation,110,10
+MSF,Mixed Relation,120,6
+MSF,Mixed Relation,130,13
+MSF,Mixed Relation,140,21
+MSF,Mixed Relation,150,12
+MSF,Mixed Relation,160,19
+MSF,Mixed Relation,170,31
+MSF,Mixed Relation,180,18
+MSF,Mixed Relation,190,22
+MSF,Mixed Relation,200,23
+MSF,Heavy Workload,20,0
+MSF,Heavy Workload,30,6
+MSF,Heavy Workload,40,10
+MSF,Heavy Workload,50,13
+MSF,Heavy Workload,60,7
+MSF,Heavy Workload,70,12
+MSF,Heavy Workload,80,13
+MSF,Heavy Workload,90,22
+MSF,Heavy Workload,100,14
+MSF,Heavy Workload,110,16
+MSF,Heavy Workload,120,25
+MSF,Heavy Workload,130,38
+MSF,Heavy Workload,140,24
+MSF,Heavy Workload,150,30
+MSF,Heavy Workload,160,16
+MSF,Heavy Workload,170,38
+MSF,Heavy Workload,180,30
+MSF,Heavy Workload,190,39
+MSF,Heavy Workload,200,36
+MSF,High Utilization,20,0
+MSF,High Utilization,30,4
+MSF,High Utilization,40,10
+MSF,High Utilization,50,8
+MSF,High Utilization,60,7
+MSF,High Utilization,70,15
+MSF,High Utilization,80,20
+MSF,High Utilization,90,16
+MSF,High Utilization,100,11
+MSF,High Utilization,110,27
+MSF,High Utilization,120,26
+MSF,High Utilization,130,26
+MSF,High Utilization,140,22
+MSF,High Utilization,150,27
+MSF,High Utilization,160,33
+MSF,High Utilization,170,33
+MSF,High Utilization,180,16
+MSF,High Utilization,190,37
+MSF,High Utilization,200,56
+LPT,General,20,0
+LPT,General,30,4
+LPT,General,40,3
+LPT,General,50,10
+LPT,General,60,8
+LPT,General,70,15
+LPT,General,80,9
+LPT,General,90,18
+LPT,General,100,10
+LPT,General,110,4
+LPT,General,120,10
+LPT,General,130,8
+LPT,General,140,12
+LPT,General,150,24
+LPT,General,160,16
+LPT,General,170,12
+LPT,General,180,12
+LPT,General,190,8
+LPT,General,200,17
+LPT,Paired Block,20,0
+LPT,Paired Block,30,6
+LPT,Paired Block,40,2
+LPT,Paired Block,50,8
+LPT,Paired Block,60,6
+LPT,Paired Block,70,6
+LPT,Paired Block,80,10
+LPT,Paired Block,90,3
+LPT,Paired Block,100,11
+LPT,Paired Block,110,8
+LPT,Paired Block,120,8
+LPT,Paired Block,130,4
+LPT,Paired Block,140,1
+LPT,Paired Block,150,8
+LPT,Paired Block,160,2
+LPT,Paired Block,170,8
+LPT,Paired Block,180,12
+LPT,Paired Block,190,15
+LPT,Paired Block,200,12
+LPT,Subassembly,20,1
+LPT,Subassembly,30,0
+LPT,Subassembly,40,2
+LPT,Subassembly,50,4
+LPT,Subassembly,60,7
+LPT,Subassembly,70,3
+LPT,Subassembly,80,10
+LPT,Subassembly,90,10
+LPT,Subassembly,100,4
+LPT,Subassembly,110,16
+LPT,Subassembly,120,14
+LPT,Subassembly,130,7
+LPT,Subassembly,140,13
+LPT,Subassembly,150,3
+LPT,Subassembly,160,2
+LPT,Subassembly,170,1
+LPT,Subassembly,180,8
+LPT,Subassembly,190,17
+LPT,Subassembly,200,9
+LPT,Mixed Relation,20,0
+LPT,Mixed Relation,30,2
+LPT,Mixed Relation,40,3
+LPT,Mixed Relation,50,6
+LPT,Mixed Relation,60,10
+LPT,Mixed Relation,70,13
+LPT,Mixed Relation,80,10
+LPT,Mixed Relation,90,17
+LPT,Mixed Relation,100,3
+LPT,Mixed Relation,110,5
+LPT,Mixed Relation,120,6
+LPT,Mixed Relation,130,7
+LPT,Mixed Relation,140,14
+LPT,Mixed Relation,150,12
+LPT,Mixed Relation,160,14
+LPT,Mixed Relation,170,17
+LPT,Mixed Relation,180,7
+LPT,Mixed Relation,190,11
+LPT,Mixed Relation,200,18
+LPT,Heavy Workload,20,0
+LPT,Heavy Workload,30,2
+LPT,Heavy Workload,40,3
+LPT,Heavy Workload,50,6
+LPT,Heavy Workload,60,4
+LPT,Heavy Workload,70,8
+LPT,Heavy Workload,80,9
+LPT,Heavy Workload,90,2
+LPT,Heavy Workload,100,5
+LPT,Heavy Workload,110,9
+LPT,Heavy Workload,120,12
+LPT,Heavy Workload,130,18
+LPT,Heavy Workload,140,8
+LPT,Heavy Workload,150,6
+LPT,Heavy Workload,160,3
+LPT,Heavy Workload,170,21
+LPT,Heavy Workload,180,5
+LPT,Heavy Workload,190,19
+LPT,Heavy Workload,200,18
+LPT,High Utilization,20,0
+LPT,High Utilization,30,3
+LPT,High Utilization,40,7
+LPT,High Utilization,50,3
+LPT,High Utilization,60,3
+LPT,High Utilization,70,10
+LPT,High Utilization,80,13
+LPT,High Utilization,90,3
+LPT,High Utilization,100,3
+LPT,High Utilization,110,5
+LPT,High Utilization,120,12
+LPT,High Utilization,130,12
+LPT,High Utilization,140,1
+LPT,High Utilization,150,8
+LPT,High Utilization,160,17
+LPT,High Utilization,170,4
+LPT,High Utilization,180,2
+LPT,High Utilization,190,15
+LPT,High Utilization,200,15
+GA,General,20,0
+GA,General,30,1
+GA,General,40,1
+GA,General,50,0
+GA,General,60,1
+GA,General,70,1
+GA,General,80,1
+GA,General,90,4
+GA,General,100,6
+GA,General,110,0
+GA,General,120,9
+GA,General,130,4
+GA,General,140,5
+GA,General,150,20
+GA,General,160,21
+GA,General,170,14
+GA,General,180,3
+GA,General,190,16
+GA,General,200,21
+GA,Paired Block,20,0
+GA,Paired Block,30,2
+GA,Paired Block,40,0
+GA,Paired Block,50,3
+GA,Paired Block,60,1
+GA,Paired Block,70,2
+GA,Paired Block,80,3
+GA,Paired Block,90,0
+GA,Paired Block,100,5
+GA,Paired Block,110,3
+GA,Paired Block,120,2
+GA,Paired Block,130,5
+GA,Paired Block,140,4
+GA,Paired Block,150,9
+GA,Paired Block,160,9
+GA,Paired Block,170,8
+GA,Paired Block,180,19
+GA,Paired Block,190,9
+GA,Paired Block,200,22
+GA,Subassembly,20,1
+GA,Subassembly,30,0
+GA,Subassembly,40,1
+GA,Subassembly,50,0
+GA,Subassembly,60,1
+GA,Subassembly,70,2
+GA,Subassembly,80,2
+GA,Subassembly,90,3
+GA,Subassembly,100,1
+GA,Subassembly,110,5
+GA,Subassembly,120,4
+GA,Subassembly,130,4
+GA,Subassembly,140,8
+GA,Subassembly,150,6
+GA,Subassembly,160,4
+GA,Subassembly,170,9
+GA,Subassembly,180,7
+GA,Subassembly,190,16
+GA,Subassembly,200,8
+GA,Mixed Relation,20,0
+GA,Mixed Relation,30,1
+GA,Mixed Relation,40,0
+GA,Mixed Relation,50,1
+GA,Mixed Relation,60,0
+GA,Mixed Relation,70,3
+GA,Mixed Relation,80,2
+GA,Mixed Relation,90,4
+GA,Mixed Relation,100,2
+GA,Mixed Relation,110,2
+GA,Mixed Relation,120,4
+GA,Mixed Relation,130,2
+GA,Mixed Relation,140,3
+GA,Mixed Relation,150,2
+GA,Mixed Relation,160,2
+GA,Mixed Relation,170,22
+GA,Mixed Relation,180,10
+GA,Mixed Relation,190,4
+GA,Mixed Relation,200,12
+GA,Heavy Workload,20,0
+GA,Heavy Workload,30,1
+GA,Heavy Workload,40,1
+GA,Heavy Workload,50,1
+GA,Heavy Workload,60,0
+GA,Heavy Workload,70,1
+GA,Heavy Workload,80,6
+GA,Heavy Workload,90,1
+GA,Heavy Workload,100,3
+GA,Heavy Workload,110,3
+GA,Heavy Workload,120,7
+GA,Heavy Workload,130,10
+GA,Heavy Workload,140,8
+GA,Heavy Workload,150,7
+GA,Heavy Workload,160,5
+GA,Heavy Workload,170,12
+GA,Heavy Workload,180,10
+GA,Heavy Workload,190,15
+GA,Heavy Workload,200,15
+GA,High Utilization,20,0
+GA,High Utilization,30,1
+GA,High Utilization,40,1
+GA,High Utilization,50,0
+GA,High Utilization,60,1
+GA,High Utilization,70,2
+GA,High Utilization,80,2
+GA,High Utilization,90,1
+GA,High Utilization,100,1
+GA,High Utilization,110,5
+GA,High Utilization,120,6
+GA,High Utilization,130,4
+GA,High Utilization,140,4
+GA,High Utilization,150,10
+GA,High Utilization,160,11
+GA,High Utilization,170,12
+GA,High Utilization,180,10
+GA,High Utilization,190,17
+GA,High Utilization,200,20
+Proposed,General,20,0
+Proposed,General,30,1
+Proposed,General,40,1
+Proposed,General,50,0
+Proposed,General,60,1
+Proposed,General,70,1
+Proposed,General,80,0
+Proposed,General,90,2
+Proposed,General,100,2
+Proposed,General,110,0
+Proposed,General,120,2
+Proposed,General,130,2
+Proposed,General,140,1
+Proposed,General,150,0
+Proposed,General,160,2
+Proposed,General,170,2
+Proposed,General,180,0
+Proposed,General,190,5
+Proposed,General,200,4
+Proposed,Paired Block,20,0
+Proposed,Paired Block,30,2
+Proposed,Paired Block,40,0
+Proposed,Paired Block,50,3
+Proposed,Paired Block,60,1
+Proposed,Paired Block,70,2
+Proposed,Paired Block,80,0
+Proposed,Paired Block,90,0
+Proposed,Paired Block,100,0
+Proposed,Paired Block,110,0
+Proposed,Paired Block,120,2
+Proposed,Paired Block,130,2
+Proposed,Paired Block,140,0
+Proposed,Paired Block,150,0
+Proposed,Paired Block,160,0
+Proposed,Paired Block,170,3
+Proposed,Paired Block,180,1
+Proposed,Paired Block,190,0
+Proposed,Paired Block,200,6
+Proposed,Subassembly,20,1
+Proposed,Subassembly,30,0
+Proposed,Subassembly,40,1
+Proposed,Subassembly,50,0
+Proposed,Subassembly,60,1
+Proposed,Subassembly,70,2
+Proposed,Subassembly,80,2
+Proposed,Subassembly,90,0
+Proposed,Subassembly,100,1
+Proposed,Subassembly,110,1
+Proposed,Subassembly,120,3
+Proposed,Subassembly,130,1
+Proposed,Subassembly,140,2
+Proposed,Subassembly,150,2
+Proposed,Subassembly,160,1
+Proposed,Subassembly,170,0
+Proposed,Subassembly,180,3
+Proposed,Subassembly,190,3
+Proposed,Subassembly,200,2
+Proposed,Mixed Relation,20,0
+Proposed,Mixed Relation,30,1
+Proposed,Mixed Relation,40,0
+Proposed,Mixed Relation,50,1
+Proposed,Mixed Relation,60,0
+Proposed,Mixed Relation,70,2
+Proposed,Mixed Relation,80,2
+Proposed,Mixed Relation,90,2
+Proposed,Mixed Relation,100,0
+Proposed,Mixed Relation,110,2
+Proposed,Mixed Relation,120,3
+Proposed,Mixed Relation,130,1
+Proposed,Mixed Relation,140,2
+Proposed,Mixed Relation,150,0
+Proposed,Mixed Relation,160,1
+Proposed,Mixed Relation,170,7
+Proposed,Mixed Relation,180,1
+Proposed,Mixed Relation,190,1
+Proposed,Mixed Relation,200,2
+Proposed,Heavy Workload,20,0
+Proposed,Heavy Workload,30,1
+Proposed,Heavy Workload,40,1
+Proposed,Heavy Workload,50,1
+Proposed,Heavy Workload,60,0
+Proposed,Heavy Workload,70,1
+Proposed,Heavy Workload,80,3
+Proposed,Heavy Workload,90,0
+Proposed,Heavy Workload,100,2
+Proposed,Heavy Workload,110,1
+Proposed,Heavy Workload,120,2
+Proposed,Heavy Workload,130,3
+Proposed,Heavy Workload,140,1
+Proposed,Heavy Workload,150,3
+Proposed,Heavy Workload,160,1
+Proposed,Heavy Workload,170,3
+Proposed,Heavy Workload,180,4
+Proposed,Heavy Workload,190,0
+Proposed,Heavy Workload,200,2
+Proposed,High Utilization,20,0
+Proposed,High Utilization,30,1
+Proposed,High Utilization,40,1
+Proposed,High Utilization,50,0
+Proposed,High Utilization,60,1
+Proposed,High Utilization,70,0
+Proposed,High Utilization,80,2
+Proposed,High Utilization,90,1
+Proposed,High Utilization,100,0
+Proposed,High Utilization,110,1
+Proposed,High Utilization,120,0
+Proposed,High Utilization,130,1
+Proposed,High Utilization,140,0
+Proposed,High Utilization,150,2
+Proposed,High Utilization,160,2
+Proposed,High Utilization,170,2
+Proposed,High Utilization,180,2
+Proposed,High Utilization,190,2
+Proposed,High Utilization,200,6

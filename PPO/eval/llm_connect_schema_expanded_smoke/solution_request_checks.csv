@@ -1,0 +1,5 @@
+﻿type,expected_prefix,actual_after_prefix,ok,block_id,expected_position_after_frozen_prefix,actual_position,priority_before_ids,expected_bay,actual_bay
+freeze_prefix,"[3, 2]","[3, 2]",True,,,,,,
+priority_block,,,True,1.0,2.0,2.0,,,
+delayed_block,,,True,4.0,,3.0,[1],,
+manual_bay_assignment,,,True,15.0,,,,36B,36B

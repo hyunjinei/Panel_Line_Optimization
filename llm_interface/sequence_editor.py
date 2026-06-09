@@ -7,6 +7,17 @@ from typing import List, Sequence
 from .schemas import EditConstraint, ScheduleEditRequest
 
 
+def _prepend_blocks(sequence: List[int], block_ids: Sequence[int]) -> List[int]:
+    """[AGENT-ADD] Move already-started/frozen blocks to the prefix order."""
+    prefix: List[int] = []
+    for block_id in block_ids:
+        normalized = int(block_id)
+        if normalized in sequence and normalized not in prefix:
+            prefix.append(normalized)
+    remainder = [block_id for block_id in sequence if block_id not in set(prefix)]
+    return [*prefix, *remainder]
+
+
 def _move_block(sequence: List[int], block_id: int, position: int) -> List[int]:
     if block_id not in sequence:
         raise ValueError(f"block_id {block_id} is not in the current sequence")
@@ -42,12 +53,45 @@ def apply_edit_request(sequence: Sequence[int], request: ScheduleEditRequest) ->
     """
 
     edited = list(sequence)
+    priority_ids = [
+        int(constraint.block_id)
+        for constraint in request.constraints
+        if constraint.type == "priority_block" and constraint.block_id is not None
+    ]
+    forced_insert_position = 0
     for constraint in request.constraints:
+        if constraint.type == "freeze_prefix":
+            before_prefix = list(edited)
+            edited = _apply_constraint(edited, constraint)
+            block_ids = [int(block_id) for block_id in (constraint.block_ids or []) if int(block_id) in before_prefix]
+            forced_insert_position = max(forced_insert_position, len(dict.fromkeys(block_ids)))
+            continue
+        if constraint.type == "priority_block":
+            if constraint.block_id is None:
+                raise ValueError("priority_block requires block_id")
+            edited = _move_block(edited, int(constraint.block_id), forced_insert_position)
+            forced_insert_position += 1
+            continue
         edited = _apply_constraint(edited, constraint)
+    for constraint in request.constraints:
+        if constraint.type != "delayed_block" or constraint.block_id is None:
+            continue
+        for priority_id in priority_ids:
+            if priority_id != int(constraint.block_id):
+                edited = _enforce_precedence(edited, priority_id, int(constraint.block_id))
     return edited
 
 
 def _apply_constraint(sequence: List[int], constraint: EditConstraint) -> List[int]:
+    if constraint.type == "freeze_prefix":
+        block_ids = list(constraint.block_ids or [])
+        if not block_ids and constraint.block_id is not None:
+            block_ids = [int(constraint.block_id)]
+        return _prepend_blocks(sequence, block_ids)
+
+    if constraint.type == "delayed_block":
+        return list(sequence)
+
     if constraint.type == "fixed_position":
         if constraint.block_id is None or constraint.position is None:
             raise ValueError("fixed_position requires block_id and position")

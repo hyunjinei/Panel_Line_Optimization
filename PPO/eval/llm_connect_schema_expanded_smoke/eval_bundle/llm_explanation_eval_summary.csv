@@ -1,0 +1,2 @@
+﻿bundles,request_echo_mean,metric_delta_consistency_mean,trace_grounding_mean,constraint_grounding_mean,output_completeness_mean,llm_grounded_explanation_score_mean
+1,1.0,1.0,1.0,1.0,1.0,1.0

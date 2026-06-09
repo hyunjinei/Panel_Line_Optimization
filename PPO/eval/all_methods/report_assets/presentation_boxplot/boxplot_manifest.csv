@@ -1,0 +1,14 @@
+﻿file,metric,method,rows,columns,description
+makespan_boxplot_all_methods_long.csv,Makespan (h),All,570,4,All methods long-format source for block-count boxplots
+makespan_boxplot_SPT.csv,Makespan (h),SPT,6,20,Rows are distribution groups; columns are block counts 20 to 200
+makespan_boxplot_MSF.csv,Makespan (h),MSF,6,20,Rows are distribution groups; columns are block counts 20 to 200
+makespan_boxplot_LPT.csv,Makespan (h),LPT,6,20,Rows are distribution groups; columns are block counts 20 to 200
+makespan_boxplot_GA.csv,Makespan (h),GA,6,20,Rows are distribution groups; columns are block counts 20 to 200
+makespan_boxplot_Proposed.csv,Makespan (h),Proposed,6,20,Rows are distribution groups; columns are block counts 20 to 200
+violation_boxplot_all_methods_long.csv,Violation,All,570,4,All methods long-format source for block-count boxplots
+violation_boxplot_SPT.csv,Violation,SPT,6,20,Rows are distribution groups; columns are block counts 20 to 200
+violation_boxplot_MSF.csv,Violation,MSF,6,20,Rows are distribution groups; columns are block counts 20 to 200
+violation_boxplot_LPT.csv,Violation,LPT,6,20,Rows are distribution groups; columns are block counts 20 to 200
+violation_boxplot_GA.csv,Violation,GA,6,20,Rows are distribution groups; columns are block counts 20 to 200
+violation_boxplot_Proposed.csv,Violation,Proposed,6,20,Rows are distribution groups; columns are block counts 20 to 200
+boxplot_readme_ko.txt,description,All,0,0,Korean explanation file

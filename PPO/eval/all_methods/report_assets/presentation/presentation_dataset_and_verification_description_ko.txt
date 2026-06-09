@@ -1,0 +1,280 @@
+# [AGENT-ADD] 발표용 CSV와 데이터 설명
+
+이 폴더는 발표와 엑셀 그래프 작성을 위해 필요한 생성데이터 결과와 practical case 결과를 한 곳에 모은 폴더입니다.
+원본 결과 파일은 report_assets 상위 폴더와 PPO/eval 각 실행 폴더에 그대로 남겨두고, 여기에는 발표용 복사본만 모았습니다.
+
+
+1. 생성데이터 실험 구성
+
+비교 방법:
+- SPT
+- MSF
+- LPT
+- GA
+- Proposed
+
+블록 수:
+- 20부터 200까지 10 단위
+- 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200
+
+크기 구간:
+- Small: 20~80 블록
+- Medium: 90~140 블록
+- Large: 150~200 블록
+
+분포:
+- base
+- ps_heavy
+- sub_heavy
+- mixed_ps_sub
+- heavy_work
+- overload
+
+
+2. 생성데이터 분포 뜻
+
+base
+- 기본 생성 조건입니다.
+- P/S 쌍을 추가로 많이 만들지 않습니다.
+- 별판 그룹을 추가로 만들지 않습니다.
+- 작업량, 크기, 두께 스케일은 기본값입니다.
+- 기준 문제로 사용합니다.
+
+ps_heavy
+- P/S 쌍이 많은 문제입니다.
+- P/S 관련 순서와 연속성 부담이 커집니다.
+- ps_ratio가 0.10으로 설정됩니다.
+- sub_ratio는 0.00입니다.
+
+sub_heavy
+- 별판 또는 소조립 그룹이 많은 문제입니다.
+- 별판 통합 처리 관련 이벤트가 더 자주 생길 수 있습니다.
+- sub_ratio가 0.10으로 설정됩니다.
+- ps_ratio는 0.00입니다.
+
+mixed_ps_sub
+- P/S 쌍과 별판 그룹이 둘 다 많은 문제입니다.
+- P/S 순서 부담과 별판 묶음 처리가 동시에 들어갑니다.
+- ps_ratio와 sub_ratio가 모두 0.10입니다.
+
+heavy_work
+- 블록 자체의 작업량이 큰 문제입니다.
+- 심수, tact time, 길이, 폭, 두께가 커집니다.
+- 한 블록당 처리 시간이 길어지고 용량 부담이 커집니다.
+- makespan과 제약 충돌을 함께 보기 위한 분포입니다.
+
+overload
+- 전체 생산 부하가 큰 문제입니다.
+- util_target이 1.25로 높습니다.
+- 같은 기간 안에 더 빡빡하게 블록을 넣는 상황을 나타냅니다.
+- 용량 초과, 일정 밀림, 제약 충돌 가능성이 커집니다.
+
+주의:
+- sub_ratio = 0.00은 생성 단계에서 별판 그룹을 의도적으로 만들지 않는다는 뜻입니다.
+- ps_ratio = 0.00은 생성 단계에서 P/S 쌍을 의도적으로 만들지 않는다는 뜻입니다.
+- base는 제약이 없는 문제가 아닙니다. 용량, 베이, C/Seam, 라인, 론지 같은 기본 제약은 그대로 검사됩니다.
+
+
+3. 생성데이터 CSV 파일
+
+synthetic_all_graph_values_long.csv
+- 생성데이터 전체 raw 그래프 값입니다.
+- 각 문제, 방법, 블록 수, 분포, makespan, violation 값을 long format으로 저장합니다.
+
+synthetic_size_profile_summary.csv
+- Small, Medium, Large 크기 구간별, 분포별, 방법별 요약입니다.
+- 평균, 표준편차, 최소, 사분위, 중앙값, 최대값을 포함합니다.
+
+synthetic_block_profile_summary.csv
+- 블록 수별, 분포별, 방법별 요약입니다.
+- 20~200 전체 범위를 그대로 분석할 때 사용합니다.
+
+synthetic_size_summary.csv
+- 크기 구간별, 방법별 요약입니다.
+- 분포를 합쳐서 Small, Medium, Large 효과를 볼 때 사용합니다.
+
+synthetic_profile_summary.csv
+- 분포별, 방법별 요약입니다.
+- 블록 수 구간을 합쳐서 분포 효과를 볼 때 사용합니다.
+
+synthetic_size_profile_makespan_wide.csv
+- Small, Medium, Large x 분포별 makespan wide table입니다.
+- 엑셀에서 방법별 막대그래프나 선그래프를 만들기 쉽도록 구성했습니다.
+
+synthetic_size_profile_violations_wide.csv
+- Small, Medium, Large x 분포별 violation wide table입니다.
+
+synthetic_block_profile_makespan_wide.csv
+- 블록 수 x 분포별 makespan wide table입니다.
+
+synthetic_block_profile_violations_wide.csv
+- 블록 수 x 분포별 violation wide table입니다.
+
+synthetic_block_count_makespan_wide.csv
+- 블록 수별 makespan wide table입니다.
+- 분포를 평균으로 합친 전체 블록 수 추세 그래프에 사용합니다.
+
+synthetic_block_count_violations_wide.csv
+- 블록 수별 violation wide table입니다.
+
+synthetic_size_profile_block_ranges.csv
+- Small, Medium, Large 구간에 어떤 블록 수가 포함되었는지 정리한 파일입니다.
+
+
+4. Practical case 구성
+
+입력 데이터:
+- environment/판넬 블록 데이터셋_250618_SNU.xlsx
+
+비교 방법:
+- Actual
+- ActionMasking
+- SPT
+- MSF
+- LPT
+- GA
+- Proposed
+
+Practical case에서 비교한 값:
+- Makespan
+- Primary violation
+- Raw event
+- Info event
+- Bay 35A longi 합계
+- Bay 36B longi 합계
+- Bay longi 분배 차이
+
+
+5. Practical case CSV 파일
+
+practical_case_summary.csv
+- practical case 전체 요약입니다.
+- 방법별 makespan, violation, raw event, Bay longi 분배를 포함합니다.
+
+practical_case_plot_values_long.csv
+- practical case 그래프 작성용 long format입니다.
+- Makespan, Violation, Bay 35A longi, Bay 36B longi를 한 파일에 모았습니다.
+
+practical_case_bay_longi_distribution.csv
+- 방법별 35A, 36B longi 분배입니다.
+
+practical_case_violation_verification.csv
+- 보고용 violation과 독립 감사 violation을 함께 비교한 파일입니다.
+- Proposed의 primary violation 0 검증 근거가 들어 있습니다.
+
+independent_constraint_audit_summary.csv
+- 저장된 스케줄을 원본 데이터와 환경 제약 검사기로 다시 검사한 독립 감사 요약입니다.
+
+independent_constraint_audit_breakdown.csv
+- 독립 감사에서 감지된 제약 코드별 세부 집계입니다.
+
+independent_constraint_audit_rows.csv
+- 독립 감사의 블록별 검사 결과입니다.
+
+independent_constraint_catalog.csv
+- 독립 감사에서 어떤 제약을 켰는지 정리한 목록입니다.
+
+
+6. Violation 집계 기준
+
+Primary violation
+- 실제 제약 위반으로 집계하는 값입니다.
+- 발표에서 "violation"이라고 말할 때 사용하는 기준입니다.
+
+Raw event
+- 검사 중 감지된 모든 이벤트입니다.
+- 실제 위반과 INFO 이벤트를 모두 포함합니다.
+
+Info event
+- 정보성 이벤트입니다.
+- 실제 위반으로 세지 않습니다.
+
+Proposed practical case 결과:
+- audit_primary = 0
+- audit_raw = 6
+- audit_info = 6
+- audit_primary_constraint_ids = []
+- audit_raw_constraint_ids = ["P7#1", "P7#1", "P5#17", "P5#17", "P5#17", "P5#17"]
+
+해석:
+- P7#1은 론지 A/B 부하 균형 관련 정보성 이벤트입니다.
+- P5#17은 별판 통합 처리 정보성 이벤트입니다.
+- Proposed의 raw event 6건은 모두 INFO이므로 실제 primary violation은 0입니다.
+
+
+7. 독립 감사에서 검사한 제약 목록
+
+P5#8
+- 평일 심수 용량
+
+P5#9
+- 72심 초과 시 17블록 조건
+
+P5#10
+- 주말 심수 용량
+
+P5#13
+- 자재 미입고 금지
+
+P5#15
+- 명절 전날 제약
+
+P5#16
+- 혹서기 용량 제약
+
+P5#17
+- 별판 통합 처리
+- INFO 성격
+
+P7#1
+- 론지 A/B 부하 균형
+- INFO 성격
+
+P7#2
+- 폭 21m 초과 블록은 B베이
+
+P7#3
+- 작은 P/S 쌍 동일 베이
+
+P7#4
+- 날짜 조건 P/S 동일 베이
+
+P7#7
+- 베이 연속 배치 제한
+
+P7#8
+- 주판 Only 연속 제한
+
+P7#10
+- 론지 30개 이상 A베이 우선
+
+P7#12
+- LT강재 A베이 우선
+
+ROUTING_C_SEAM_SPACING
+- C/Seam 간격
+
+ROUTING_CURVED_SPACING
+- 곡판 간격
+
+ROUTING_HIGH_SEAM_SPACING
+- 고심수 간격
+
+ROUTING_WORKSHOP_ORDER
+- 같은 실제 작업장 내 조립착수일 순서
+
+LINE_GROUP_CONSTRAINT
+- 라인 그룹 연속 제한
+
+
+8. 발표용 문장 예시
+
+생성데이터 실험에서는 블록 수 20~200 범위와 6개 분포 조건을 조합하여 SPT, MSF, LPT, GA, Proposed를 비교하였다.
+
+분포 조건은 기본 문제, P/S 쌍 증가, 별판 그룹 증가, P/S와 별판 혼합, 작업량 증가, 전체 부하 증가를 각각 나타낸다.
+
+Practical case에서는 원본 실적 데이터를 사용하여 각 방법의 makespan, primary violation, Bay longi 분배를 비교하였다.
+
+Violation은 primary violation 기준으로 집계하였다. Proposed는 저장된 CSV 숫자만 사용한 것이 아니라, 원본 블록 데이터를 다시 불러오고 저장된 시퀀스와 Bay 배정, 시작 및 종료 시간을 재생하여 독립 감사로 다시 검사했다.
+
+독립 감사 결과 Proposed의 primary violation은 0이며, raw event 6건은 모두 INFO 이벤트이므로 실제 위반에서 제외하였다.

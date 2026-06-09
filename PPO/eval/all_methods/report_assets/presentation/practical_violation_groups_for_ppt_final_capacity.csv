@@ -1,0 +1,43 @@
+﻿method_order,case_label,method_label,group_order,violation_group_ko,count,source_constraints,note
+0,ActualReplay,Manual,1,후공정 착수 순서 위반,23,ROUTING_WORKSHOP_ORDER pairwise inversions,같은 작업장 내 조립착수일 순서 역전쌍 전수 계산
+0,ActualReplay,Manual,2,베이/론지 연속 배치 제한 위반,22,P7#7 + P7#8,베이 연속 배치 20회 + 주판 Only 연속 2회
+0,ActualReplay,Manual,3,특정 블록 및 공정 연속 배치 제한 위반,21,ROUTING_C_SEAM_SPACING + LINE_GROUP_CONSTRAINT,C/Seam 간격 19회 + 라인 그룹 연속 2회
+0,ActualReplay,Manual,4,일일 생산 용량 초과,1,P5#16/P5#9 final daily capacity state,"최종 날짜 단위: 2025-06-10 18:22 BLK_32P, 76/69심"
+0,ActualReplay,Manual,5,베이 적합성 위반,3,P7#2,폭 21m 초과 블록 베이 배정 위반
+0,ActualReplay,Manual,99,제약 조건 미준수 횟수 합계,70,grouped_total,"INFO 항목(P7#1, P5#17)은 제외, 일일 용량은 최종 날짜 단위로 1회 집계"
+1,ActionMasking,MSDH,1,후공정 착수 순서 위반,17,ROUTING_WORKSHOP_ORDER pairwise inversions,작업장 순서 제약 하드 적용 후 같은 작업장 내 조립착수일 순서 역전쌍 전수 계산
+1,ActionMasking,MSDH,2,베이/론지 연속 배치 제한 위반,3,P7#7 + P7#8,베이 연속 배치 3회 + 주판 Only 연속 0회
+1,ActionMasking,MSDH,3,특정 블록 및 공정 연속 배치 제한 위반,15,ROUTING_C_SEAM_SPACING + LINE_GROUP_CONSTRAINT,C/Seam 간격 12회 + 라인 그룹 연속 3회
+1,ActionMasking,MSDH,4,일일 생산 용량 초과,1,P5#16/P5#9 final daily capacity state,"최종 날짜 단위: 2025-06-10 18:22 BLK_20P, 76/69심"
+1,ActionMasking,MSDH,5,베이 적합성 위반,0,P7#2,폭 21m 초과 블록 베이 배정 위반 없음
+1,ActionMasking,MSDH,99,제약 조건 미준수 횟수 합계,36,grouped_total,"INFO 항목(P7#1, P5#17)은 제외, 작업장 순서는 역전쌍, 일일 용량은 최종 날짜 단위로 1회 집계"
+2,SPT,SPT,1,후공정 착수 순서 위반,0,ROUTING_WORKSHOP_ORDER pairwise inversions,같은 작업장 내 조립착수일 순서 역전쌍 전수 계산
+2,SPT,SPT,2,베이/론지 연속 배치 제한 위반,0,P7#7 + P7#8,베이 연속 배치 0회 + 주판 Only 연속 0회
+2,SPT,SPT,3,특정 블록 및 공정 연속 배치 제한 위반,10,ROUTING_C_SEAM_SPACING + LINE_GROUP_CONSTRAINT,C/Seam 간격 10회 + 라인 그룹 연속 0회
+2,SPT,SPT,4,일일 생산 용량 초과,0,P5#16/P5#9 final daily capacity state,최종 날짜 단위 초과 없음
+2,SPT,SPT,5,베이 적합성 위반,0,P7#2,폭 21m 초과 블록 베이 배정 위반
+2,SPT,SPT,99,제약 조건 미준수 횟수 합계,10,grouped_total,"INFO 항목(P7#1, P5#17)은 제외, 일일 용량은 최종 날짜 단위로 1회 집계"
+3,MSF,MSF,1,후공정 착수 순서 위반,0,ROUTING_WORKSHOP_ORDER pairwise inversions,같은 작업장 내 조립착수일 순서 역전쌍 전수 계산
+3,MSF,MSF,2,베이/론지 연속 배치 제한 위반,0,P7#7 + P7#8,베이 연속 배치 0회 + 주판 Only 연속 0회
+3,MSF,MSF,3,특정 블록 및 공정 연속 배치 제한 위반,6,ROUTING_C_SEAM_SPACING + LINE_GROUP_CONSTRAINT,C/Seam 간격 6회 + 라인 그룹 연속 0회
+3,MSF,MSF,4,일일 생산 용량 초과,0,P5#16/P5#9 final daily capacity state,최종 날짜 단위 초과 없음
+3,MSF,MSF,5,베이 적합성 위반,0,P7#2,폭 21m 초과 블록 베이 배정 위반
+3,MSF,MSF,99,제약 조건 미준수 횟수 합계,6,grouped_total,"INFO 항목(P7#1, P5#17)은 제외, 일일 용량은 최종 날짜 단위로 1회 집계"
+4,LPT,LPT,1,후공정 착수 순서 위반,0,ROUTING_WORKSHOP_ORDER pairwise inversions,같은 작업장 내 조립착수일 순서 역전쌍 전수 계산
+4,LPT,LPT,2,베이/론지 연속 배치 제한 위반,0,P7#7 + P7#8,베이 연속 배치 0회 + 주판 Only 연속 0회
+4,LPT,LPT,3,특정 블록 및 공정 연속 배치 제한 위반,3,ROUTING_C_SEAM_SPACING + LINE_GROUP_CONSTRAINT,C/Seam 간격 3회 + 라인 그룹 연속 0회
+4,LPT,LPT,4,일일 생산 용량 초과,0,P5#16/P5#9 final daily capacity state,최종 날짜 단위 초과 없음
+4,LPT,LPT,5,베이 적합성 위반,0,P7#2,폭 21m 초과 블록 베이 배정 위반
+4,LPT,LPT,99,제약 조건 미준수 횟수 합계,3,grouped_total,"INFO 항목(P7#1, P5#17)은 제외, 일일 용량은 최종 날짜 단위로 1회 집계"
+5,GA,GA,1,후공정 착수 순서 위반,0,ROUTING_WORKSHOP_ORDER pairwise inversions,같은 작업장 내 조립착수일 순서 역전쌍 전수 계산
+5,GA,GA,2,베이/론지 연속 배치 제한 위반,0,P7#7 + P7#8,베이 연속 배치 0회 + 주판 Only 연속 0회
+5,GA,GA,3,특정 블록 및 공정 연속 배치 제한 위반,5,ROUTING_C_SEAM_SPACING + LINE_GROUP_CONSTRAINT,C/Seam 간격 5회 + 라인 그룹 연속 0회
+5,GA,GA,4,일일 생산 용량 초과,0,P5#16/P5#9 final daily capacity state,최종 날짜 단위 초과 없음
+5,GA,GA,5,베이 적합성 위반,0,P7#2,폭 21m 초과 블록 베이 배정 위반
+5,GA,GA,99,제약 조건 미준수 횟수 합계,5,grouped_total,"INFO 항목(P7#1, P5#17)은 제외, 일일 용량은 최종 날짜 단위로 1회 집계"
+6,Proposed,Proposed,1,후공정 착수 순서 위반,0,ROUTING_WORKSHOP_ORDER pairwise inversions,같은 작업장 내 조립착수일 순서 역전쌍 전수 계산
+6,Proposed,Proposed,2,베이/론지 연속 배치 제한 위반,0,P7#7 + P7#8,베이 연속 배치 0회 + 주판 Only 연속 0회
+6,Proposed,Proposed,3,특정 블록 및 공정 연속 배치 제한 위반,0,ROUTING_C_SEAM_SPACING + LINE_GROUP_CONSTRAINT,C/Seam 간격 0회 + 라인 그룹 연속 0회
+6,Proposed,Proposed,4,일일 생산 용량 초과,0,P5#16/P5#9 final daily capacity state,최종 날짜 단위 초과 없음
+6,Proposed,Proposed,5,베이 적합성 위반,0,P7#2,폭 21m 초과 블록 베이 배정 위반
+6,Proposed,Proposed,99,제약 조건 미준수 횟수 합계,0,grouped_total,"INFO 항목(P7#1, P5#17)은 제외, 일일 용량은 최종 날짜 단위로 1회 집계"

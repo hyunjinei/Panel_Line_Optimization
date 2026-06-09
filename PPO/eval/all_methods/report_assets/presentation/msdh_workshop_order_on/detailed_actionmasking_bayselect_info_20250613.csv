@@ -1,0 +1,8 @@
+﻿type,date,total_blocks,block_id,width_m,longi_count,seam_count,c_seam_count,has_curved_plate,assigned_bay,final_reason,material_type,P7#2_result,P7#3_4_result,P7#7_8_result,P7#10_result,P7#11_result,P7#1_result,bay_35a_worktime_before,bay_36b_worktime_before,bay_35a_worktime_after,bay_36b_worktime_after
+METADATA,20250613,6,,,,,,,,날짜별 베이 선택 분석: 6개 블록,,,,,,,,,,,
+BLOCK_DETAIL,20250613,6,67.0,19.3,26.0,4.0,1.0,False,35A,P7#1 부하균등(론지): 35A(802ea) ≤ 36B(862ea) → A베이 선택,NORMAL,PASS,PASS,PASS,PASS,PASS,BALANCE_DECISION,0.0,0.0,7.76,0.0
+BLOCK_DETAIL,20250613,6,70.0,12.5,9.0,3.0,0.0,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,7.76,0.0,7.76,3.4
+BLOCK_DETAIL,20250613,6,71.0,9.2,5.0,3.0,2.0,False,35A,P7#1 부하균등(론지): 35A(828ea) ≤ 36B(871ea) → A베이 선택,NORMAL,PASS,PASS,PASS,PASS,PASS,BALANCE_DECISION,7.76,3.4,11.98,3.4
+BLOCK_DETAIL,20250613,6,72.0,9.2,5.0,3.0,2.0,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,11.98,3.4,11.98,7.62
+BLOCK_DETAIL,20250613,6,68.0,5.4,6.0,1.0,1.0,False,35A,P7#1 부하균등(론지): 35A(833ea) ≤ 36B(876ea) → A베이 선택,NORMAL,PASS,PASS,PASS,PASS,PASS,BALANCE_DECISION,11.98,7.62,15.97,7.62
+BLOCK_DETAIL,20250613,6,69.0,5.4,6.0,1.0,1.0,False,36B,P7#7 연속성 제약: A베이 연속 제한 → B베이 강제,NORMAL,PASS,PASS,RESTRICTED,,,,15.97,7.62,15.97,11.61

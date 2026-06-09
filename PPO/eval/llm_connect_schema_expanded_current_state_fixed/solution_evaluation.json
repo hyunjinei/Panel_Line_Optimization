@@ -1,0 +1,168 @@
+{
+  "request": {
+    "raw_request": "현재 3번과 2번 블록은 이미 작업 중이니까 순서를 고정하고, 설비 복구 후 1번 블록을 가장 먼저 투입해줘. 4번 블록은 고장 때문에 바로 다음 투입에서 제외하고, 15번 블록은 36B 베이에 배정해줘.",
+    "mode": "repair",
+    "preserve_existing_schedule_as_much_as_possible": true,
+    "constraints": [
+      {
+        "type": "freeze_prefix",
+        "block_id": null,
+        "block_ids": [
+          3,
+          2
+        ],
+        "position": null,
+        "before_block_id": null,
+        "after_block_id": null,
+        "bay": null,
+        "date_key": null,
+        "date_token": null,
+        "max_blocks": null,
+        "seam_limit": null,
+        "target": null,
+        "enabled": null,
+        "scope": "both",
+        "components": [],
+        "note": ""
+      },
+      {
+        "type": "priority_block",
+        "block_id": 1,
+        "block_ids": [],
+        "position": null,
+        "before_block_id": null,
+        "after_block_id": null,
+        "bay": null,
+        "date_key": null,
+        "date_token": null,
+        "max_blocks": null,
+        "seam_limit": null,
+        "target": "next_after_recovery",
+        "enabled": null,
+        "scope": "both",
+        "components": [],
+        "note": ""
+      },
+      {
+        "type": "delayed_block",
+        "block_id": 4,
+        "block_ids": [],
+        "position": null,
+        "before_block_id": null,
+        "after_block_id": null,
+        "bay": null,
+        "date_key": null,
+        "date_token": null,
+        "max_blocks": null,
+        "seam_limit": null,
+        "target": "not_immediate_next",
+        "enabled": null,
+        "scope": "both",
+        "components": [],
+        "note": ""
+      },
+      {
+        "type": "manual_bay_assignment",
+        "block_id": 15,
+        "block_ids": [],
+        "position": null,
+        "before_block_id": null,
+        "after_block_id": null,
+        "bay": "36B",
+        "date_key": null,
+        "date_token": null,
+        "max_blocks": null,
+        "seam_limit": null,
+        "target": null,
+        "enabled": null,
+        "scope": "both",
+        "components": [],
+        "note": ""
+      }
+    ],
+    "unparsed_fragments": []
+  },
+  "request_satisfaction_ok": true,
+  "request_satisfaction_checks": [
+    {
+      "type": "freeze_prefix",
+      "expected_prefix": [
+        3,
+        2
+      ],
+      "actual_after_prefix": [
+        3,
+        2
+      ],
+      "ok": true
+    },
+    {
+      "type": "priority_block",
+      "block_id": 1,
+      "expected_position_after_frozen_prefix": 2,
+      "actual_position": 2,
+      "ok": true
+    },
+    {
+      "type": "delayed_block",
+      "block_id": 4,
+      "priority_before_ids": [
+        1
+      ],
+      "actual_position": 3,
+      "ok": true
+    },
+    {
+      "type": "manual_bay_assignment",
+      "block_id": 15,
+      "expected_bay": "36B",
+      "actual_bay": "36B",
+      "ok": true
+    }
+  ],
+  "current_state_consistency_ok": true,
+  "current_state_consistency_checks": [
+    {
+      "type": "freeze_prefix",
+      "expected_current_prefix": [
+        3,
+        2
+      ],
+      "actual_before_prefix": [
+        3,
+        2
+      ],
+      "ok": true,
+      "note": "freeze_prefix는 실제 실행 중 prefix와 before schedule prefix가 같을 때 운영 해석이 안전합니다."
+    }
+  ],
+  "final_audit_used": true,
+  "before": {
+    "makespan_hours": 25.19,
+    "primary_violations": 8,
+    "raw_violations": 18,
+    "constraint_family_counts": {
+      "C_SEAM_SPACING_FAMILY": 7,
+      "LINE_GROUP_FAMILY": 1
+    },
+    "audit_synced": true
+  },
+  "after": {
+    "makespan_hours": 25.11,
+    "primary_violations": 6,
+    "raw_violations": 19,
+    "constraint_family_counts": {
+      "C_SEAM_SPACING_FAMILY": 6
+    },
+    "audit_synced": true
+  },
+  "delta": {
+    "makespan_hours": -0.08000000000000185,
+    "primary_violations": -2,
+    "raw_violations": 1
+  },
+  "interpretation_flags": {
+    "operationally_valid_current_state": true,
+    "use_metric_delta_as_operational_evidence": true
+  }
+}

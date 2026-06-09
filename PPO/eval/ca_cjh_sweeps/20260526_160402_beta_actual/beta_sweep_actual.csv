@@ -1,0 +1,2 @@
+﻿method,sweep,feature_mode,priority_mode,beta_load,objective_mode,alpha,makespan,violations,runtime,evaluations,result_folder
+CA_CJH,beta,process_plus_core,lpt_cjh,0.0,strict_lexicographic,0.0,90.45,15,461.24956364603713,2346,PPO/eval/ca_cjh_sweeps/20260526_160402_beta_actual/beta_0p0

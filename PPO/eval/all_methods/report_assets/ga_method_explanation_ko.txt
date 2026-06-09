@@ -1,0 +1,425 @@
+[AGENT-ADD] 개발한 GA 설명자료
+
+파일 목적
+이 문서는 발표에서 사용할 GA 설명자료이다.
+현재 코드에 구현된 GA baseline이 어떤 방식으로 동작하는지 설명한다.
+대상 코드는 PPO/eval/methods.py의 run_ga_metaheuristic 함수이다.
+
+
+1. GA의 역할
+
+GA는 Genetic Algorithm, 즉 유전 알고리즘 기반의 비교 방법이다.
+이 프로젝트에서는 GA를 RL과 휴리스틱을 비교하기 위한 baseline 방법으로 사용한다.
+
+GA는 블록을 하나씩 규칙으로 고르는 방식이 아니다.
+대신 전체 블록 순서를 하나의 후보 해로 보고, 여러 후보 순서를 만들고 평가한 뒤, 좋은 순서들을 조합하면서 더 나은 순서를 찾는다.
+
+즉 GA가 찾는 것은 다음과 같은 블록 투입 순서이다.
+
+[3, 2, 4, 8, 11, 1, ...]
+
+이런 순서를 하나의 chromosome으로 본다.
+
+
+2. GA에서 chromosome의 의미
+
+이 코드에서 GA chromosome은 블록 ID들의 순열이다.
+
+예를 들어 블록이 1번부터 8번까지 있다면, 하나의 chromosome은 다음과 같이 표현된다.
+
+[3, 1, 5, 2, 8, 4, 7, 6]
+
+이 의미는 다음과 같다.
+
+- 3번 블록을 먼저 투입한다.
+- 그 다음 1번 블록을 투입한다.
+- 그 다음 5번 블록을 투입한다.
+- 이런 식으로 모든 블록의 투입 순서를 정한다.
+
+중요한 점은 모든 블록이 한 번씩만 들어가야 한다는 것이다.
+따라서 GA는 중복 블록이나 누락 블록이 생기지 않도록 sequence를 정규화한다.
+
+코드 기준:
+- _normalize_sequence
+- _ga_block_id
+
+
+3. 초기 population 생성
+
+GA는 처음부터 하나의 순서만 평가하지 않는다.
+여러 개의 후보 순서를 population으로 만든다.
+
+현재 코드는 초기 population을 다음 방식으로 만든다.
+
+1. 원래 block_id 순서
+2. 조립 착수 기준일 기준 정렬 순서
+3. 무작위 shuffle 순서들
+
+예를 들어 population size가 100이면, 서로 다른 후보 순서 100개를 만든 뒤 평가를 시작한다.
+
+코드 기준:
+- population_size = ga_population
+- date_seed
+- rng.shuffle
+
+발표 표현:
+"GA는 여러 개의 후보 블록 순서를 동시에 만들고, 각 후보를 실제 스케줄러 환경에서 평가한다."
+
+
+4. 후보 순서 평가 방식
+
+GA가 만든 순서는 그 자체로 바로 결과가 아니다.
+각 후보 순서를 기존 스케줄링 환경에 넣고 실제로 스케줄을 생성해 본다.
+
+코드에서는 run_assembly_decoding_sequence_with_blocks를 호출한다.
+이때 GA가 만든 순서를 forced_prefix_block_ids로 넘긴다.
+
+의미는 다음과 같다.
+
+- GA가 제안한 순서를 우선 투입 순서로 사용한다.
+- 기존 assembly scheduler가 그 순서를 따라 스케줄을 생성한다.
+- Bay 배정, makespan 계산, 최종 제약 검증은 기존 환경을 그대로 사용한다.
+
+따라서 GA는 별도의 단순 계산으로 점수를 매기는 것이 아니라, 실제 PBS 스케줄링 환경을 통해 평가된다.
+
+코드 기준:
+- _evaluate_sequence
+- run_assembly_decoding_sequence_with_blocks
+- forced_prefix_block_ids
+- allow_forced_prefix_override=True
+
+중요한 점:
+GA의 chromosome 생성 자체는 action masking을 사용하지 않는다.
+하지만 후보 순서의 최종 평가는 기존 스케줄러와 Final Audit 경로를 사용하므로, makespan과 제약 위반은 다른 방법들과 같은 기준으로 계산된다.
+
+
+5. GA fitness score
+
+GA는 각 후보 순서를 평가한 뒤, 어떤 후보가 더 좋은지 비교해야 한다.
+현재 코드는 다음 순서로 후보를 비교한다.
+
+1. 처리 실패 또는 미완료 penalty
+2. primary violation 수
+3. makespan
+4. raw violation 수
+
+즉 가장 먼저 보는 것은 모든 블록을 최종 결과까지 제대로 처리했는지이다.
+그 다음은 주요 제약 위반 수이다.
+그 다음이 makespan이다.
+마지막으로 raw violation 수를 본다.
+
+점수는 다음 tuple로 구성된다.
+
+(missing_penalty, primary_violations, makespan_hours, raw_violations)
+
+GA는 이 tuple이 작은 후보를 더 좋은 후보로 본다.
+
+다만 여기서 missing_penalty는 일반적인 상황에서는 거의 0이다.
+이유는 GA sequence를 평가하기 전에 _normalize_sequence가 중복 블록을 제거하고, 빠진 블록을 뒤에 다시 붙여서 전체 블록 순열로 복구하기 때문이다.
+
+따라서 missing_penalty는 "GA chromosome이 블록을 빠뜨려서 생기는 penalty"라기보다, 스케줄러 평가가 max_days, 예외 상황, 강한 제약 충돌 등으로 전체 블록을 끝까지 처리하지 못했을 때를 대비한 안전장치에 가깝다.
+
+발표에서는 "누락 블록 penalty"라고 강하게 말하기보다, "전체 블록 처리 실패 방지용 안전 penalty"라고 설명하는 편이 더 정확하다.
+
+예를 들어 두 후보가 있다고 하자.
+
+후보 A:
+- primary violation = 2
+- makespan = 180시간
+
+후보 B:
+- primary violation = 5
+- makespan = 160시간
+
+이 경우 후보 B가 makespan은 더 짧지만, primary violation이 더 많다.
+현재 GA score 기준에서는 후보 A가 더 좋은 후보로 선택된다.
+
+이유는 실제 생산 스케줄에서는 단순히 빨리 끝나는 것보다 핵심 제약을 덜 위반하는 것이 더 중요하기 때문이다.
+
+코드 기준:
+- _ga_score_from_stats
+
+
+6. Elite 보존
+
+각 generation에서 평가가 끝나면 후보들을 score 기준으로 정렬한다.
+그중 상위 elite_count개는 다음 generation에 그대로 보존한다.
+
+이것을 elite 보존이라고 한다.
+
+예를 들어 population size가 100이고 elite_count가 2라면, 현재 generation에서 가장 좋은 후보 2개는 다음 generation에도 그대로 남는다.
+
+이렇게 하면 좋은 해가 다음 세대에서 사라지는 것을 막을 수 있다.
+
+코드 기준:
+- elite_count = ga_elite
+- elites = ranked[:elite_count]
+
+
+7. Crossover
+
+GA는 좋은 후보들을 부모로 선택하고, 두 부모 순서를 섞어서 새로운 자식 순서를 만든다.
+현재 코드는 order crossover 방식을 사용한다.
+
+동작 방식:
+
+1. 부모 A에서 임의의 구간을 하나 선택한다.
+2. 그 구간은 자식에게 그대로 복사한다.
+3. 나머지 위치는 부모 B의 순서를 따라 채운다.
+4. 중복 블록은 넣지 않는다.
+
+예시:
+
+Parent A:
+[1, 2, 3, 4, 5, 6]
+
+Parent B:
+[4, 1, 6, 2, 5, 3]
+
+Parent A에서 [2, 3, 4] 구간을 복사한다고 하면:
+
+Child:
+[_, 2, 3, 4, _, _]
+
+나머지는 Parent B 순서에서 아직 없는 블록을 채운다.
+Parent B에서 2, 3, 4를 제외하면 [1, 6, 5]가 남는다.
+
+최종 Child:
+[1, 2, 3, 4, 6, 5]
+
+이 방식은 블록 ID가 중복되지 않는 순열 문제에 적합하다.
+
+코드 기준:
+- _ga_order_crossover
+
+
+8. Mutation
+
+Crossover만 사용하면 후보들이 너무 비슷해질 수 있다.
+그래서 mutation을 사용한다.
+
+현재 코드는 swap mutation을 사용한다.
+
+동작 방식:
+
+1. mutation_rate 확률로 mutation을 수행한다.
+2. sequence 안에서 임의의 두 위치를 고른다.
+3. 두 블록의 위치를 서로 바꾼다.
+
+예시:
+
+Before:
+[1, 2, 3, 4, 5]
+
+2번 위치와 5번 위치를 바꾸면:
+
+After:
+[1, 5, 3, 4, 2]
+
+Mutation은 새로운 탐색 방향을 만들기 위한 장치이다.
+
+코드 기준:
+- _ga_mutate_swap
+- ga_mutation_rate
+
+
+9. Generation 반복
+
+GA는 다음 과정을 여러 generation 동안 반복한다.
+
+1. 현재 population 평가
+2. score 기준 정렬
+3. elite 후보 보존
+4. elite 또는 기존 population에서 부모 선택
+5. crossover로 자식 생성
+6. mutation 적용
+7. 새 population 평가
+
+이 반복 횟수는 ga_generations로 정한다.
+
+예를 들어 ga_population=100, ga_generations=100이면, 대략 100개의 후보를 100세대 동안 개선한다.
+중복 후보는 다시 평가하지 않도록 evaluated 딕셔너리에 저장한다.
+
+코드 기준:
+- for generation in range(1, generations + 1)
+- evaluated
+- _record_batch
+
+
+10. 병렬 평가
+
+GA는 후보 하나를 평가할 때마다 기존 스케줄러를 실행해야 한다.
+따라서 계산량이 크다.
+
+이를 줄이기 위해 현재 코드는 후보 평가를 병렬로 수행할 수 있다.
+
+병렬 worker 수는 CPU 수와 RAM을 보고 동적으로 정한다.
+
+사용되는 설정:
+- ga_parallel
+- ga_parallel_workers
+- ga_worker_threads
+- ga_ram_gb_per_worker
+- ga_progress_interval
+
+auto 모드에서는 다음 기준을 사용한다.
+
+- 전체 CPU 코어 수 확인
+- 일부 코어는 시스템용으로 남겨둠
+- 전체 RAM 확인
+- worker 하나당 필요한 RAM 추정
+- task 수, CPU 한계, RAM 한계 중 가장 작은 값으로 worker 수 결정
+
+코드 기준:
+- _resolve_ga_parallel_plan
+- ProcessPoolExecutor
+- _init_ga_worker
+- _run_parallel_ga_task
+
+발표 표현:
+"GA는 후보 평가가 독립적이므로 여러 후보 순서를 병렬로 평가할 수 있다."
+
+
+11. 최종 선택
+
+모든 generation 평가가 끝나면 가장 score가 좋은 sequence를 best_sequence로 선택한다.
+그 다음 best_sequence를 한 번 더 실행해서 최종 결과 CSV를 저장한다.
+
+저장되는 주요 결과:
+
+- ga_evaluation_results.csv
+  - 최종 선택된 GA schedule 결과
+
+- ga_population_summary.csv
+  - generation별 후보 평가 요약
+  - primary violation
+  - raw violation
+  - makespan
+  - sequence head
+
+최종 statistics에는 다음 정보도 들어간다.
+
+- ga_candidates_evaluated
+- ga_population
+- ga_generations
+- ga_mutation_rate
+- ga_seed
+- ga_best_sequence_head
+- computation_seconds
+- ga_parallel_enabled
+- ga_parallel_workers
+- ga_worker_threads
+
+코드 기준:
+- final_statistics
+- ga_population_summary.csv
+- ga_evaluation_results.csv
+
+
+12. 평가 명령어에서 조절 가능한 GA 파라미터
+
+GA는 main.py eval 경로에서 실행할 수 있다.
+대표 파라미터는 다음과 같다.
+
+--methods GA
+--ga_population 100
+--ga_generations 100
+--ga_elite 2
+--ga_mutation_rate 0.25
+--ga_seed 42
+--ga_parallel auto
+--ga_parallel_workers 0
+--ga_worker_threads 1
+--ga_ram_gb_per_worker 0.75
+--ga_progress_interval 100
+
+의미:
+
+- ga_population: 한 generation에서 유지할 후보 순서 수
+- ga_generations: 진화 반복 횟수
+- ga_elite: 다음 generation에 그대로 보존할 우수 후보 수
+- ga_mutation_rate: swap mutation 수행 확률
+- ga_seed: 재현 가능한 난수 seed
+- ga_parallel: 병렬 평가 사용 여부
+- ga_parallel_workers: worker 수 직접 지정, 0이면 자동
+- ga_worker_threads: worker 내부 torch thread 수
+- ga_ram_gb_per_worker: worker 하나당 예상 RAM
+- ga_progress_interval: 진행 로그 출력 간격
+
+
+13. 발표용 한 장 도식
+
+GA 설명 그림은 다음 구조로 그리면 된다.
+
+Initial Population
+-> Fitness Evaluation
+-> Elite Selection
+-> Order Crossover
+-> Swap Mutation
+-> New Population
+-> 반복
+-> Best Sequence
+-> Final Audit
+
+각 박스 설명:
+
+Initial Population:
+여러 개의 블록 순서 후보 생성
+
+Fitness Evaluation:
+각 후보를 기존 PBS scheduler에 넣어 makespan과 violation 계산
+
+Elite Selection:
+좋은 후보를 다음 세대로 보존
+
+Order Crossover:
+좋은 후보끼리 순서를 섞어 새 후보 생성
+
+Swap Mutation:
+두 블록 위치를 바꿔 새로운 탐색 방향 추가
+
+Best Sequence:
+가장 좋은 후보 순서를 최종 GA 결과로 선택
+
+Final Audit:
+최종 schedule의 makespan과 제약 위반을 기존 기준으로 다시 저장
+
+
+14. GA와 다른 방법의 차이
+
+SPT, LPT, SEAM_MIN은 매 step에서 하나의 규칙으로 다음 블록을 고른다.
+
+예:
+- SPT: 처리 시간이 짧은 블록 우선
+- LPT: 처리 시간이 긴 블록 우선
+- SEAM_MIN: 심수 부담이 작은 블록 우선
+
+반면 GA는 한 step씩 greedy하게 고르는 것이 아니라, 전체 블록 순서를 하나의 후보 해로 보고 탐색한다.
+
+RL은 학습된 정책이 현재 상태와 후보 블록을 보고 다음 블록을 선택한다.
+
+GA는 학습된 모델을 사용하지 않는다.
+대신 후보 순서들을 반복적으로 생성하고 평가하면서 좋은 순서를 찾는다.
+
+
+15. GA 설명 핵심 문장
+
+발표에서는 다음처럼 설명하면 된다.
+
+"본 연구의 GA baseline은 블록 투입 순서를 하나의 chromosome으로 정의하고, 여러 순열 후보를 생성한 뒤 기존 PBS 스케줄링 환경에서 makespan과 제약 위반을 평가한다. 이후 elite 보존, order crossover, swap mutation을 반복하여 더 좋은 순서를 탐색하고, 최종적으로 primary violation과 makespan 기준에서 가장 우수한 sequence를 선택한다."
+
+
+16. 주의해서 말할 점
+
+GA는 스케줄링 환경을 대체하지 않는다.
+GA는 후보 블록 순서를 생성하는 탐색 알고리즘이다.
+
+실제 Bay 배정, makespan 계산, 제약 위반 계산은 기존 PBS scheduler와 Final Audit 경로에서 수행된다.
+
+즉 GA의 역할은 다음과 같다.
+
+"어떤 블록 순서를 시험해 볼지 제안하는 전역 탐색기"
+
+기존 PBS scheduler의 역할은 다음과 같다.
+
+"그 순서가 실제 생산 흐름에서 어떤 결과를 만드는지 계산하고 검증하는 평가기"

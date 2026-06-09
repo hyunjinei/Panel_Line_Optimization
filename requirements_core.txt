@@ -95,6 +95,7 @@ nvidia-nccl-cu12==2.26.2
 nvidia-nvjitlink-cu12==12.6.85
 nvidia-nvtx-cu12==12.6.77
 openai==1.66.3
+google-genai>=1.0.0
 opencv-python-headless==4.11.0.86
 openpyxl==3.1.5
 orjson==3.10.18

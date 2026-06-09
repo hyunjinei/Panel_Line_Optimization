@@ -1,0 +1,2 @@
+﻿request_echo,metric_delta_consistency,trace_grounding,constraint_grounding,output_completeness,llm_grounded_explanation_score,makespan_delta,primary_delta,raw_delta,changed_steps_preview_count,forced_steps_after_count,bundle_path,request
+1.0,1.0,1.0,1.0,1.0,1.0,-1.5500000000000007,-2,-1,10,3,PPO/eval/llm_connect_schema_expanded_smoke/analysis_bundle.json,"현재 3번과 2번 블록은 이미 작업 중이니까 순서를 고정하고, 설비 복구 후 1번 블록을 가장 먼저 투입해줘. 4번 블록은 고장 때문에 바로 다음 투입에서 제외하고, 15번 블록은 36B 베이에 배정해줘."

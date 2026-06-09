@@ -23,10 +23,10 @@ from .summary_adapters import summarize_results_csv
 from .validation import request_to_dict, validate_request
 
 
-# [AGENT-ADD] Common LLM provider options keep Groq/OpenAI setup consistent.
+# [AGENT-EDIT] Common LLM provider options keep Groq/Gemini/OpenAI setup consistent.
 def _add_llm_provider_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--llm-model", default=None)
-    parser.add_argument("--llm-provider", default=None, help="openai, groq, ollama, or openai_compatible")
+    parser.add_argument("--llm-provider", default=None, help="openai, groq, gemini, ollama, or openai_compatible")
     parser.add_argument("--llm-base-url", default=None, help="OpenAI-compatible base URL")
     parser.add_argument("--llm-api-key-env", default=None, help="Environment variable name that stores the API key")
 
@@ -49,7 +49,7 @@ def _parse_args() -> argparse.Namespace:
     parse_cmd = sub.add_parser("parse", help="Parse natural-language request into ScheduleEditRequest JSON")
     parse_cmd.add_argument("--request", required=True)
     parse_cmd.add_argument("--sequence-csv", help="Optional existing result CSV for validation")
-    parse_cmd.add_argument("--parser", default="deterministic", choices=["deterministic", "llm", "openai", "groq", "ollama", "openai_compatible", "auto"])
+    parse_cmd.add_argument("--parser", default="deterministic", choices=["deterministic", "llm", "openai", "groq", "gemini", "ollama", "openai_compatible", "auto"])
     _add_llm_provider_args(parse_cmd)
     parse_cmd.add_argument("--output", help="Optional JSON output path")
 
@@ -64,7 +64,7 @@ def _parse_args() -> argparse.Namespace:
     eval_parse_cmd = sub.add_parser("eval-parse", help="Evaluate request understanding against labeled cases")
     eval_parse_cmd.add_argument("--cases", required=True, help="JSONL/JSON/CSV file with request and expected_constraints")
     eval_parse_cmd.add_argument("--sequence-csv", help="Optional existing result CSV for validation")
-    eval_parse_cmd.add_argument("--parser", default="deterministic", choices=["deterministic", "llm", "openai", "groq", "ollama", "openai_compatible", "auto"])
+    eval_parse_cmd.add_argument("--parser", default="deterministic", choices=["deterministic", "llm", "openai", "groq", "gemini", "ollama", "openai_compatible", "auto"])
     _add_llm_provider_args(eval_parse_cmd)
     eval_parse_cmd.add_argument("--output-dir", default="llm_connect_eval")
 

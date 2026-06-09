@@ -1,0 +1,8 @@
+﻿source_dir,method,method_label,method_order,result_file,rows,metric_rows,makespan_hours,max_row_makespan_hours,violations,raw_violations,bay_35a_longi_total,bay_36b_longi_total,bay_35a_block_count,bay_36b_block_count,total_longi_count,longi_balance_abs_diff,longi_balance_ratio_35a,longi_balance_ratio_36b
+PPO/eval/20250609_0429_12_46_seed42,EXCEL,Actual,0,excel_evaluation_results.csv,72,68,104.83333333333333,26.6,45,69,407.0,552.0,33,39,959.0,145.0,0.424400417101147,0.5755995828988529
+PPO/eval/20250609_0429_12_46_seed42,ACTIONMASKING,ActionMasking,1,actionmasking_evaluation_results.csv,72,68,104.71666666666667,25.38,31,36,493.0,466.0,37,35,959.0,27.0,0.5140771637122002,0.4859228362877998
+PPO/eval/20250609_0429_12_46_seed42,SPT,SPT,2,spt_evaluation_results.csv,72,68,91.51666666666667,26.32,10,18,471.0,488.0,35,37,959.0,17.0,0.49113660062565173,0.5088633993743483
+PPO/eval/20250609_0429_12_46_seed42,SEAM_MIN,MSF,3,seam_min_evaluation_results.csv,72,68,91.0,25.56,6,12,493.0,466.0,35,37,959.0,27.0,0.5140771637122002,0.4859228362877998
+PPO/eval/20250609_0429_12_46_seed42,LPT,LPT,4,lpt_evaluation_results.csv,72,68,89.63333333333334,25.04,3,8,501.0,458.0,36,36,959.0,43.0,0.5224191866527633,0.47758081334723673
+PPO/eval/20250609_0514_13_44_seed42,GA,GA,5,ga_evaluation_results.csv,72,68,88.81666666666666,25.31,5,10,491.0,468.0,35,37,959.0,23.0,0.5119916579770595,0.4880083420229406
+PPO/eval/20250609_0429_12_46_seed42,RL,Proposed,6,rl_best_pm_results.csv,72,68,88.61666666666666,26.5,0,6,472.0,487.0,35,37,959.0,15.0,0.4921793534932221,0.5078206465067779

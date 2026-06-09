@@ -1,0 +1,38 @@
+﻿constraint_id,kind,enabled_in_independent_audit,description,notes
+P5#1,domain,False,납기 기반 착수일 제약,현재 연구 설정에서 비활성
+P5#3,domain,False,P 블록이 S 블록보다 먼저 와야 하는 P/S 순서,현재 연구 제약 세트에서 제외
+P5#4,domain,False,고정 조립 P/S 연속성 규칙,현재 연구 제약 세트에서 제외
+P5#6,domain,False,라인 B FAB 간격 규칙,현재 연구 설정에서 비활성
+P5#8,domain,True,평일 심수 용량,
+P5#9,domain,True,72심 초과 시 17블록 조건,
+P5#10,domain,True,주말 심수 용량,
+P5#11,domain,False,조립 타입 혼합/연속 제한,현재 연구 제약 세트에서 제외
+P5#12,domain,False,사내/사외 혼합 제한,현재 연구 제약 세트에서 제외
+P5#13,domain,True,자재 미입고 금지,
+P5#15,domain,True,명절 전날 제약,
+P5#16,domain,True,혹서기 용량 제약,
+P5#17,domain,True,별판 통합 처리,INFO 성격
+P6#1,domain,False,Draft 특수블록 시간 제약,사용자 요청으로 제거
+P6#2,domain,False,Cross seam 특수블록 시간 제약,사용자 요청으로 제거
+P6#3,domain,False,주판 10장 초과 시간 제약,사용자 요청으로 제거
+P6#4,domain,False,Cross seam 혼합 배치 제약,사용자 요청으로 제거
+P7#1,domain,True,론지 A/B 부하 균형,INFO 성격
+P7#2,domain,True,폭 21m 초과 블록은 B베이,
+P7#3,domain,True,작은 P/S 쌍 동일 베이,
+P7#4,domain,True,날짜 조건 P/S 동일 베이,
+P7#7,domain,True,베이 연속 배치 제한,
+P7#8,domain,True,주판 Only 연속 제한,
+P7#10,domain,True,론지 30개 이상 A베이 우선,
+P7#11,domain,False,10번 블록 B베이 패턴,현재 연구 설정에서 비활성
+P7#12,domain,True,LT강재 A베이 우선,
+ROUTING_C_SEAM_SPACING,domain,True,C/Seam 간격,
+ROUTING_CURVED_SPACING,domain,True,곡판 간격,
+ROUTING_HIGH_SEAM_SPACING,domain,True,고심수 간격,
+ROUTING_WORKSHOP_ORDER,domain,True,같은 실제 작업장 내 조립착수일 순서,runtime에서 꺼도 post-hoc audit에서는 집계
+LINE_GROUP_CONSTRAINT,internal_guard,True,라인 그룹 연속 제한,구현 가드
+CONSECUTIVE_3BAY,internal_guard,False,3베이 패턴 방지,구현 가드
+CONSECUTIVE_B_BAY,internal_guard,False,B베이 2연속 금지,도메인 규칙과 불일치하여 현재 연구 설정에서 제외
+HIGH_LONGI_SPLIT,internal_guard,False,고론지 연속 송선 방지,현재 기본 비활성
+enable_workshop_head_masking,bias,False,작업장 head 후보 축소,제약이 아니라 후보 편향
+enable_assembly_start_leadtime_layers,bias,False,조립착수일 slack 층 분리,제약이 아니라 후보 편향
+enable_assembly_start_window_filter,bias,False,조립착수일 날짜창 필터,제약이 아니라 후보 편향

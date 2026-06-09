@@ -1,0 +1,741 @@
+# Codex Prompt: Implement CA-CJH-Insertion for Shipyard Panel-Line Scheduling
+
+Repository:
+hyunjinei/Panel_Line_Optimization
+
+Purpose:
+Implement a new heuristic method for IJNAOE-style experiments by extending the existing PFSP Cosine–Jaccard Heuristic (CJH) to the shipyard panel-line scheduling problem.
+
+The main method must preserve the identity of the original CJH:
+- It must be an NEH-style constructive insertion heuristic.
+- It must sort candidate blocks using a Cosine–Jaccard global priority.
+- It must insert each block into all possible positions of the current partial sequence.
+- It must evaluate each tentative insertion using the existing DES / constraint / bay-assignment environment.
+- It must choose the best insertion position using a constraint-aware lexicographic objective.
+
+This task is NOT about reinforcement learning.
+Do NOT modify PPO training, self-labeling training, pointer-network architecture, policy loss, reward design, or RL model files.
+The existing learning-based scheduler may be used only as a comparison baseline, not as part of this method.
+
+============================================================
+0. Background and Required Interpretation
+============================================================
+
+This repository contains a panel-line scheduling environment where the problem is:
+- determine the block input sequence,
+- assign each block to a downstream bay after common upstream processes,
+- satisfy operational constraints,
+- minimize constraint violations and makespan.
+
+The existing presentation / paper materials are only for understanding the problem:
+- They explain the panel-line scheduling problem, constraints, DES environment, action masking, and evaluation metrics.
+- Do NOT copy or modify the self-labeling / RL algorithm for this task.
+
+The proposed method in this task is a heuristic:
+
+    CA-CJH-Insertion
+    Constraint-Aware Cosine–Jaccard Insertion Heuristic
+
+It adapts the PFSP CJH idea to panel-line scheduling.
+
+Key conceptual mapping:
+
+PFSP-CJH:
+    job = processing-time vector
+    global priority = cosine + Jaccard-normal similarity to robust baseline
+    insertion evaluation = makespan - alpha * local-window similarity
+
+Panel-line CA-CJH:
+    block = production-feature vector
+    global priority = cosine + Jaccard-normal similarity to robust baseline
+    insertion evaluation = DES-based hard violation, soft violation, makespan, local-window similarity, longi balance
+
+Important terminology:
+- Cosine is production-feature / process-load shape alignment.
+- Jaccard-normal is normal-load coverage / load regularity.
+- Local-window similarity is local flow smoothing.
+- Do NOT describe Jaccard as bottleneck overlap.
+- Do NOT implement Jaccard as bottleneck overlap unless an explicit high-load set is separately implemented. For this task, do not implement bottleneck overlap.
+
+============================================================
+1. Inspect Existing Code First
+============================================================
+
+Before editing, inspect and summarize relevant files:
+- main.py
+- config.yaml
+- scheduling/common/selection_rules.py
+- scheduling/assembly_start/action_sequence_조립착수일기준휴리스틱.py
+- scheduling/assembly_start/rl_assembly_scheduler.py
+- enhanced_environment/models/block.py
+- enhanced_environment/pbs_env/step_logic.py
+- any function that evaluates a forced sequence or runs deterministic assembly decoding
+- any existing GA/SPT/LPT/MSF evaluation scripts
+- any existing output-saving utilities
+
+Create a design document:
+
+    docs/ca_cjh_insertion_design.md
+
+It must include:
+1. Current scheduling flow summary.
+2. Where candidate block selection currently occurs.
+3. How forced_sequence or deterministic sequence evaluation currently works.
+4. Whether partial-sequence evaluation is directly supported.
+5. If not directly supported, how you implement a safe partial-sequence evaluator.
+6. How CA-CJH-Insertion preserves the NEH-style insertion identity.
+7. How hard constraints and soft relaxation are treated.
+8. How bay assignment remains controlled by the existing environment.
+9. Exact equations used by CA-CJH.
+10. Files modified and why.
+
+Do not skip this design document.
+
+============================================================
+2. Main Algorithm to Implement
+============================================================
+
+Implement the main method:
+
+    CA-CJH-Insertion
+
+Core procedure:
+
+Input:
+- blocks
+- metadata
+- existing DES / assembly environment
+- parameters:
+    trim_ratio gamma
+    w_cos
+    w_jac
+    alpha
+    feature_mode
+    normal_scope
+    evaluation_mode
+    objective_mode
+
+Output:
+- final block sequence
+- existing deterministic bay assignments
+- makespan
+- hard violation count
+- soft violation count or violation score
+- longi balance
+- runtime
+- detailed candidate/insertion trace
+
+Algorithm:
+
+1. Build a production-feature vector x_b for every block b.
+2. Normalize feature vectors.
+3. Compute a robust baseline vector using trimmed mean.
+4. Compute normal feature ranges using trimmed standard deviation.
+5. For every block b:
+   5.1 Compute Cos(b): production-feature shape alignment.
+   5.2 Compute J(b): Jaccard-normal normal-load coverage / load regularity.
+   5.3 Compute S_global(b) = w_cos * Cos(b) + w_jac * J(b).
+6. Sort blocks in descending order of S_global(b).
+7. Initialize partial sequence pi = empty.
+8. For each block b in the sorted priority list:
+   8.1 For every insertion position ell in {0, ..., len(pi)}:
+       - Create tentative sequence pi_candidate = insert b into pi at ell.
+       - Evaluate pi_candidate with the existing DES / constraint / bay-assignment logic.
+       - Compute:
+           H(pi_candidate): hard violation count or hard infeasibility indicator
+           V(pi_candidate): soft violation count / score
+           Cmax(pi_candidate): makespan or partial makespan
+           Delta_L(pi_candidate): longi bay imbalance
+           S_loc(b, ell): local-window Cosine–Jaccard smoothing score
+       - Build insertion key:
+           objective_mode = "cost":
+               key = (
+                   H(pi_candidate),
+                   V(pi_candidate),
+                   Cmax(pi_candidate) - alpha * S_loc(b, ell),
+                   Delta_L(pi_candidate)
+               )
+
+           objective_mode = "lexicographic":
+               key = (
+                   H(pi_candidate),
+                   V(pi_candidate),
+                   Cmax(pi_candidate),
+                   -S_loc(b, ell),
+                   Delta_L(pi_candidate)
+               )
+
+       - Smaller key is better.
+   8.2 Insert b at the position ell* with the best key.
+9. Return the final sequence and metrics.
+
+Main default:
+- objective_mode: "cost"
+because this preserves the original CJH identity:
+    cost = makespan - alpha * local-window similarity
+but extended with hard/soft constraint priority.
+
+============================================================
+3. Mathematical Definitions to Implement
+============================================================
+
+For each block b, define production-feature vector:
+
+    x_b = [x_{b,1}, ..., x_{b,D}]
+
+Default feature_mode must be:
+
+    process_only
+
+where x_b contains only the 8 processing times of the block.
+
+Why:
+- This most closely preserves the original PFSP-CJH identity.
+- The original CJH is based on processing-time vectors.
+- Additional shipyard features can be added in ablation.
+
+Also support optional feature modes:
+
+    process_plus_core:
+        8 processing_times
+        total processing time
+        seam_count
+        c_seam_count
+        width
+        longi_count
+
+    augmented:
+        process_plus_core
+        length
+        min_thickness
+        max_thickness
+        main_plate_count
+        curved_plate_count
+        has_curved_plate
+        is_high_seam_block
+        material_ready
+        assembly_start slack
+        max_start_date slack
+        one-hot assembly_type
+        one-hot port_starboard
+        one-hot workshop_type
+        one-hot material_type
+
+Use safe fallback values:
+- missing numeric -> 0.0
+- missing bool -> 0.0
+- missing categorical -> all-zero one-hot
+- missing date/slack -> 0.0
+
+Normalize feature matrix:
+    x_tilde_{b,d} = (x_{b,d} - min_d) / (max_d - min_d + epsilon)
+
+Compute baseline:
+    x_B,d = TrimMean_b(x_tilde_{b,d}; gamma)
+
+Compute trimmed std:
+    sigma_d = TrimStd_b(x_tilde_{b,d}; gamma)
+
+Normal range:
+    R_d = [x_B,d - sigma_d, x_B,d + sigma_d]
+
+Cosine:
+    Cos(b) = dot(x_tilde_b, x_B) / (||x_tilde_b||_2 * ||x_B||_2 + epsilon)
+
+Normal set:
+    A(b) = {d | x_tilde_{b,d} in R_d}
+
+Jaccard-normal:
+    J(b) = |A(b)| / D
+
+Global CJH score:
+    S_global(b) = w_cos * Cos(b) + w_jac * J(b)
+
+Local window for insertion:
+For partial sequence pi_t and inserting block b at position ell:
+
+    W_t(b, ell) =
+        {b}, if t = 0
+        {b, pi_1}, if ell = 0 and t > 0
+        {pi_ell, b, pi_{ell+1}}, if 0 < ell < t
+        {pi_t, b}, if ell = t and t > 0
+
+Local average vector:
+    x_loc(b, ell) = average normalized feature vector of blocks in W_t(b, ell)
+
+Local cosine:
+    Cos_loc(b, ell) = dot(x_loc, x_B) / (||x_loc||_2 * ||x_B||_2 + epsilon)
+
+Local Jaccard-normal:
+    J_loc(b, ell) = number of dimensions where x_loc,d is in R_d divided by D
+
+Local-window similarity:
+    S_loc(b, ell) = w_cos * Cos_loc(b, ell) + w_jac * J_loc(b, ell)
+
+Insertion cost:
+    G(pi_t^{b,ell}) = Cmax(pi_t^{b,ell}) - alpha * S_loc(b, ell)
+
+Constraint-aware insertion key:
+    key_cost = (
+        H(pi_t^{b,ell}),
+        V(pi_t^{b,ell}),
+        G(pi_t^{b,ell}),
+        Delta_L(pi_t^{b,ell})
+    )
+
+Hard constraints:
+- Do not bypass existing hard constraints.
+- If the environment reports a hard violation, H must be > 0.
+- If H > 0, the insertion should be dominated by any H = 0 insertion.
+
+Soft constraints:
+- Soft violations may be allowed through the existing relaxation mechanism.
+- They should be counted in V.
+- Lower V is preferred before makespan.
+
+Bay assignment:
+- Do not invent a new bay assignment rule.
+- Use the existing deterministic bay assignment / routing logic.
+- CA-CJH chooses sequence; existing environment assigns bay.
+
+============================================================
+4. Evaluation of Tentative Sequences
+============================================================
+
+Implement a safe evaluator:
+
+    evaluate_panel_sequence_for_cjh(
+        sequence,
+        blocks,
+        metadata,
+        config,
+        partial=True,
+        save_csv=False,
+        save_detailed=False,
+    ) -> dict
+
+It must return:
+- hard_violation_count
+- soft_violation_count or violation_score
+- total_violation_count
+- makespan_hours
+- longi_35a
+- longi_36b
+- longi_abs_diff
+- bay_assignments if available
+- schedule_results if available
+- error flag if evaluation fails
+
+How to evaluate:
+1. First inspect whether existing run_assembly_decoding_sequence_with_blocks(..., forced_sequence=...) can evaluate a forced prefix or forced full sequence safely.
+2. If it can evaluate partial sequences, use it.
+3. If it only supports full sequences, implement a partial evaluator using the existing environment step logic, or complete the remaining blocks with a deterministic fallback sequence only for evaluation.
+4. Do not silently bypass masking/constraints.
+5. Do not use RL.
+6. Do not use PPO actor.
+7. Do not use self-labeling rollout.
+
+Important:
+- If evaluating a partial sequence, metrics are partial metrics.
+- If completing remaining blocks is necessary, document the fallback policy clearly in docs/ca_cjh_insertion_design.md.
+- Prefer partial evaluation if possible because it is closest to NEH's partial-sequence insertion evaluation.
+
+============================================================
+5. Candidate Pool and Priority List
+============================================================
+
+For CA-CJH-Insertion, the global priority list is computed once from all blocks at the beginning, similar to PFSP-CJH.
+
+Do not use stepwise candidate-pool dispatching as the main method.
+
+However, optional ablation may implement:
+
+    CA-CJH-Stepwise
+
+where at each decision step the method ranks only the current candidate pool.
+But this is not the main method.
+
+Main method:
+    CA-CJH-Insertion
+
+Optional ablation:
+    CA-CJH-Stepwise or CA-CJH-Dispatch
+
+CA-CJH-Stepwise is only to show the contribution of insertion:
+- If Stepwise is implemented, it should be clearly marked as a fast dispatching variant.
+- Do not confuse it with the main method.
+
+============================================================
+6. Files to Add
+============================================================
+
+Add:
+
+    scheduling/common/cjh_panel_features.py
+
+Functions:
+- extract_block_feature_vector(block, context=None, feature_mode="process_only")
+- build_feature_matrix(block_ids, blocks_dict, context=None, feature_mode="process_only")
+- normalize_feature_matrix(X)
+- compute_trimmed_baseline(X_norm, trim_ratio=0.1)
+- compute_normal_coverage_scores(X_norm, baseline, trimmed_std)
+- compute_cosine_scores(X_norm, baseline)
+- compute_cjh_scores(...)
+
+Add:
+
+    scheduling/common/cjh_panel_insertion.py
+
+Functions:
+- run_ca_cjh_insertion(...)
+- evaluate_panel_sequence_for_cjh(...)
+- compute_local_window_score(...)
+- build_insertion_trace_row(...)
+- save_cjh_insertion_trace(...)
+
+Add optional:
+
+    scheduling/common/cjh_panel_stepwise.py
+
+Only if easy, for ablation.
+
+Add:
+
+    docs/ca_cjh_insertion_design.md
+
+Add scripts:
+
+    scripts/run_ca_cjh_insertion_actual.py
+    scripts/run_ca_cjh_insertion_smoke.py
+
+Optional:
+    scripts/run_ca_cjh_insertion_generated.py
+
+============================================================
+7. Files to Modify
+============================================================
+
+Modify selection method integration only as needed.
+
+main.py:
+- Add a new mode or route:
+    python main.py heuristic --config config.yaml --yes
+  with:
+    heuristic.entry: assembly_start
+    heuristic.method: ca_cjh_insertion
+
+or add direct mode if cleaner:
+    python main.py ca_cjh_insertion --config config.yaml --yes
+
+Do not break existing modes:
+- train
+- eval
+- compare
+- heuristic
+- replay
+- replay_start_date
+- gantt
+
+scheduling/common/selection_rules.py:
+- Add method aliases only if needed:
+    ca_cjh_stepwise
+    cjh_panel_stepwise
+- Do NOT implement CA-CJH-Insertion as a simple select_block_id dispatch rule.
+  It is an insertion heuristic that builds a sequence, not a one-step selector.
+
+scheduling/assembly_start/action_sequence_조립착수일기준휴리스틱.py:
+- Avoid intrusive changes.
+- If CA-CJH-Insertion uses existing forced_sequence evaluator, minimal changes may be needed.
+- Do not disturb current SPT/LPT/MSF/RL behavior.
+
+config.yaml or new config:
+- Add cjh_panel / ca_cjh section.
+
+============================================================
+8. Config
+============================================================
+
+Add or support this config block:
+
+ca_cjh:
+  enabled: true
+  method: insertion
+  feature_mode: process_only          # process_only | process_plus_core | augmented
+  trim_ratio: 0.1
+  w_cos: 0.5
+  w_jac: 0.5
+  alpha: 100.0
+  objective_mode: cost                # cost | lexicographic
+  evaluation_mode: partial_des        # partial_des | full_des_with_completion
+  completion_policy: none             # none | lpt | cjh_priority, only if full completion needed
+  hard_constraint_priority: true
+  soft_violation_priority: true
+  include_longi_balance: true
+  trace_enabled: true
+  trace_output_dir: results/ca_cjh_traces
+  max_blocks_for_full_insertion: 120
+  beam_width: null                    # null means full insertion
+  random_seed: 42
+
+Feature mode default must be process_only.
+
+Reason:
+The PFSP-CJH method is processing-time-vector-based.
+Augmented feature modes are for ablation and industrial extension.
+
+============================================================
+9. Runtime Control
+============================================================
+
+Full insertion can be expensive.
+
+Implement:
+- full insertion by default for small/actual instances.
+- optional beam mode for large generated instances.
+
+Beam mode:
+- If beam_width is not null, evaluate only the top K insertion positions or keep K best partial sequences.
+- Do not enable beam by default.
+- Document that beam is an acceleration approximation.
+
+Add runtime logging:
+- number of blocks
+- total insertion evaluations
+- elapsed seconds
+- evaluations per second
+
+============================================================
+10. Trace Outputs for Paper Analysis
+============================================================
+
+The method must save detailed trace CSVs when trace_enabled is true.
+
+Global priority trace:
+    results/ca_cjh_traces/global_priority.csv
+
+Columns:
+- block_id
+- priority_rank
+- cosine_score
+- jaccard_normal_score
+- cjh_global_score
+- total_processing_time
+- feature_mode
+
+Insertion trace:
+    results/ca_cjh_traces/insertion_trace.csv
+
+Columns:
+- step
+- candidate_block_id
+- insertion_position
+- tentative_sequence
+- hard_violation_count
+- soft_violation_count
+- total_violation_count
+- makespan_hours
+- local_cosine_score
+- local_jaccard_normal_score
+- local_similarity_score
+- insertion_cost
+- longi_35a
+- longi_36b
+- longi_abs_diff
+- selected_position
+- reason
+
+Final result:
+    results/ca_cjh_traces/final_result.csv
+
+Columns:
+- method
+- number_of_blocks
+- makespan_hours
+- hard_violation_count
+- soft_violation_count
+- total_violation_count
+- longi_35a
+- longi_36b
+- longi_abs_diff
+- runtime_sec
+- feature_mode
+- trim_ratio
+- w_cos
+- w_jac
+- alpha
+- objective_mode
+
+These traces are essential for IJNAOE paper analysis.
+
+============================================================
+11. Experiment Scripts
+============================================================
+
+Create:
+
+scripts/run_ca_cjh_insertion_smoke.py
+
+Purpose:
+- Run on a tiny subset or generated small instance if available.
+- Verify the method returns a sequence and metrics.
+- Verify no RL/PPO model is required.
+- Verify trace files are created.
+
+Create:
+
+scripts/run_ca_cjh_insertion_actual.py
+
+Purpose:
+- Run CA-CJH-Insertion on actual panel-line data using config.
+- Compare against existing heuristics if easy:
+    SPT
+    LPT
+    MSF
+    GA if existing evaluation function is available
+    MSDH if available
+- Save a summary CSV.
+
+If existing evaluation scripts already compare methods, extend them carefully.
+
+Do not remove existing experiment scripts.
+
+============================================================
+12. Expected Comparisons for the Paper
+============================================================
+
+The implementation should support these comparisons:
+
+Main comparison:
+- Manual
+- MSDH
+- SPT
+- LPT
+- MSF
+- GA
+- CA-CJH-Insertion
+
+Optional:
+- Existing learning-based scheduler
+- CA-CJH-Stepwise
+
+Ablation:
+- CA-CJH-Insertion full
+- Cosine-only: w_cos=1, w_jac=0
+- Jaccard-only: w_cos=0, w_jac=1
+- No local-window: alpha=0
+- process_only feature mode
+- process_plus_core feature mode
+- augmented feature mode
+- objective_mode=cost
+- objective_mode=lexicographic
+
+Important:
+Jaccard-only must be described as normal-load coverage / regularity only.
+Do not say bottleneck overlap.
+
+============================================================
+13. Do Not Change These
+============================================================
+
+Do not modify:
+- PPO training
+- self-labeling training
+- pointer network
+- policy loss
+- RL reward design
+- learned model loading
+- deterministic bay assignment rules unless absolutely necessary
+- core constraint definitions
+- existing action masking semantics
+- existing SPT/LPT/MSF behavior
+- benchmark or input data files
+
+If you need a helper from existing code, call it without changing its semantics.
+
+============================================================
+14. README / Documentation
+============================================================
+
+Update README.md or add docs/ca_cjh_insertion_usage.md.
+
+Explain:
+
+CA-CJH-Insertion:
+- is a constructive insertion heuristic,
+- preserves NEH-style insertion,
+- is not reinforcement learning,
+- builds a global priority list using Cosine–Jaccard scores,
+- evaluates every insertion position using DES,
+- respects hard constraint priority,
+- treats soft-relaxation violations as violation scores,
+- uses the existing bay assignment logic.
+
+Explain the three CJH signals:
+
+1. Cosine:
+   production-feature / process-load shape alignment.
+
+2. Jaccard-normal:
+   normal-load coverage / load regularity.
+   Not bottleneck overlap.
+
+3. Local-window similarity:
+   local flow smoothing around the inserted block.
+
+Add example commands.
+
+Example command:
+    python main.py heuristic --config config_ca_cjh.yaml --yes
+
+or if you add direct mode:
+    python main.py ca_cjh_insertion --config config_ca_cjh.yaml --yes
+
+============================================================
+15. Verification
+============================================================
+
+After implementation, run or explain how to run:
+
+1. Smoke test:
+    python scripts/run_ca_cjh_insertion_smoke.py
+
+2. Actual-data run:
+    python scripts/run_ca_cjh_insertion_actual.py --config config_ca_cjh.yaml
+
+3. Check trace files:
+    results/ca_cjh_traces/global_priority.csv
+    results/ca_cjh_traces/insertion_trace.csv
+    results/ca_cjh_traces/final_result.csv
+
+4. Confirm:
+    - no PPO model is required,
+    - no self-labeling training is invoked,
+    - no RL actor is loaded,
+    - deterministic bay assignment remains existing,
+    - hard violation is prioritized before soft violation and makespan,
+    - makespan - alpha * local similarity is used inside the insertion key when objective_mode=cost.
+
+============================================================
+16. Final Summary Required from Codex
+============================================================
+
+At the end, summarize:
+1. Files inspected.
+2. Files changed.
+3. Files added.
+4. How CA-CJH-Insertion preserves NEH-style insertion.
+5. How Cosine, Jaccard-normal, and local-window similarity are implemented.
+6. How tentative sequences are evaluated.
+7. How hard and soft constraints are handled.
+8. How bay assignment is handled.
+9. How to run the smoke test.
+10. How to run actual-data experiment.
+11. Any limitations or assumptions, especially around partial-sequence evaluation.
+
+============================================================
+17. One-Sentence Method Identity
+============================================================
+
+The implemented method should match this identity:
+
+CA-CJH-Insertion is a constraint-aware constructive insertion heuristic that extends PFSP-CJH to shipyard panel-line scheduling by ranking blocks with baseline-based Cosine–Jaccard production-feature similarity and evaluating every insertion position through DES using hard-constraint priority, soft-violation minimization, makespan reduction, and local flow-smoothing.

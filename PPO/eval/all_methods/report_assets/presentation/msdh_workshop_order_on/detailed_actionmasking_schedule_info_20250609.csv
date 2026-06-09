@@ -1,0 +1,191 @@
+﻿type,date,total_blocks,total_steps,step,block_id,assembly_type,port_starboard,status,reason,P5#11_check,P5#3_check,P6#4_check,P6#time_check,selected_block,available_count,excluded_count,primary_constraint,relax_level,relax_stage,relax_constraints,relax_target_count,relax_targets,relaxed_block_count,relax_target_total,final_choice_flag,final_violation_count,final_violation_list,seam_count,c_seam_count,has_curved_plate
+METADATA,20250609,18,18,,,,,,,,,,,,,,,,,,,,,,,,,,,
+STEP_SUMMARY,20250609,18,18,0,선택: 1,fixed,,"가용: 16, 제외: 2","available_types: {'fixed': 9, 'line': 7}, excluded_types: {'line': 2}",,,,,1,16,2,없음,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250609,18,18,0,4,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,0,7,fixed,C,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,0,3,fixed,C,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,0,12,line,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,0,13,line,S,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,0,18,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,0,5,line,S,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,0,6,line,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,0,11,line,C,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,0,14,line,S,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,0,15,line,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,0,8,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,0,9,fixed,S,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,0,10,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,0,1,fixed,S,AVAILABLE,모든 제약조건 통과,,,,,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,0,2,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,0,16,line,S,EXCLUDED,ROUTING_WORKSHOP_ORDER 위반,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,0,17,line,P,EXCLUDED,ROUTING_WORKSHOP_ORDER 위반,,,,,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250609,18,18,1,선택: 11,line,,"가용: 10, 제외: 7","available_types: {'fixed': 5, 'line': 5}, excluded_types: {'line': 4, 'fixed': 3}",,,,,11,10,7,없음,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250609,18,18,1,4,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,1,7,fixed,C,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,1,3,fixed,C,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,1,12,line,P,EXCLUDED,ROUTING_C_SEAM_SPACING 위반,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,1,13,line,S,EXCLUDED,ROUTING_C_SEAM_SPACING 위반,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,1,18,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,1,5,line,S,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,1,6,line,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,1,11,line,C,AVAILABLE,모든 제약조건 통과,,,,,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,1,14,line,S,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,1,15,line,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,1,8,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,1,9,fixed,S,EXCLUDED,ROUTING_C_SEAM_SPACING 위반,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,1,10,fixed,P,EXCLUDED,ROUTING_C_SEAM_SPACING 위반,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,1,2,fixed,P,EXCLUDED,ROUTING_C_SEAM_SPACING 위반,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,1,16,line,S,EXCLUDED,ROUTING_WORKSHOP_ORDER 위반,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,1,17,line,P,EXCLUDED,ROUTING_WORKSHOP_ORDER 위반,,,,,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250609,18,18,2,선택: 2,fixed,,"가용: 14, 제외: 2","available_types: {'fixed': 8, 'line': 6}, excluded_types: {'line': 2}",,,,,2,14,2,없음,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250609,18,18,2,4,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,2,7,fixed,C,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,2,3,fixed,C,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,2,12,line,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,2,13,line,S,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,2,18,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,2,5,line,S,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,2,6,line,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,2,14,line,S,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,2,15,line,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,2,8,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,2,9,fixed,S,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,2,10,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,2,2,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,2,16,line,S,EXCLUDED,ROUTING_WORKSHOP_ORDER 위반,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,2,17,line,P,EXCLUDED,ROUTING_WORKSHOP_ORDER 위반,,,,,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250609,18,18,3,선택: 8,fixed,,"가용: 9, 제외: 6","available_types: {'fixed': 5, 'line': 4}, excluded_types: {'line': 4, 'fixed': 2}",,,,,8,9,6,없음,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250609,18,18,3,4,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,3,7,fixed,C,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,3,3,fixed,C,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,3,12,line,P,EXCLUDED,ROUTING_C_SEAM_SPACING 위반,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,3,13,line,S,EXCLUDED,ROUTING_C_SEAM_SPACING 위반,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,3,18,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,3,5,line,S,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,3,6,line,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,3,14,line,S,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,3,15,line,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,3,8,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,3,9,fixed,S,EXCLUDED,ROUTING_C_SEAM_SPACING 위반,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,3,10,fixed,P,EXCLUDED,ROUTING_C_SEAM_SPACING 위반,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,3,16,line,S,EXCLUDED,ROUTING_WORKSHOP_ORDER 위반,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,3,17,line,P,EXCLUDED,ROUTING_WORKSHOP_ORDER 위반,,,,,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250609,18,18,4,선택: 5,line,,"가용: 12, 제외: 2","available_types: {'fixed': 6, 'line': 6}, excluded_types: {'line': 2}",,,,,5,12,2,없음,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250609,18,18,4,4,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,4,7,fixed,C,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,4,3,fixed,C,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,4,12,line,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,4,13,line,S,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,4,18,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,4,5,line,S,AVAILABLE,모든 제약조건 통과,,,,,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,4,6,line,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,4,14,line,S,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,4,15,line,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,4,9,fixed,S,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,4,10,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,4,16,line,S,EXCLUDED,ROUTING_WORKSHOP_ORDER 위반,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,4,17,line,P,EXCLUDED,ROUTING_WORKSHOP_ORDER 위반,,,,,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250609,18,18,5,선택: 6,line,,"가용: 11, 제외: 2","available_types: {'fixed': 6, 'line': 5}, excluded_types: {'line': 2}",,,,,6,11,2,없음,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250609,18,18,5,4,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,5,7,fixed,C,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,5,3,fixed,C,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,5,12,line,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,5,13,line,S,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,5,18,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,5,6,line,P,AVAILABLE,모든 제약조건 통과,,,,,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,5,14,line,S,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,5,15,line,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,5,9,fixed,S,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,5,10,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,5,16,line,S,EXCLUDED,ROUTING_WORKSHOP_ORDER 위반,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,5,17,line,P,EXCLUDED,ROUTING_WORKSHOP_ORDER 위반,,,,,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250609,18,18,6,선택: 9,fixed,,"가용: 8, 제외: 4","available_types: {'fixed': 6, 'line': 2}, excluded_types: {'line': 4}",,,,,9,8,4,P5#11,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250609,18,18,6,4,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,6,7,fixed,C,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,6,3,fixed,C,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,6,12,line,P,EXCLUDED,"P5#11,12 위반",,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,6,13,line,S,EXCLUDED,"P5#11,12 위반",,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,6,18,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,6,14,line,S,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,6,15,line,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,6,9,fixed,S,AVAILABLE,모든 제약조건 통과,,,,,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,6,10,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,6,16,line,S,EXCLUDED,"P5#11,12 위반",,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,6,17,line,P,EXCLUDED,"P5#11,12 위반",,,,,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250609,18,18,7,선택: 3,fixed,,"가용: 6, 제외: 5","available_types: {'fixed': 4, 'line': 2}, excluded_types: {'line': 4, 'fixed': 1}",,,,,3,6,5,P5#11,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250609,18,18,7,4,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,7,7,fixed,C,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,7,3,fixed,C,AVAILABLE,모든 제약조건 통과,,,,,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,7,12,line,P,EXCLUDED,"ROUTING_C_SEAM_SPACING, P5#11,12 위반",,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,7,13,line,S,EXCLUDED,"ROUTING_C_SEAM_SPACING, P5#11,12 위반",,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,7,18,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,7,14,line,S,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,7,15,line,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,7,10,fixed,P,EXCLUDED,ROUTING_C_SEAM_SPACING 위반,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,7,16,line,S,EXCLUDED,"P5#11,12 위반",,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,7,17,line,P,EXCLUDED,"P5#11,12 위반",,,,,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250609,18,18,8,선택: 10,fixed,,"가용: 6, 제외: 4","available_types: {'fixed': 4, 'line': 2}, excluded_types: {'line': 4}",,,,,10,6,4,P5#11,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250609,18,18,8,4,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,8,7,fixed,C,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,8,12,line,P,EXCLUDED,"P5#11,12 위반",,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,8,13,line,S,EXCLUDED,"P5#11,12 위반",,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,8,18,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,8,14,line,S,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,8,15,line,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,8,10,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,8,16,line,S,EXCLUDED,"P5#11,12 위반",,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,8,17,line,P,EXCLUDED,"P5#11,12 위반",,,,,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250609,18,18,9,선택: 15,line,,"가용: 5, 제외: 4","available_types: {'fixed': 3, 'line': 2}, excluded_types: {'line': 4}",,,,,15,5,4,P5#11,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250609,18,18,9,4,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,9,7,fixed,C,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,9,12,line,P,EXCLUDED,"ROUTING_C_SEAM_SPACING, P5#11,12 위반",,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,9,13,line,S,EXCLUDED,"ROUTING_C_SEAM_SPACING, P5#11,12 위반",,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,9,18,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,9,14,line,S,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,9,15,line,P,AVAILABLE,모든 제약조건 통과,,,,,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,9,16,line,S,EXCLUDED,"P5#11,12 위반",,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,9,17,line,P,EXCLUDED,"P5#11,12 위반",,,,,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250609,18,18,10,선택: 4,fixed,,"가용: 8, 제외: 0","available_types: {'fixed': 3, 'line': 5}, excluded_types: {}",,,,,4,8,0,없음,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250609,18,18,10,4,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,10,7,fixed,C,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,10,12,line,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,10,13,line,S,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,10,18,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,10,14,line,S,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,10,16,line,S,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,10,17,line,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250609,18,18,11,선택: 14,line,,"가용: 7, 제외: 0","available_types: {'fixed': 2, 'line': 5}, excluded_types: {}",,,,,14,7,0,없음,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250609,18,18,11,7,fixed,C,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,11,12,line,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,11,13,line,S,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,11,18,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,11,14,line,S,AVAILABLE,모든 제약조건 통과,,,,,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,11,16,line,S,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,11,17,line,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250609,18,18,12,선택: 12,line,,"가용: 6, 제외: 0","available_types: {'fixed': 2, 'line': 4}, excluded_types: {}",,,,,12,6,0,없음,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250609,18,18,12,7,fixed,C,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,12,12,line,P,AVAILABLE,모든 제약조건 통과,,,,,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,12,13,line,S,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,12,18,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,12,16,line,S,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,12,17,line,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250609,18,18,13,선택: 16,line,,"가용: 4, 제외: 1","available_types: {'fixed': 2, 'line': 2}, excluded_types: {'line': 1}",,,,,16,4,1,없음,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250609,18,18,13,7,fixed,C,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,13,13,line,S,EXCLUDED,ROUTING_C_SEAM_SPACING 위반,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,13,18,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,13,16,line,S,AVAILABLE,모든 제약조건 통과,,,,,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,13,17,line,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250609,18,18,14,선택: 7,fixed,,"가용: 2, 제외: 2","available_types: {'fixed': 2}, excluded_types: {'line': 2}",,,,,7,2,2,P5#11,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250609,18,18,14,7,fixed,C,AVAILABLE,모든 제약조건 통과,,,,,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,14,13,line,S,EXCLUDED,"P5#11,12 위반",,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,14,18,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,14,17,line,P,EXCLUDED,"P5#11,12 위반",,,,,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250609,18,18,15,선택: 18,fixed,,"가용: 1, 제외: 2","available_types: {'fixed': 1}, excluded_types: {'line': 2}",,,,,18,1,2,P5#11,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250609,18,18,15,13,line,S,EXCLUDED,"P5#11,12 위반",,,,,,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,15,18,fixed,P,AVAILABLE,모든 제약조건 통과,,,,,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,15,17,line,P,EXCLUDED,"P5#11,12 위반",,,,,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250609,18,18,16,선택: 13,line,,"가용: 2, 제외: 0","available_types: {'line': 2}, excluded_types: {}",,,,,13,2,0,없음,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250609,18,18,16,13,line,S,AVAILABLE,모든 제약조건 통과,,,,,★,,,,0,,,0,,,,False,0,,,,False
+BLOCK_DETAIL,20250609,18,18,16,17,line,P,AVAILABLE,모든 제약조건 통과,,,,,,,,,0,,,0,,,,False,0,,,,False
+STEP_SUMMARY,20250609,18,18,17,선택: 17,line,,"가용: 1, 제외: 0","available_types: {'line': 1}, excluded_types: {}",,,,,17,1,0,없음,,,,,,0,0,0,,,,,
+BLOCK_DETAIL,20250609,18,18,17,17,line,P,AVAILABLE,모든 제약조건 통과,,,,,★,,,,0,,,0,,,,False,0,,,,False

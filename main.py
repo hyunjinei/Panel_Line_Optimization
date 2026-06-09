@@ -25,6 +25,12 @@ def _normalize_method_name(name: str) -> str:
         "seam_min": "SEAM_MIN",
         "seammin": "SEAM_MIN",
         "seam": "SEAM_MIN",
+        # [AGENT-ADD] CA-CJH insertion heuristic aliases for eval summaries.
+        "ca_cjh": "CA_CJH",
+        "cacjh": "CA_CJH",
+        "ca_cjh_insertion": "CA_CJH",
+        "cjh": "CA_CJH",
+        "cjh_insertion": "CA_CJH",
         "rl": "RL",
         "강화학습": "RL",
         "excel": "EXCEL",
@@ -179,7 +185,10 @@ def validate_config(mode: str, config: dict) -> tuple[list, list, dict]:
             else:
                 warnings.append(f"{key_name} 항목 '{raw}'는 인식되지 않는 키입니다.")
 
+    # [AGENT-EDIT] Show scope-specific hard constraints in the CLI summary too.
     summary["strict_rules"] = (constraint_cfg.get("strict_rules") or [])
+    summary["hard_constraints_start_date"] = (constraint_cfg.get("hard_constraints_start_date") or [])
+    summary["hard_constraints_assembly"] = (constraint_cfg.get("hard_constraints_assembly") or [])
     # [AGENT-EDIT] 날짜별 용량 오버라이드 활성 플래그 반영
     if constraint_cfg.get("enable_daily_block_cap_overrides"):
         summary["daily_block_cap_overrides"] = (constraint_cfg.get("daily_block_cap_overrides") or {})
@@ -226,7 +235,13 @@ def print_summary(summary: dict) -> None:
         print(f"- 간트차트 검색 경로: {summary.get('gantt_search_dir')}")
     print(f"- 완화 순서(착수일): {_summarize_list(summary.get('relax_order_start_date') or [])}")
     print(f"- 완화 순서(조립): {_summarize_list(summary.get('relax_order_assembly') or [])}")
-    print(f"- 완화 금지: {_summarize_list(summary.get('strict_rules') or [])}")
+    hard_rules = []
+    hard_rules.extend(summary.get("strict_rules") or [])
+    hard_rules.extend(summary.get("hard_constraints_start_date") or [])
+    hard_rules.extend(summary.get("hard_constraints_assembly") or [])
+    # [AGENT-EDIT] Keep the summary readable when the same hard rule appears in both scopes.
+    hard_rules = list(dict.fromkeys(hard_rules))
+    print(f"- 완화 금지: {_summarize_list(hard_rules)}")
     if summary.get("daily_block_cap_overrides"):
         print(f"- 일일 블록 제한: {summary.get('daily_block_cap_overrides')}")
     if summary.get("daily_seam_cap_overrides"):

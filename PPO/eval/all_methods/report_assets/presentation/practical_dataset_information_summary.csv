@@ -1,0 +1,24 @@
+﻿Category,Item,Value
+Data source,Input Excel file,environment/판넬 블록 데이터셋_250618_SNU.xlsx
+Data source,Evaluation result file,PPO/eval/20250609_0429_12_46_seed42/excel_evaluation_results.csv
+Scale,Original Excel rows,72
+Scale,Scheduling units after linked-block aggregation,68
+Scale,Expanded evaluation rows,72
+Date,Production start date range,20250609-20250613
+Date,Assembly start date range,20250610-20250617
+Relation,Paired-block relation count,0
+Relation,Blocks involved in paired-block relation,0
+Relation,Linked subassembly group count,4
+Relation,Original rows involved in linked subassembly groups,8
+Relation,Rows merged by linked-block aggregation,4
+Type,"Port/starboard/center distribution, scheduling units",C:8; P:32; S:28
+Type,"Assembly type distribution, scheduling units",fixed:33; line:35
+Type,"Line group distribution, scheduling units",F_1:2; F_10:11; F_2:3; F_3:3; F_4:6; F_5:1; F_6:2; F_7:3; F_8:1; F_9:1; L_1:17; L_2:18
+Bay,"Bay distribution, scheduling units",35A:32; 36B:36
+Bay,"Bay distribution, expanded rows",35A:33; 36B:39
+Workload,"Total longi count, scheduling units",889
+Workload,"Total longi count, expanded rows",959
+Workload,"Longi 35A, expanded rows",407
+Workload,"Longi 36B, expanded rows",552
+Workload,"Seam count total, scheduling units",223
+Workload,"C-seam count total, scheduling units",50

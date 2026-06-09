@@ -1,0 +1,16 @@
+﻿file,rows,columns
+synthetic_all_graph_values_long.csv,570,25
+synthetic_size_profile_summary.csv,90,24
+synthetic_block_profile_summary.csv,570,23
+synthetic_size_summary.csv,15,22
+synthetic_profile_summary.csv,30,22
+synthetic_size_profile_makespan_wide.csv,18,7
+synthetic_size_profile_violations_wide.csv,18,7
+synthetic_block_profile_makespan_wide.csv,114,7
+synthetic_block_profile_violations_wide.csv,114,7
+synthetic_block_count_makespan_wide.csv,19,6
+synthetic_block_count_violations_wide.csv,19,6
+synthetic_size_profile_block_ranges.csv,18,8
+practical_case_summary.csv,7,19
+practical_case_bay_longi_distribution.csv,14,7
+practical_case_plot_values_long.csv,28,6

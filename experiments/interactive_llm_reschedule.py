@@ -35,6 +35,7 @@ from llm_interface.reschedule import (
 )
 from llm_interface.result_explainer import explain_comparison
 from llm_interface.schemas import ComparisonSummary, ScheduleEditRequest
+from llm_interface.solution_evaluator import evaluate_solution, save_solution_evaluation
 from llm_interface.summary_adapters import summarize_result_rows
 from llm_interface.validation import request_to_dict, validate_request
 from runtime_config import get_runtime_config, set_runtime_config
@@ -65,13 +66,14 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--date-offset", type=int, default=0)
     parser.add_argument("--max-days", type=int, default=20)
     parser.add_argument("--rl-model-path")
-    parser.add_argument("--parser", default="deterministic", choices=["deterministic", "llm", "openai", "groq", "ollama", "openai_compatible", "auto"])
+    parser.add_argument("--parser", default="deterministic", choices=["deterministic", "llm", "openai", "groq", "gemini", "ollama", "openai_compatible", "auto"])
     parser.add_argument("--llm-model", default=None)
     parser.add_argument("--llm-provider", default=None)
     parser.add_argument("--llm-base-url", default=None)
     parser.add_argument("--llm-api-key-env", default=None)
     parser.add_argument("--runtime-config-json", default="")
     parser.add_argument("--freeze-existing-prefix", action="store_true")
+    parser.add_argument("--disable-current-state-baseline", action="store_true")
     parser.add_argument("--save-detailed-process", action="store_true")
     parser.add_argument("--verbose-scheduler", action="store_true")
     return parser.parse_args()
@@ -286,6 +288,19 @@ def _fill_frozen_prefix(plan: List[Optional[int]], before_sequence: Sequence[int
     return filled
 
 
+def _current_state_only_request(request: ScheduleEditRequest) -> ScheduleEditRequest:
+    """Return only constraints that describe already-executed current state."""
+    # [AGENT-ADD] freeze_prefix is not a schedule improvement request. It is the
+    # operational state that both before and after schedules must share.
+    return ScheduleEditRequest(
+        raw_request=request.raw_request,
+        mode=request.mode,
+        preserve_existing_schedule_as_much_as_possible=request.preserve_existing_schedule_as_much_as_possible,
+        constraints=[copy.deepcopy(c) for c in request.constraints if c.type == "freeze_prefix"],
+        unparsed_fragments=[],
+    )
+
+
 def run_case(args: argparse.Namespace) -> Dict[str, Any]:
     out_dir = Path(args.output_dir).resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -299,6 +314,23 @@ def run_case(args: argparse.Namespace) -> Dict[str, Any]:
     blocks, metadata = _load_blocks(args.excel_path, args.sheet_name)
 
     with _pushd(out_dir):
+        # [AGENT-EDIT] Parse first so already-started prefix state can be applied
+        # to the baseline run. Without this, before/after may compare different
+        # current states and produce misleading metric deltas.
+        request = parse_request_auto(
+            args.request,
+            current_sequence=[],
+            parser_mode=args.parser,
+            model=args.llm_model,
+            provider=getattr(args, "llm_provider", None),
+            base_url=getattr(args, "llm_base_url", None),
+            api_key_env=getattr(args, "llm_api_key_env", None),
+        )
+        current_state_request = _current_state_only_request(request)
+        current_state_forced_prefix = []
+        if not bool(args.disable_current_state_baseline):
+            current_state_forced_prefix = build_forced_prefix_plan(current_state_request)
+
         before_csv = out_dir / "before_results.csv"
         before_rows, before_stats, before_trace = _run_scheduler(
             method=args.method,
@@ -309,19 +341,11 @@ def run_case(args: argparse.Namespace) -> Dict[str, Any]:
             max_days=args.max_days,
             output_csv=before_csv,
             save_detailed=args.save_detailed_process,
+            forced_prefix=current_state_forced_prefix,
             rl_model_path=args.rl_model_path,
         )
         before_sequence = _metric_sequence(before_rows)
 
-        request = parse_request_auto(
-            args.request,
-            current_sequence=before_sequence,
-            parser_mode=args.parser,
-            model=args.llm_model,
-            provider=getattr(args, "llm_provider", None),
-            base_url=getattr(args, "llm_base_url", None),
-            api_key_env=getattr(args, "llm_api_key_env", None),
-        )
         errors, warnings = validate_request(request, sequence=before_sequence)
         request_json_path = out_dir / "request.json"
         request_json_path.write_text(
@@ -382,6 +406,12 @@ def run_case(args: argparse.Namespace) -> Dict[str, Any]:
         report_path = out_dir / "analysis_report.md"
         save_analysis_bundle(bundle, bundle_path)
         save_analysis_report(bundle, report_path)
+        solution_eval = evaluate_solution(
+            request=request,
+            before_rows=before_rows,
+            after_rows=after_rows,
+        )
+        solution_eval_paths = save_solution_evaluation(solution_eval, out_dir)
 
         summary = {
             "method": args.method,
@@ -393,6 +423,7 @@ def run_case(args: argparse.Namespace) -> Dict[str, Any]:
             "after_decision_trace_csv": after_trace_csv,
             "analysis_bundle_json": str(bundle_path),
             "analysis_report_md": str(report_path),
+            **solution_eval_paths,
             "explanation": explanation,
             "before": before_summary.__dict__,
             "after": after_summary.__dict__,
@@ -401,7 +432,9 @@ def run_case(args: argparse.Namespace) -> Dict[str, Any]:
             "forced_prefix": forced_prefix,
             "precedence_rules": precedence_rules,
             "manual_bay_assignments": manual_bays,
+            "current_state_forced_prefix": current_state_forced_prefix,
             "runtime_override": interactive_runtime_cfg,
+            "solution_evaluation": solution_eval,
             "warnings": warnings,
         }
         summary_path = out_dir / "summary.json"
@@ -417,6 +450,7 @@ def main() -> None:
         "before_csv": summary["before_csv"],
         "after_csv": summary["after_csv"],
         "analysis_bundle_json": summary["analysis_bundle_json"],
+        "solution_evaluation_json": summary["solution_evaluation_json"],
     }, ensure_ascii=False, indent=2))
 
 

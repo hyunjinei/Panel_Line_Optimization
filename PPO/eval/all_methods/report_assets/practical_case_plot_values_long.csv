@@ -1,0 +1,29 @@
+﻿method,method_label,method_order,metric,value,unit
+EXCEL,Actual,0,Bay 35A longi,407.0,count
+EXCEL,Actual,0,Bay 36B longi,552.0,count
+EXCEL,Actual,0,Makespan,104.83333333333333,h
+EXCEL,Actual,0,Violation,45.0,count
+ACTIONMASKING,ActionMasking,1,Bay 35A longi,493.0,count
+ACTIONMASKING,ActionMasking,1,Bay 36B longi,466.0,count
+ACTIONMASKING,ActionMasking,1,Makespan,104.71666666666667,h
+ACTIONMASKING,ActionMasking,1,Violation,31.0,count
+SPT,SPT,2,Bay 35A longi,471.0,count
+SPT,SPT,2,Bay 36B longi,488.0,count
+SPT,SPT,2,Makespan,91.51666666666667,h
+SPT,SPT,2,Violation,10.0,count
+SEAM_MIN,MSF,3,Bay 35A longi,493.0,count
+SEAM_MIN,MSF,3,Bay 36B longi,466.0,count
+SEAM_MIN,MSF,3,Makespan,91.0,h
+SEAM_MIN,MSF,3,Violation,6.0,count
+LPT,LPT,4,Bay 35A longi,501.0,count
+LPT,LPT,4,Bay 36B longi,458.0,count
+LPT,LPT,4,Makespan,89.63333333333334,h
+LPT,LPT,4,Violation,3.0,count
+GA,GA,5,Bay 35A longi,491.0,count
+GA,GA,5,Bay 36B longi,468.0,count
+GA,GA,5,Makespan,88.81666666666666,h
+GA,GA,5,Violation,5.0,count
+RL,Proposed,6,Bay 35A longi,472.0,count
+RL,Proposed,6,Bay 36B longi,487.0,count
+RL,Proposed,6,Makespan,88.61666666666666,h
+RL,Proposed,6,Violation,0.0,count

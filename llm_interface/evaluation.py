@@ -20,6 +20,9 @@ from .validation import request_from_dict, request_to_dict, validate_request
 
 CONSTRAINT_FIELDS_BY_TYPE: Dict[str, Tuple[str, ...]] = {
     "fixed_position": ("block_id", "position"),
+    "freeze_prefix": ("block_ids",),
+    "priority_block": ("block_id", "target"),
+    "delayed_block": ("block_id", "target"),
     "precedence": ("before_block_id", "after_block_id"),
     "manual_bay_assignment": ("block_id", "bay"),
     "constraint_toggle": ("target", "enabled", "scope"),

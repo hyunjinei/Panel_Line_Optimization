@@ -1,0 +1,7 @@
+﻿Test instance,Problem type,Block count range,Main generation setting,Utilization target,Paired-block relation ratio,Subassembly relation ratio,Seam scale,Tact-time scale,Length scale,Width scale,Thickness scale
+S1 / M1 / L1,General,S: 20-80; M: 90-140; L: 150-200,Baseline generation condition without a dominant stress factor,1.0,0.0,0.0,1.0,1.0,1.0,1.0,1.0
+S2 / M2 / L2,Paired Block,S: 20-80; M: 90-140; L: 150-200,Increased paired-block relation ratio,1.0,0.1,0.0,1.0,1.0,1.0,1.0,1.0
+S3 / M3 / L3,Subassembly,S: 20-80; M: 90-140; L: 150-200,Increased subassembly or linked-block ratio,1.0,0.0,0.1,1.0,1.0,1.0,1.0,1.0
+S4 / M4 / L4,Mixed Relation,S: 20-80; M: 90-140; L: 150-200,Combined paired-block and subassembly relation stress,1.0,0.1,0.1,1.0,1.0,1.0,1.0,1.0
+S5 / M5 / L5,Heavy Workload,S: 20-80; M: 90-140; L: 150-200,Increased per-block workload and physical scale,1.0,0.05,0.05,1.2,1.2,1.05,1.05,1.2
+S6 / M6 / L6,High Utilization,S: 20-80; M: 90-140; L: 150-200,Increased overall utilization and daily capacity pressure,1.25,0.05,0.05,1.1,1.1,1.0,1.0,1.0

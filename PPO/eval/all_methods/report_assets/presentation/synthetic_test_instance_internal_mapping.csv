@@ -1,0 +1,7 @@
+﻿Presentation label,Internal profile name,Problem type,Configuration note
+S1 / M1 / L1,base,General,Internal names are used only for traceability and should not be shown in the presentation slide.
+S2 / M2 / L2,ps_heavy,Paired Block,Internal names are used only for traceability and should not be shown in the presentation slide.
+S3 / M3 / L3,sub_heavy,Subassembly,Internal names are used only for traceability and should not be shown in the presentation slide.
+S4 / M4 / L4,mixed_ps_sub,Mixed Relation,Internal names are used only for traceability and should not be shown in the presentation slide.
+S5 / M5 / L5,heavy_work,Heavy Workload,Internal names are used only for traceability and should not be shown in the presentation slide.
+S6 / M6 / L6,overload,High Utilization,Internal names are used only for traceability and should not be shown in the presentation slide.

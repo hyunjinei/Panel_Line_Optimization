@@ -11,6 +11,7 @@ import random
 import traceback
 import time
 import multiprocessing as mp
+from datetime import datetime, timedelta
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from typing import Dict, List, Optional, Tuple
 
@@ -20,6 +21,7 @@ import torch
 
 from runtime_config import get_runtime_config, set_runtime_config
 from enhanced_environment.constraints import ConstraintConfig
+from enhanced_environment.constraints.managers import CalendarManager
 from scheduling.assembly_start.action_sequence_조립착수일기준휴리스틱 import (
     run_assembly_decoding_sequence_with_blocks,
     save_detailed_process_schedule_assembly,
@@ -48,6 +50,7 @@ from PPO.models.single_step_actor import (
     DIFF_BLOCK_FEATURE_DIM,
 )
 from scheduling.assembly_start.rl_assembly_scheduler import run_rl_assembly_decoding_sequence_with_blocks
+from scheduling.common.cjh_panel_insertion import run_ca_cjh_insertion
 
 from PPO.eval.helpers import sanitize_label_for_filename
 from PPO.eval.files import (
@@ -69,6 +72,11 @@ _GA_WORKER_METADATA = None
 _GA_WORKER_START_DATE = None
 _GA_WORKER_MAX_DAYS = 20
 _GA_WORKER_DATE_OFFSET = 0
+_CP_REPLAY_WORKER_BLOCKS = None
+_CP_REPLAY_WORKER_METADATA = None
+_CP_REPLAY_WORKER_START_DATE = None
+_CP_REPLAY_WORKER_MAX_DAYS = 20
+_CP_REPLAY_WORKER_DATE_OFFSET = 0
 
 
 def _get_setting(settings: Optional[Dict[str, object]], key: str, default: object) -> object:
@@ -964,6 +972,20 @@ def run_seam_min_heuristic(blocks: List, metadata: Dict, start_date: str, result
     )
 
 
+# ==== [AGENT-ADD BEGIN: CA-CJH constructive insertion baseline] ====
+def run_ca_cjh_insertion_baseline(blocks: List, metadata: Dict, start_date: str, result_folder: str = None,
+                                  settings: Optional[Dict[str, object]] = None) -> Tuple[List[Dict], Dict, List[Dict], object]:
+    """Run CA-CJH-Insertion through the same DES/final-audit path used by GA."""
+    return run_ca_cjh_insertion(
+        blocks=blocks,
+        metadata=metadata,
+        start_date=start_date,
+        result_folder=result_folder,
+        settings=settings,
+    )
+# ==== [AGENT-ADD END] ====
+
+
 # ==== [AGENT-ADD BEGIN: lightweight GA evaluation baseline] ====
 def _ga_block_id(block: object) -> int:
     return int(getattr(block, "block_id", block.get("block_id") if isinstance(block, dict) else 0))
@@ -1364,6 +1386,1877 @@ def run_ga_metaheuristic(blocks: List, metadata: Dict, start_date: str, result_f
         f"   GA 완료: Makespan = {float(final_statistics.get('makespan_hours', 0) or 0):.2f}시간, "
         f"Primary = {final_statistics.get('total_violations_primary', final_statistics.get('total_violations', 0))}, "
         f"후보평가 = {len(evaluated)}개, 계산시간 = {elapsed_seconds:.2f}s"
+    )
+    return final_results, final_statistics, [], None
+# ==== [AGENT-ADD END] ====
+
+
+# ==== [AGENT-ADD BEGIN: OR-Tools CP-SAT comparison baseline] ====
+def _cp_sat_worker_count(settings: Optional[Dict[str, object]]) -> int:
+    """[AGENT-ADD] Dynamically size CP-SAT search workers from the host CPU/RAM."""
+    requested = int(_get_setting(settings, "cp_workers", 0) or 0)
+    if requested > 0:
+        return max(1, requested)
+
+    cpu_count = os.cpu_count() or 1
+    # [AGENT-EDIT] Honor cp_full_cpu for exact CP-SAT runs as well as fast mode.
+    full_cpu = _as_bool(_get_setting(settings, "cp_full_cpu", False), False)
+    reserve_cores = 0 if full_cpu else max(1, cpu_count // 16)
+    ram_gb = _get_total_memory_gb()
+    ram_limit = cpu_count
+    if ram_gb:
+        per_worker_ram = float(_get_setting(settings, "cp_ram_gb_per_worker", 0.50) or 0.50)
+        ram_limit = max(1, int(ram_gb / max(0.1, per_worker_ram)))
+    return max(1, min(cpu_count - reserve_cores, ram_limit))
+
+
+def _cp_sat_processing_times(block: object, scale: int) -> List[int]:
+    """[AGENT-ADD] Convert 8 process times in minutes to CP integer units."""
+    raw_times = list(getattr(block, "processing_times", []) or [])
+    if len(raw_times) < 8:
+        raw_times.extend([0.0] * (8 - len(raw_times)))
+    converted: List[int] = []
+    for value in raw_times[:8]:
+        try:
+            converted.append(max(0, int(round(float(value) * scale))))
+        except (TypeError, ValueError):
+            converted.append(0)
+    return converted
+
+
+def _cp_sat_is_ps_small_pair(block: object, blocks_dict: Dict[int, object]) -> bool:
+    """[AGENT-ADD] Match the existing small P/S pair bay rule where possible."""
+    checker = getattr(block, "is_ps_small_pair", None)
+    if callable(checker):
+        try:
+            return bool(checker(blocks_dict))
+        except TypeError:
+            return bool(checker())
+    pair_id = getattr(block, "pair_block_id", None)
+    if not pair_id:
+        return False
+    pair = blocks_dict.get(int(pair_id))
+    try:
+        current_longi = int(getattr(block, "longi_count", 99) or 99)
+        pair_longi = int(getattr(pair, "longi_count", 99) or 99) if pair is not None else 99
+        return current_longi < 7 and pair_longi < 7
+    except (TypeError, ValueError):
+        return False
+
+
+def _cp_sat_normalize_sequence(block_ids: List[int], sequence: List[int]) -> List[int]:
+    """[AGENT-ADD] Keep CP candidate sequences complete and duplicate-free."""
+    seen = set()
+    normalized: List[int] = []
+    allowed = set(block_ids)
+    for block_id in sequence:
+        if block_id in allowed and block_id not in seen:
+            normalized.append(int(block_id))
+            seen.add(int(block_id))
+    for block_id in block_ids:
+        if block_id not in seen:
+            normalized.append(int(block_id))
+    return normalized
+
+
+def _cp_add_and_bool(model, literals: List[object], name: str):
+    """[AGENT-ADD] Reified AND helper for native CP-SAT violation variables."""
+    z = model.NewBoolVar(name)
+    if not literals:
+        model.Add(z == 1)
+        return z
+    model.AddBoolAnd(literals).OnlyEnforceIf(z)
+    model.AddBoolOr([lit.Not() for lit in literals] + [z])
+    return z
+
+
+def _cp_add_or_bool(model, literals: List[object], name: str):
+    """[AGENT-ADD] Reified OR helper for native CP-SAT violation variables."""
+    z = model.NewBoolVar(name)
+    if not literals:
+        model.Add(z == 0)
+        return z
+    model.AddBoolOr(literals).OnlyEnforceIf(z)
+    model.AddBoolAnd([lit.Not() for lit in literals]).OnlyEnforceIf(z.Not())
+    for lit in literals:
+        model.AddImplication(lit, z)
+    return z
+
+
+def _cp_add_int_eq_bool(model, left, right, name: str):
+    """[AGENT-ADD] Bool variable equivalent to left == right."""
+    z = model.NewBoolVar(name)
+    model.Add(left == right).OnlyEnforceIf(z)
+    model.Add(left != right).OnlyEnforceIf(z.Not())
+    return z
+
+
+def _cp_add_linear_ge_bool(model, expr, threshold: int, name: str):
+    """[AGENT-ADD] Bool variable equivalent to expr >= threshold."""
+    z = model.NewBoolVar(name)
+    model.Add(expr >= threshold).OnlyEnforceIf(z)
+    model.Add(expr <= threshold - 1).OnlyEnforceIf(z.Not())
+    return z
+
+
+def _cp_add_linear_le_bool(model, expr, threshold: int, name: str):
+    """[AGENT-ADD] Bool variable equivalent to expr <= threshold."""
+    z = model.NewBoolVar(name)
+    model.Add(expr <= threshold).OnlyEnforceIf(z)
+    model.Add(expr >= threshold + 1).OnlyEnforceIf(z.Not())
+    return z
+
+
+def _cp_block_attr_value(block: object, attr: str, default: str = "") -> str:
+    value = getattr(block, attr, default)
+    if hasattr(value, "value"):
+        value = value.value
+    return str(value if value is not None else default)
+
+
+def _cp_parse_start_datetime(start_date: str) -> datetime:
+    text = str(start_date or "").strip()
+    for fmt in ("%Y%m%d", "%Y-%m-%d", "%Y/%m/%d"):
+        try:
+            return datetime.strptime(text[:10] if "-" in text or "/" in text else text[:8], fmt)
+        except ValueError:
+            continue
+    return datetime(2025, 1, 1)
+
+
+def _cp_repair_basic_manual_bays(
+    manual_bays: Dict[int, str],
+    blocks_dict: Dict[int, object],
+    cfg: ConstraintConfig,
+) -> Tuple[Dict[int, str], int]:
+    """[AGENT-ADD] Apply obvious Bay-rule repair before final replay.
+
+    This does not forbid CP-SAT from exploring violations. It only prevents a
+    time-limited FEASIBLE solution from being replayed with basic Bay mistakes
+    that the native objective already intended to avoid.
+    """
+    repaired = dict(manual_bays or {})
+    repair_count = 0
+
+    def _set(block_id: int, bay_name: str) -> None:
+        nonlocal repair_count
+        if repaired.get(int(block_id)) != bay_name:
+            repaired[int(block_id)] = bay_name
+            repair_count += 1
+
+    if cfg.is_constraint_enabled("P7#2"):
+        for block_id, block in blocks_dict.items():
+            if float(getattr(block, "width", 0.0) or 0.0) > 21.0:
+                _set(int(block_id), "36B")
+
+    if cfg.is_constraint_enabled("P7#3") or cfg.is_constraint_enabled("P7#4"):
+        seen_pairs = set()
+        for block_id, block in blocks_dict.items():
+            pair_id = getattr(block, "pair_block_id", None)
+            if pair_id is None or int(pair_id) not in blocks_dict:
+                continue
+            pair_key = tuple(sorted((int(block_id), int(pair_id))))
+            if pair_key in seen_pairs:
+                continue
+            seen_pairs.add(pair_key)
+            if not _cp_sat_is_ps_small_pair(block, blocks_dict):
+                continue
+            target_bay = "36B" if repaired.get(pair_key[0]) == "36B" or repaired.get(pair_key[1]) == "36B" else repaired.get(pair_key[0], "35A")
+            _set(pair_key[0], target_bay)
+            _set(pair_key[1], target_bay)
+
+    return repaired, repair_count
+
+
+def _cp_resolve_capacity_limit(cfg: ConstraintConfig, calendar_manager: Optional[CalendarManager], target_dt: datetime) -> int:
+    """[AGENT-ADD] Mirror CapacityTracker.get_capacity_limits for CP-SAT daily buckets."""
+    is_weekend = bool(calendar_manager.is_weekend(target_dt)) if calendar_manager else target_dt.weekday() >= 5
+    is_hot = bool(calendar_manager.is_hot_season(target_dt)) if calendar_manager else target_dt.month in {6, 7, 8}
+    try:
+        is_holiday_eve = bool(calendar_manager.is_holiday_eve(target_dt)) if calendar_manager else False
+    except Exception:
+        is_holiday_eve = False
+
+    base_limit = int(getattr(cfg, "weekend_seam_limit", 45) if is_weekend else getattr(cfg, "weekday_seam_limit", 75))
+    if bool(getattr(cfg, "holiday_eve_seam_reduction_enabled", True)) and is_holiday_eve:
+        base_limit = int(getattr(cfg, "holiday_eve_seam_limit", 35))
+    if (
+        is_hot
+        and not (bool(getattr(cfg, "holiday_eve_seam_reduction_enabled", True)) and is_holiday_eve)
+        and cfg.is_constraint_enabled("P5#16")
+    ):
+        if str(getattr(cfg, "hot_season_reduction_type", "absolute")) == "absolute":
+            base_limit = max(1, int(base_limit - int(getattr(cfg, "hot_season_seam_reduction", 6))))
+        else:
+            pct = float(getattr(cfg, "hot_season_percentage_reduction", 15))
+            base_limit = max(1, int(base_limit - int(base_limit * pct / 100.0)))
+
+    override_map = getattr(cfg, "daily_seam_cap_overrides", {}) or {}
+    scale_map = getattr(cfg, "daily_seam_cap_scales", {}) or {}
+    key = target_dt.strftime("%Y%m%d")
+    if key in override_map:
+        try:
+            return max(1, int(override_map[key]))
+        except Exception:
+            pass
+    if key in scale_map:
+        try:
+            base_limit = max(1, int(base_limit * float(scale_map[key])))
+        except Exception:
+            pass
+    return max(1, int(base_limit))
+
+
+def _cp_add_native_pbs_violation_terms(
+    *,
+    model,
+    block_ids: List[int],
+    blocks_dict: Dict[int, object],
+    position: Dict[int, object],
+    bay_b: Dict[int, object],
+    block_at_pos: List[object],
+    common_start: Dict[Tuple[int, int], object],
+    start_date: str,
+    max_days: int,
+    time_scale: int,
+    horizon: int,
+    cfg: ConstraintConfig,
+) -> Tuple[List[object], List[object], Dict[str, int]]:
+    """[AGENT-ADD] Native CP-SAT transfer of the main final-audit violation families.
+
+    This moves representative ERROR/WARNING PBS rules into CP-SAT as soft
+    violation variables instead of only checking them after replay.
+    """
+    n_blocks = len(block_ids)
+    ordered_ids = list(block_ids)
+    id_to_idx = {block_id: idx for idx, block_id in enumerate(ordered_ids)}
+    primary_terms: List[object] = []
+    raw_terms: List[object] = []
+    counts: Dict[str, int] = {}
+
+    def _add(term, cid: str, *, raw_only: bool = False) -> None:
+        raw_terms.append(term)
+        if not raw_only:
+            primary_terms.append(term)
+        counts[cid] = counts.get(cid, 0) + 1
+
+    def _constant_array(values: List[int]):
+        return [model.NewConstant(int(value)) for value in values]
+
+    # Positional feature variables via inverse order.
+    bay_at_pos = []
+    type_codes: Dict[str, int] = {}
+    group_codes: Dict[str, int] = {"": 0}
+    features = {
+        "assembly_type": [],
+        "line_group": [],
+        "cross_seam": [],
+        "c_seam": [],
+        "curved": [],
+        "high_seam": [],
+        "main_plate_only": [],
+    }
+    for block_id in ordered_ids:
+        block = blocks_dict[block_id]
+        assembly_type = _cp_block_attr_value(block, "assembly_type", "")
+        if assembly_type not in type_codes:
+            type_codes[assembly_type] = len(type_codes)
+        features["assembly_type"].append(type_codes[assembly_type])
+
+        line_group = str(getattr(block, "line_group", "") or "")
+        if line_group not in group_codes:
+            group_codes[line_group] = len(group_codes)
+        features["line_group"].append(group_codes[line_group])
+        features["cross_seam"].append(1 if bool(getattr(block, "is_cross_seam", False)) else 0)
+        features["c_seam"].append(1 if int(getattr(block, "c_seam_count", 0) or 0) > 0 else 0)
+        features["curved"].append(1 if bool(getattr(block, "has_curved_plate", False)) else 0)
+        features["high_seam"].append(1 if bool(getattr(block, "is_high_seam_block", False)) else 0)
+        features["main_plate_only"].append(1 if bool(getattr(block, "is_main_plate_only", False)) else 0)
+
+    for pos_idx in range(n_blocks):
+        bay_var = model.NewBoolVar(f"cp_native_bay_at_pos_{pos_idx}")
+        model.AddElement(block_at_pos[pos_idx], [bay_b[block_id] for block_id in ordered_ids], bay_var)
+        bay_at_pos.append(bay_var)
+
+    def _feature_at_pos(name: str, pos_idx: int, ub: int = 1):
+        target = model.NewIntVar(0, max(ub, 1), f"cp_native_{name}_at_{pos_idx}")
+        model.AddElement(block_at_pos[pos_idx], _constant_array(features[name]), target)
+        return target
+
+    assembly_type_at_pos = [
+        _feature_at_pos("assembly_type", pos_idx, max(type_codes.values()) if type_codes else 0)
+        for pos_idx in range(n_blocks)
+    ]
+    line_group_at_pos = [
+        _feature_at_pos("line_group", pos_idx, max(group_codes.values()) if group_codes else 0)
+        for pos_idx in range(n_blocks)
+    ]
+    cross_at_pos = [_feature_at_pos("cross_seam", pos_idx, 1) for pos_idx in range(n_blocks)]
+    cseam_at_pos = [_feature_at_pos("c_seam", pos_idx, 1) for pos_idx in range(n_blocks)]
+    curved_at_pos = [_feature_at_pos("curved", pos_idx, 1) for pos_idx in range(n_blocks)]
+    high_seam_at_pos = [_feature_at_pos("high_seam", pos_idx, 1) for pos_idx in range(n_blocks)]
+    main_plate_at_pos = [_feature_at_pos("main_plate_only", pos_idx, 1) for pos_idx in range(n_blocks)]
+
+    # P5#3,4: S block must not precede its P pair.
+    if cfg.is_constraint_enabled("P5#3") or cfg.is_constraint_enabled("P5#4"):
+        for block_id in ordered_ids:
+            block = blocks_dict[block_id]
+            if _cp_block_attr_value(block, "port_starboard", "") != "S":
+                continue
+            pair_id = getattr(block, "pair_block_id", None)
+            if pair_id is None or int(pair_id) not in position:
+                continue
+            bad = model.NewBoolVar(f"cp_native_ps_order_bad_{block_id}")
+            model.Add(position[block_id] <= position[int(pair_id)]).OnlyEnforceIf(bad)
+            model.Add(position[block_id] > position[int(pair_id)]).OnlyEnforceIf(bad.Not())
+            _add(bad, "P5#3,4")
+
+    # P5#11,12: adjacent same assembly category is penalized, matching prefix validator.
+    if cfg.is_constraint_enabled("P5#11") or cfg.is_constraint_enabled("P5#12"):
+        for pos_idx in range(n_blocks - 1):
+            bad = _cp_add_int_eq_bool(
+                model,
+                assembly_type_at_pos[pos_idx],
+                assembly_type_at_pos[pos_idx + 1],
+                f"cp_native_mixing_bad_{pos_idx}",
+            )
+            _add(bad, "P5#11,12")
+
+    # LINE_GROUP_CONSTRAINT: more than configured same line-group streak.
+    if cfg.is_constraint_enabled("LINE_GROUP_CONSTRAINT"):
+        limit = (
+            int(getattr(cfg, "line_group_soft_limit", 3))
+            if bool(getattr(cfg, "line_group_use_soft_limit", False))
+            else int(getattr(cfg, "line_group_strict_limit", 2))
+        )
+        window = max(2, limit + 1)
+        line_code = type_codes.get("line")
+        for start_idx in range(0, max(0, n_blocks - window + 1)):
+            for group_value, group_code in group_codes.items():
+                if not group_value or not str(group_value).startswith("L"):
+                    continue
+                lits = []
+                for offset in range(window):
+                    pos_idx = start_idx + offset
+                    lits.append(_cp_add_int_eq_bool(model, line_group_at_pos[pos_idx], group_code, f"cp_native_lg_{start_idx}_{offset}_{group_code}"))
+                    if line_code is not None:
+                        lits.append(_cp_add_int_eq_bool(model, assembly_type_at_pos[pos_idx], line_code, f"cp_native_lg_line_{start_idx}_{offset}_{group_code}"))
+                _add(_cp_add_and_bool(model, lits, f"cp_native_line_group_bad_{start_idx}_{group_code}"), "LINE_GROUP_CONSTRAINT")
+
+    # P6#4 and routing spacing families.
+    if cfg.is_constraint_enabled("P6#4"):
+        for pos_idx in range(n_blocks - 2):
+            _add(
+                _cp_add_and_bool(
+                    model,
+                    [
+                        _cp_add_int_eq_bool(model, cross_at_pos[pos_idx], 1, f"cp_native_cross_{pos_idx}_0"),
+                        _cp_add_int_eq_bool(model, cross_at_pos[pos_idx + 1], 1, f"cp_native_cross_{pos_idx}_1"),
+                        _cp_add_int_eq_bool(model, cross_at_pos[pos_idx + 2], 1, f"cp_native_cross_{pos_idx}_2"),
+                    ],
+                    f"cp_native_p64_bad_{pos_idx}",
+                ),
+                "P6#4",
+            )
+    spacing_specs = [
+        ("ROUTING_C_SEAM_SPACING", cseam_at_pos, int(getattr(cfg, "c_seam_spacing_gap", 2) or 2)),
+        ("ROUTING_CURVED_SPACING", curved_at_pos, 2),
+        ("ROUTING_HIGH_SEAM_SPACING", high_seam_at_pos, 2),
+    ]
+    for cid, feature_vars, gap in spacing_specs:
+        if not cfg.is_constraint_enabled(cid):
+            continue
+        for pos_idx in range(n_blocks):
+            for next_idx in range(pos_idx + 1, min(n_blocks, pos_idx + max(1, gap) + 1)):
+                _add(
+                    _cp_add_and_bool(
+                        model,
+                        [
+                            _cp_add_int_eq_bool(model, feature_vars[pos_idx], 1, f"cp_native_{cid}_{pos_idx}_{next_idx}_a"),
+                            _cp_add_int_eq_bool(model, feature_vars[next_idx], 1, f"cp_native_{cid}_{pos_idx}_{next_idx}_b"),
+                        ],
+                        f"cp_native_{cid}_bad_{pos_idx}_{next_idx}",
+                    ),
+                    cid,
+                )
+
+    # P7 Bay assignment and consecutive-bay families.
+    for block_id in ordered_ids:
+        block = blocks_dict[block_id]
+        if cfg.is_constraint_enabled("P7#2") and float(getattr(block, "width", 0.0) or 0.0) > 21.0:
+            bay_a_bad = model.NewBoolVar(f"cp_native_p72_bad_{block_id}")
+            model.Add(bay_a_bad + bay_b[block_id] == 1)
+            _add(bay_a_bad, "P7#2")
+        if cfg.is_constraint_enabled("P7#10") and int(getattr(block, "longi_count", 0) or 0) >= 30:
+            _add(bay_b[block_id], "P7#10")
+        if (
+            cfg.is_constraint_enabled("P7#12")
+            and _cp_block_attr_value(block, "material_type", "") == "LT"
+        ):
+            _add(bay_b[block_id], "P7#12")
+
+    # [AGENT-ADD] P7#3,4: small P/S pairs should stay on the same Bay.
+    if cfg.is_constraint_enabled("P7#3") or cfg.is_constraint_enabled("P7#4"):
+        seen_pairs = set()
+        for block_id in ordered_ids:
+            block = blocks_dict[block_id]
+            pair_id = getattr(block, "pair_block_id", None)
+            if pair_id is None or int(pair_id) not in bay_b:
+                continue
+            pair_key = tuple(sorted((int(block_id), int(pair_id))))
+            if pair_key in seen_pairs:
+                continue
+            seen_pairs.add(pair_key)
+            if not _cp_sat_is_ps_small_pair(block, blocks_dict):
+                continue
+            bad = model.NewBoolVar(f"cp_native_p73_p74_bad_{pair_key[0]}_{pair_key[1]}")
+            model.Add(bay_b[pair_key[0]] != bay_b[pair_key[1]]).OnlyEnforceIf(bad)
+            model.Add(bay_b[pair_key[0]] == bay_b[pair_key[1]]).OnlyEnforceIf(bad.Not())
+            _add(bad, "P7#3,4")
+
+    if cfg.is_constraint_enabled("P7#7"):
+        for pos_idx in range(n_blocks - 1):
+            _add(
+                _cp_add_and_bool(
+                    model,
+                    [bay_at_pos[pos_idx].Not(), bay_at_pos[pos_idx + 1].Not()],
+                    f"cp_native_p77_a_bad_{pos_idx}",
+                ),
+                "P7#7",
+            )
+        for pos_idx in range(n_blocks - 2):
+            _add(
+                _cp_add_and_bool(
+                    model,
+                    [bay_at_pos[pos_idx], bay_at_pos[pos_idx + 1], bay_at_pos[pos_idx + 2]],
+                    f"cp_native_p77_b_bad_{pos_idx}",
+                ),
+                "P7#7",
+            )
+    if cfg.is_constraint_enabled("CONSECUTIVE_B_BAY"):
+        for pos_idx in range(n_blocks - 1):
+            _add(_cp_add_and_bool(model, [bay_at_pos[pos_idx], bay_at_pos[pos_idx + 1]], f"cp_native_bb_bad_{pos_idx}"), "CONSECUTIVE_B_BAY")
+
+    if cfg.is_constraint_enabled("P7#8"):
+        for pos_idx in range(n_blocks - 2):
+            main_lits = [
+                _cp_add_int_eq_bool(model, main_plate_at_pos[pos_idx + offset], 1, f"cp_native_p78_main_{pos_idx}_{offset}")
+                for offset in range(3)
+            ]
+            _add(_cp_add_and_bool(model, main_lits + [bay_at_pos[pos_idx].Not(), bay_at_pos[pos_idx + 1].Not(), bay_at_pos[pos_idx + 2].Not()], f"cp_native_p78_a_bad_{pos_idx}"), "P7#8")
+            _add(_cp_add_and_bool(model, main_lits + [bay_at_pos[pos_idx], bay_at_pos[pos_idx + 1], bay_at_pos[pos_idx + 2]], f"cp_native_p78_b_bad_{pos_idx}"), "P7#8")
+
+    # [AGENT-ADD] P7#1: Bay load balance. Prefix-level replay can be enabled
+    # for small verification cases, but final-balance penalty stays the default
+    # because full prefix reification makes larger exact runs stall before the
+    # first solution.
+    if cfg.is_constraint_enabled("P7#1"):
+        work_values = {
+            block_id: max(0, sum(_cp_sat_processing_times(blocks_dict[block_id], time_scale)))
+            for block_id in ordered_ids
+        }
+        longi_values = {
+            block_id: max(0, int(getattr(blocks_dict[block_id], "longi_count", 0) or 0))
+            for block_id in ordered_ids
+        }
+        total_work_bound = max(1, sum(work_values.values()))
+        total_longi_bound = max(1, sum(longi_values.values()))
+        use_longi_balance = bool(getattr(cfg, "enable_longi_load_balance", False))
+        prefix_positions = range(1, n_blocks) if bool(getattr(cfg, "cp_native_prefix_balance", False)) else [n_blocks - 1]
+        for pos_idx in prefix_positions:
+            prefix_a_work_terms = []
+            prefix_b_work_terms = []
+            prefix_a_longi_terms = []
+            prefix_b_longi_terms = []
+            for block_id in ordered_ids:
+                if pos_idx >= n_blocks - 1:
+                    in_b = bay_b[block_id]
+                    in_a = bay_b[block_id].Not()
+                else:
+                    in_prefix = _cp_add_linear_le_bool(model, position[block_id], pos_idx, f"cp_native_p71_prefix_{pos_idx}_{block_id}")
+                    in_b = _cp_add_and_bool(model, [in_prefix, bay_b[block_id]], f"cp_native_p71_prefix_b_{pos_idx}_{block_id}")
+                    in_a = _cp_add_and_bool(model, [in_prefix, bay_b[block_id].Not()], f"cp_native_p71_prefix_a_{pos_idx}_{block_id}")
+                prefix_a_work_terms.append(work_values[block_id] * in_a)
+                prefix_b_work_terms.append(work_values[block_id] * in_b)
+                prefix_a_longi_terms.append(longi_values[block_id] * in_a)
+                prefix_b_longi_terms.append(longi_values[block_id] * in_b)
+
+            a_work = sum(prefix_a_work_terms)
+            b_work = sum(prefix_b_work_terms)
+            work_diff = model.NewIntVar(0, total_work_bound, f"cp_native_p71_work_diff_{pos_idx}")
+            model.AddAbsEquality(work_diff, a_work - b_work)
+            work_bad = _cp_add_linear_ge_bool(
+                model,
+                10 * work_diff - 3 * (a_work + b_work),
+                1,
+                f"cp_native_p71_work_bad_{pos_idx}",
+            )
+            if use_longi_balance:
+                a_longi = sum(prefix_a_longi_terms)
+                b_longi = sum(prefix_b_longi_terms)
+                longi_diff = model.NewIntVar(0, total_longi_bound, f"cp_native_p71_longi_diff_{pos_idx}")
+                model.AddAbsEquality(longi_diff, a_longi - b_longi)
+                longi_bad = _cp_add_linear_ge_bool(
+                    model,
+                    10 * longi_diff - 3 * (a_longi + b_longi),
+                    1,
+                    f"cp_native_p71_longi_bad_{pos_idx}",
+                )
+                _add(_cp_add_or_bool(model, [work_bad, longi_bad], f"cp_native_p71_bad_{pos_idx}"), "P7#1")
+            else:
+                _add(work_bad, "P7#1")
+
+    # [AGENT-ADD] ROUTING_WORKSHOP_ORDER: within the same real workshop, keep
+    # the original assembly-start order as a soft penalty instead of only audit.
+    if cfg.is_constraint_enabled("ROUTING_WORKSHOP_ORDER"):
+        sortable = []
+        for block_id in ordered_ids:
+            block = blocks_dict[block_id]
+            workshop = _cp_block_attr_value(block, "assembly_workshop_code", "") or _cp_block_attr_value(block, "workshop_code", "")
+            if not workshop:
+                continue
+            date_value = _cp_parse_start_datetime(getattr(block, "assembly_start_date", "")).toordinal()
+            sortable.append((workshop, date_value, int(block_id)))
+        for left_idx in range(len(sortable)):
+            left_workshop, left_date, left_id = sortable[left_idx]
+            for right_idx in range(left_idx + 1, len(sortable)):
+                right_workshop, right_date, right_id = sortable[right_idx]
+                if left_workshop != right_workshop or left_date == right_date:
+                    continue
+                earlier_id, later_id = (left_id, right_id) if left_date < right_date else (right_id, left_id)
+                bad = model.NewBoolVar(f"cp_native_workshop_order_bad_{earlier_id}_{later_id}")
+                model.Add(position[earlier_id] > position[later_id]).OnlyEnforceIf(bad)
+                model.Add(position[earlier_id] <= position[later_id]).OnlyEnforceIf(bad.Not())
+                _add(bad, "ROUTING_WORKSHOP_ORDER")
+
+    # P5#8/9/10/15/16: daily seam capacity from CP start day buckets.
+    try:
+        calendar_manager = CalendarManager(calendar_overrides=getattr(cfg, "calendar_overrides", {}) or {})
+    except Exception:
+        calendar_manager = None
+    start_dt = _cp_parse_start_datetime(start_date)
+    day_units = max(1, 24 * 60 * int(time_scale))
+    cp_days = max(1, min(max(1, int(max_days or 20)), int(horizon // day_units) + 2))
+    day_vars: Dict[int, object] = {}
+    on_day: Dict[Tuple[int, int], object] = {}
+    for block_id in ordered_ids:
+        day_var = model.NewIntVar(0, cp_days - 1, f"cp_native_day_{block_id}")
+        model.AddDivisionEquality(day_var, common_start[(block_id, 0)], day_units)
+        day_vars[block_id] = day_var
+        for day_idx in range(cp_days):
+            z = _cp_add_int_eq_bool(model, day_var, day_idx, f"cp_native_on_day_{block_id}_{day_idx}")
+            on_day[(block_id, day_idx)] = z
+
+    for day_idx in range(cp_days):
+        day_dt = start_dt + timedelta(days=day_idx)
+        limit = _cp_resolve_capacity_limit(cfg, calendar_manager, day_dt)
+        day_seam_expr = sum(
+            (
+                int(getattr(blocks_dict[block_id], "seam_count", 0) or 0)
+                + int(getattr(blocks_dict[block_id], "c_seam_count", 0) or 0)
+            ) * on_day[(block_id, day_idx)]
+            for block_id in ordered_ids
+        )
+        day_count_expr = sum(on_day[(block_id, day_idx)] for block_id in ordered_ids)
+        is_weekend = bool(calendar_manager.is_weekend(day_dt)) if calendar_manager else day_dt.weekday() >= 5
+        is_hot = bool(calendar_manager.is_hot_season(day_dt)) if calendar_manager else day_dt.month in {6, 7, 8}
+        try:
+            is_holiday_eve = bool(calendar_manager.is_holiday_eve(day_dt)) if calendar_manager else False
+        except Exception:
+            is_holiday_eve = False
+        capacity_enabled = (
+            (is_holiday_eve and cfg.is_constraint_enabled("P5#15"))
+            or (is_hot and cfg.is_constraint_enabled("P5#16"))
+            or (is_weekend and cfg.is_constraint_enabled("P5#10"))
+            or ((not is_weekend) and cfg.is_constraint_enabled("P5#8"))
+        )
+        if capacity_enabled:
+            over = _cp_add_linear_ge_bool(model, day_seam_expr, limit + 1, f"cp_native_capacity_bad_{day_idx}")
+            cid = "P5#15" if is_holiday_eve else ("P5#16" if is_hot else ("P5#10" if is_weekend else "P5#8"))
+            _add(over, cid)
+        if (not is_weekend) and cfg.is_constraint_enabled("P5#9"):
+            over72 = _cp_add_linear_ge_bool(model, day_seam_expr, 73, f"cp_native_p59_over72_{day_idx}")
+            under17 = _cp_add_linear_le_bool(model, day_count_expr, 16, f"cp_native_p59_under17_{day_idx}")
+            _add(_cp_add_and_bool(model, [over72, under17], f"cp_native_p59_bad_{day_idx}"), "P5#9")
+
+    return primary_terms, raw_terms, counts
+
+
+def _resolve_cp_parallel_plan(candidate_count: int, settings: Optional[Dict[str, object]], total_workers: int) -> Dict:
+    """[AGENT-ADD] Size CP-SAT candidate/replay parallelism to occupy CPU cores."""
+    mode = str(_get_setting(settings, "cp_parallel", "auto")).strip().lower()
+    if mode in {"0", "false", "off", "no"}:
+        return {"enabled": False, "reason": "disabled", "workers": 1, "candidate_threads": max(1, int(total_workers))}
+
+    cpu_count = os.cpu_count() or 1
+    requested_workers = int(_get_setting(settings, "cp_parallel_workers", 0) or 0)
+    requested_threads = int(_get_setting(settings, "cp_candidate_threads", 0) or 0)
+    ram_gb = _get_total_memory_gb()
+    per_worker_ram = float(_get_setting(settings, "cp_ram_gb_per_worker", 0.75) or 0.75)
+    ram_limit = int(ram_gb / max(0.1, per_worker_ram)) if ram_gb else cpu_count
+
+    worker_limit = min(cpu_count, max(1, int(total_workers)), max(1, ram_limit), max(1, int(candidate_count)))
+    workers = requested_workers if requested_workers > 0 else worker_limit
+    workers = max(1, min(int(workers), int(candidate_count), cpu_count))
+    candidate_threads = requested_threads if requested_threads > 0 else max(1, int(total_workers) // max(1, workers))
+
+    if workers <= 1 and mode == "auto":
+        return {
+            "enabled": False,
+            "reason": "single_worker",
+            "workers": 1,
+            "candidate_threads": max(1, int(total_workers)),
+            "cpu_count": cpu_count,
+            "ram_gb": ram_gb,
+            "ram_limit": ram_limit,
+        }
+    return {
+        "enabled": True,
+        "workers": workers,
+        "candidate_threads": max(1, int(candidate_threads)),
+        "cpu_count": cpu_count,
+        "ram_gb": ram_gb,
+        "ram_limit": ram_limit,
+        "per_worker_ram_gb": per_worker_ram,
+    }
+
+
+def _build_cp_variant_specs(candidate_limit: int) -> List[Tuple[str, str, int, str, int, int]]:
+    """[AGENT-ADD] Create enough deterministic CP variants to keep CPU workers busy."""
+    base_specs = [
+        ("lpt_proxy", "total_time", 1, "branch_time", 1),
+        ("spt_proxy", "total_time", -1, "date_rank", -1),
+        ("seam_heavy_proxy", "seam", 1, "total_time", 1),
+        ("seam_light_proxy", "seam", -1, "date_rank", -1),
+        ("wide_first_proxy", "width", 1, "branch_time", 1),
+        ("longi_balance_proxy", "longi", 1, "width", -1),
+        ("date_hint_proxy", "date_rank", -1, "total_time", 1),
+        ("branch_heavy_proxy", "branch_time", 1, "longi", 1),
+        ("branch_light_proxy", "branch_time", -1, "date_rank", -1),
+        ("wide_late_proxy", "width", -1, "seam", 1),
+    ]
+    specs: List[Tuple[str, str, int, str, int, int]] = []
+    for idx in range(max(1, int(candidate_limit))):
+        name, primary, primary_dir, secondary, secondary_dir = base_specs[idx % len(base_specs)]
+        round_idx = idx // len(base_specs)
+        specs.append((f"{name}_{idx + 1}", primary, primary_dir, secondary, secondary_dir, round_idx))
+    return specs
+
+
+def _cp_sat_get_feasibility_rank(
+    blocks: List,
+    metadata: Dict,
+    start_date: str,
+    max_days: int,
+    date_offset: int,
+) -> Dict[int, int]:
+    """[AGENT-ADD] Run one LPT pass (all-on profile) to get block_id → natural scheduling position.
+
+    This masking-informed rank is injected into the CP-SAT objective so that blocks
+    the PBS scheduler naturally defers (due to capacity/bay/continuity constraints)
+    are nudged toward later positions in the CP-SAT solution.
+    """
+    try:
+        hard_all_on = _hard_profile_specs(expanded=False)[0]  # all_on profile
+        scheduled_order: Dict[int, int] = {}
+
+        def _lpt_run():
+            return run_assembly_decoding_sequence_with_blocks(
+                blocks=copy.deepcopy(blocks),
+                metadata=copy.deepcopy(metadata),
+                decoding_type="assembly",
+                selection_method="LPT",
+                max_days=max_days,
+                start_date=start_date,
+                date_offset=date_offset,
+                output_csv=os.devnull,
+                save_csv=False,
+                save_detailed=False,
+            )
+
+        results, _ = _run_with_profile(None, hard_all_on, _lpt_run)
+        for idx, row in enumerate(results or []):
+            bid = int(row.get("block_id", 0) or 0)
+            if bid and bid not in scheduled_order:
+                scheduled_order[bid] = idx
+        return scheduled_order
+    except Exception:
+        return {}
+
+
+def _run_cp_sat_solver_candidate_task(task: Dict[str, object]) -> Dict[str, object]:
+    """[AGENT-ADD] Solve one CP-SAT candidate in an independent process."""
+    try:
+        from ortools.sat.python import cp_model
+
+        profiles = list(task["profiles"])
+        block_ids = [int(profile["block_id"]) for profile in profiles]
+        n_blocks = len(block_ids)
+        variant_name = str(task["variant_name"])
+        primary = str(task["primary"])
+        primary_dir = int(task["primary_dir"])
+        secondary = str(task["secondary"])
+        secondary_dir = int(task["secondary_dir"])
+        jitter_round = int(task["jitter_round"])
+        seed = int(task["seed"])
+        solver_workers = max(1, int(task["solver_workers"]))
+        time_slice = float(task["time_slice"])
+        bay_balance_weight = max(1, int(task["bay_balance_weight"]))
+        # [AGENT-ADD] Masking-informed feasibility weight (nudges CP-SAT toward PBS-natural order)
+        feasibility_weight = max(0, int(task.get("feasibility_weight", 0)))
+
+        model = cp_model.CpModel()
+        position = {block_id: model.NewIntVar(0, n_blocks - 1, f"pos_{block_id}") for block_id in block_ids}
+        model.AddAllDifferent([position[block_id] for block_id in block_ids])
+        bay_b = {block_id: model.NewBoolVar(f"bay36b_{block_id}") for block_id in block_ids}
+
+        load_by_id = {int(profile["block_id"]): int(profile["branch_load"]) for profile in profiles}
+        total_bay_load = max(1, sum(load_by_id.values()))
+        bay_b_load = model.NewIntVar(0, total_bay_load, "bay_b_load")
+        model.Add(bay_b_load == sum(load_by_id[block_id] * bay_b[block_id] for block_id in block_ids))
+        bay_balance_abs = model.NewIntVar(0, total_bay_load, "bay_balance_abs")
+        model.AddAbsEquality(bay_balance_abs, total_bay_load - 2 * bay_b_load)
+
+        objective_terms = [bay_balance_weight * bay_balance_abs]
+        for profile in profiles:
+            block_id = int(profile["block_id"])
+            if bool(profile.get("force_bay_b", False)):
+                model.Add(bay_b[block_id] == 1)
+            primary_coeff = int(round(float(profile.get(primary, 0.0)) * 100.0)) * primary_dir
+            secondary_coeff = int(round(float(profile.get(secondary, 0.0)) * 20.0)) * secondary_dir
+            jitter = ((block_id * 1103515245 + (seed + jitter_round * 9973) * 12345) % 2001) - 1000
+            # [AGENT-ADD] Feasibility regularizer: prefer blocks the PBS scheduler defers to appear later
+            feas_coeff = 0
+            if feasibility_weight > 0:
+                feas_rank = float(profile.get("feasibility_rank_normalized", 0.5))
+                # [AGENT-EDIT] In a minimization objective, a larger positive
+                # coefficient pulls a block earlier. Use inverse rank so blocks
+                # that PBS masking schedules early are also hinted earlier.
+                feas_coeff = int(round((1.0 - feas_rank) * feasibility_weight))
+            objective_terms.append((primary_coeff + secondary_coeff + jitter + feas_coeff) * position[block_id])
+
+        # [AGENT-ADD] Use feasibility rank as init hint (masking-natural order as warm start)
+        hint_order = sorted(profiles, key=lambda p: (float(p.get("feasibility_rank_normalized", 0.5)), float(p.get("date_rank", 0.0))))
+        for idx, profile in enumerate(hint_order):
+            block_id = int(profile["block_id"])
+            model.AddHint(position[block_id], idx)
+            model.AddHint(bay_b[block_id], 1 if idx % 2 else 0)
+
+        model.Minimize(sum(objective_terms))
+        solver = cp_model.CpSolver()
+        solver.parameters.max_time_in_seconds = time_slice
+        solver.parameters.num_search_workers = solver_workers
+        solver.parameters.random_seed = seed + jitter_round
+        status = solver.Solve(model)
+        status_name = solver.StatusName(status)
+        if status not in {cp_model.OPTIMAL, cp_model.FEASIBLE}:
+            return {
+                "ok": False,
+                "variant_name": variant_name,
+                "cp_status": status_name,
+                "cp_wall_time": float(solver.WallTime()),
+            }
+
+        sequence = sorted(block_ids, key=lambda block_id: solver.Value(position[block_id]))
+        manual_bays = {
+            block_id: "36B" if solver.Value(bay_b[block_id]) else "35A"
+            for block_id in block_ids
+        }
+        return {
+            "ok": True,
+            "variant_name": variant_name,
+            "cp_status": status_name,
+            "cp_wall_time": float(solver.WallTime()),
+            "cp_objective_value": float(solver.ObjectiveValue()),
+            "sequence": sequence,
+            "manual_bays": manual_bays,
+        }
+    except Exception:
+        return {
+            "ok": False,
+            "variant_name": str(task.get("variant_name", "")),
+            "cp_status": "ERROR",
+            "cp_wall_time": 0.0,
+            "error": traceback.format_exc(),
+        }
+
+
+def _init_cp_replay_worker(
+    blocks: List,
+    metadata: Dict,
+    start_date: str,
+    base_runtime_cfg: Dict,
+    max_days: int,
+    date_offset: int,
+    worker_threads: int,
+) -> None:
+    """[AGENT-ADD] Initialize one CP final-audit replay worker."""
+    global _CP_REPLAY_WORKER_BLOCKS, _CP_REPLAY_WORKER_METADATA, _CP_REPLAY_WORKER_START_DATE
+    global _CP_REPLAY_WORKER_MAX_DAYS, _CP_REPLAY_WORKER_DATE_OFFSET
+    try:
+        torch.set_num_threads(max(1, int(worker_threads)))
+    except Exception:
+        pass
+    _CP_REPLAY_WORKER_BLOCKS = blocks
+    _CP_REPLAY_WORKER_METADATA = metadata
+    _CP_REPLAY_WORKER_START_DATE = start_date
+    _CP_REPLAY_WORKER_MAX_DAYS = int(max_days)
+    _CP_REPLAY_WORKER_DATE_OFFSET = int(date_offset)
+    set_runtime_config(copy.deepcopy(base_runtime_cfg or {}))
+
+
+def _run_parallel_cp_replay_task(task: Dict[str, object]) -> Dict[str, object]:
+    """[AGENT-ADD] Replay one CP candidate through the canonical PBS audit path."""
+    try:
+        if _CP_REPLAY_WORKER_BLOCKS is None or _CP_REPLAY_WORKER_METADATA is None or _CP_REPLAY_WORKER_START_DATE is None:
+            raise RuntimeError("CP replay worker is not initialized")
+        sequence = [int(value) for value in task.get("sequence", [])]
+        manual_bays = {int(k): str(v) for k, v in (task.get("manual_bays") or {}).items()}
+        with _eval_worker_output_context():
+            _, statistics = run_assembly_decoding_sequence_with_blocks(
+                blocks=copy.deepcopy(_CP_REPLAY_WORKER_BLOCKS),
+                metadata=copy.deepcopy(_CP_REPLAY_WORKER_METADATA),
+                decoding_type="assembly",
+                selection_method="priority",
+                max_days=int(_CP_REPLAY_WORKER_MAX_DAYS),
+                start_date=str(_CP_REPLAY_WORKER_START_DATE),
+                date_offset=int(_CP_REPLAY_WORKER_DATE_OFFSET),
+                output_csv=os.devnull,
+                save_csv=False,
+                save_detailed=False,
+                forced_sequence=None,
+                expand_rows=True,
+                forced_prefix_block_ids=sequence,
+                allow_forced_prefix_override=True,
+                manual_bay_assignments=manual_bays,
+            )
+        return {
+            "ok": True,
+            "label": str(task.get("label", "")),
+            "sequence": sequence,
+            "manual_bays": manual_bays,
+            "statistics": statistics or {},
+        }
+    except Exception:
+        return {
+            "ok": False,
+            "label": str(task.get("label", "")),
+            "sequence": [int(value) for value in task.get("sequence", [])],
+            "manual_bays": {int(k): str(v) for k, v in (task.get("manual_bays") or {}).items()},
+            "error": traceback.format_exc(),
+        }
+
+
+def _cp_sat_fast_candidate_baseline(
+    *,
+    cp_model,
+    blocks: List,
+    metadata: Dict,
+    start_date: str,
+    result_folder: Optional[str],
+    settings: Optional[Dict[str, object]],
+    output_csv: str,
+    max_days: int,
+    date_offset: int,
+    save_detailed: bool,
+    time_limit: float,
+    time_scale: int,
+    seed: int,
+    workers: int,
+    enforce_basic_bay_rules: bool,
+) -> Tuple[List[Dict], Dict, List[Dict], object]:
+    """[AGENT-ADD] Fast CP-SAT candidate generation + canonical violation-first replay selection."""
+    start_t = time.perf_counter()
+    block_ids = [_ga_block_id(block) for block in blocks]
+    blocks_dict = {_ga_block_id(block): block for block in blocks}
+    requested_candidates = int(_get_setting(settings, "cp_candidates", 0) or 0)
+    full_cpu = _as_bool(_get_setting(settings, "cp_full_cpu", True), True)
+    candidate_limit = requested_candidates if requested_candidates > 0 else max(6, int(workers))
+    if full_cpu:
+        candidate_limit = max(candidate_limit, int(workers))
+    time_slice = float(_get_setting(settings, "cp_solver_time_slice_sec", 5.0) or 5.0)
+    time_slice = max(0.1, min(float(time_limit), time_slice))
+    bay_balance_weight = max(1, int(_get_setting(settings, "cp_bay_balance_weight", 10) or 10))
+    # [AGENT-ADD] Masking-informed objective: run LPT to get PBS-natural block order
+    cp_masking_hint = _as_bool(_get_setting(settings, "cp_masking_hint", True), True)
+    feasibility_weight = max(0, int(_get_setting(settings, "cp_feasibility_weight", 30) or 30))
+
+    durations = {block_id: _cp_sat_processing_times(blocks_dict[block_id], time_scale) for block_id in block_ids}
+    date_hint = [
+        _ga_block_id(block)
+        for block in sorted(blocks, key=lambda b: str(getattr(b, "assembly_start_date", "")))
+    ]
+    date_rank = {block_id: idx for idx, block_id in enumerate(date_hint)}
+
+    # [AGENT-ADD] Pre-compute masking feasibility rank via one LPT pass
+    feasibility_rank: Dict[int, int] = {}
+    if cp_masking_hint and feasibility_weight > 0:
+        feasibility_rank = _cp_sat_get_feasibility_rank(blocks, metadata, start_date, max_days, date_offset)
+        print(f"   [CP-SAT 마스킹 힌트] LPT feasibility rank 계산 완료 ({len(feasibility_rank)}개 블록)")
+
+    profiles: List[Dict[str, object]] = []
+    n_blocks = len(block_ids)
+    for block_id in block_ids:
+        block = blocks_dict[block_id]
+        block_times = durations[block_id]
+        width = float(getattr(block, "width", 0.0) or 0.0)
+        profiles.append({
+            "block_id": int(block_id),
+            "branch_load": max(1, int(sum(block_times[5:8]))),
+            "total_time": float(sum(getattr(block, "processing_times", []) or [])),
+            "branch_time": float(sum((getattr(block, "processing_times", []) or [0] * 8)[5:8])),
+            "seam": float(getattr(block, "seam_count", 0) or 0),
+            "width": width,
+            "longi": float(getattr(block, "longi_count", 0) or 0),
+            "date_rank": float(date_rank.get(block_id, len(block_ids))),
+            "force_bay_b": bool(enforce_basic_bay_rules and (width > 21.0 or _cp_sat_is_ps_small_pair(block, blocks_dict))),
+            # [AGENT-ADD] Masking feasibility rank (normalized 0..1, 0=first scheduled by PBS)
+            "feasibility_rank_normalized": float(feasibility_rank.get(block_id, n_blocks)) / max(1, n_blocks),
+        })
+
+    candidates: Dict[Tuple[Tuple[int, ...], Tuple[Tuple[int, str], ...]], Dict[str, object]] = {}
+    solver_rows: List[Dict[str, object]] = []
+    solver_wall_total = 0.0
+    parallel_plan = _resolve_cp_parallel_plan(candidate_limit, settings, workers)
+    solver_threads = int(parallel_plan.get("candidate_threads", workers) or 1)
+    variant_specs = _build_cp_variant_specs(candidate_limit)
+    candidate_tasks = [
+        {
+            "profiles": profiles,
+            "variant_name": variant_name,
+            "primary": primary,
+            "primary_dir": primary_dir,
+            "secondary": secondary,
+            "secondary_dir": secondary_dir,
+            "jitter_round": jitter_round,
+            "seed": seed + variant_idx,
+            "solver_workers": solver_threads,
+            "time_slice": time_slice,
+            "bay_balance_weight": bay_balance_weight,
+            "feasibility_weight": feasibility_weight,  # [AGENT-ADD]
+        }
+        for variant_idx, (variant_name, primary, primary_dir, secondary, secondary_dir, jitter_round)
+        in enumerate(variant_specs)
+    ]
+
+    def _store_solver_result(result: Dict[str, object]) -> None:
+        nonlocal solver_wall_total
+        solver_wall_total += float(result.get("cp_wall_time", 0.0) or 0.0)
+        variant_name = str(result.get("variant_name", ""))
+        if not result.get("ok"):
+            solver_rows.append({
+                "candidate_label": variant_name,
+                "cp_status": result.get("cp_status", ""),
+                "cp_wall_time": result.get("cp_wall_time", 0.0),
+                "sequence_head": "",
+                "bay_head": "",
+                "selected_for_replay": False,
+                "error": result.get("error", ""),
+            })
+            return
+        sequence = _cp_sat_normalize_sequence(block_ids, [int(v) for v in result.get("sequence", [])])
+        manual_bays = {int(k): str(v) for k, v in (result.get("manual_bays") or {}).items()}
+        key = (tuple(sequence), tuple(sorted(manual_bays.items())))
+        if key not in candidates:
+            candidates[key] = {
+                "label": variant_name,
+                "sequence": sequence,
+                "manual_bays": manual_bays,
+                "cp_status": result.get("cp_status", ""),
+                "cp_wall_time": float(result.get("cp_wall_time", 0.0) or 0.0),
+                "cp_objective_value": result.get("cp_objective_value"),
+            }
+        solver_rows.append({
+            "candidate_label": variant_name,
+            "cp_status": result.get("cp_status", ""),
+            "cp_wall_time": result.get("cp_wall_time", 0.0),
+            "sequence_head": " ".join(str(v) for v in sequence[:12]),
+            "bay_head": " ".join(f"{bid}:{manual_bays.get(bid, '')}" for bid in sequence[:12]),
+            "selected_for_replay": True,
+            "error": "",
+        })
+
+    ram_text = f"{parallel_plan.get('ram_gb'):.1f}GiB" if parallel_plan.get("ram_gb") is not None else "unknown"
+    if parallel_plan.get("enabled"):
+        print(
+            "[CP-SAT 병렬] "
+            f"candidate_workers={parallel_plan['workers']}, candidate_threads={solver_threads}, "
+            f"requested_candidates={candidate_limit}, cpu={parallel_plan.get('cpu_count')}, ram={ram_text}"
+        )
+        start_method = str(_get_setting(settings, "cp_start_method", "fork")).strip().lower()
+        try:
+            ctx = mp.get_context(start_method)
+        except Exception:
+            ctx = mp.get_context()
+        with ProcessPoolExecutor(max_workers=int(parallel_plan["workers"]), mp_context=ctx) as executor:
+            futures = [executor.submit(_run_cp_sat_solver_candidate_task, task) for task in candidate_tasks]
+            for idx, future in enumerate(as_completed(futures), 1):
+                _store_solver_result(future.result())
+                if idx == len(futures) or idx % max(1, int(parallel_plan["workers"])) == 0:
+                    print(f"   [CP-SAT 병렬] 후보 생성 {idx}/{len(futures)}")
+    else:
+        print(f"[CP-SAT 병렬] disabled: {parallel_plan.get('reason')}")
+        for task in candidate_tasks:
+            _store_solver_result(_run_cp_sat_solver_candidate_task(task))
+
+    if not candidates:
+        fallback_bays = {
+            block_id: "36B" if (
+                float(getattr(blocks_dict[block_id], "width", 0.0) or 0.0) > 21.0
+                or _cp_sat_is_ps_small_pair(blocks_dict[block_id], blocks_dict)
+            ) else ("36B" if idx % 2 else "35A")
+            for idx, block_id in enumerate(date_hint)
+        }
+        candidates[(tuple(date_hint), tuple(sorted(fallback_bays.items())))] = {
+            "label": "date_hint_fallback",
+            "sequence": _cp_sat_normalize_sequence(block_ids, date_hint),
+            "manual_bays": fallback_bays,
+            "cp_status": "FALLBACK",
+            "cp_wall_time": 0.0,
+            "cp_objective_value": None,
+        }
+
+    best_record: Optional[Dict[str, object]] = None
+    best_score: Optional[Tuple[float, float, float, float]] = None
+    replay_rows: List[Dict[str, object]] = []
+    print(
+        "[CP-SAT 빠른 후보] "
+        f"unique_candidates={len(candidates)}, requested_candidates={candidate_limit}, time_slice={time_slice:.1f}s, "
+        "최종선택=(누락, primary violation, makespan, raw violation)"
+    )
+
+    def _store_replay_result(result: Dict[str, object], idx: int) -> None:
+        nonlocal best_record, best_score
+        label = str(result.get("label", ""))
+        sequence = _cp_sat_normalize_sequence(block_ids, [int(v) for v in result.get("sequence", [])])
+        manual_bays = {int(k): str(v) for k, v in (result.get("manual_bays") or {}).items()}
+        statistics = result.get("statistics") if result.get("ok") else None
+        if not statistics:
+            statistics = {
+                "makespan_hours": float("inf"),
+                "total_violations": 10**9,
+                "total_violations_primary": 10**9,
+                "cp_replay_error": str(result.get("error", "")),
+            }
+        score = _ga_score_from_stats(statistics or {})
+        replay_rows.append({
+            "candidate_label": label,
+            "replay_index": idx,
+            "primary_violations": (statistics or {}).get("total_violations_primary", (statistics or {}).get("total_violations", 0)),
+            "raw_violations": (statistics or {}).get("total_violations_raw", 0),
+            "makespan_hours": (statistics or {}).get("makespan_hours", 0),
+            "score": str(score),
+            "sequence_head": " ".join(str(v) for v in sequence[:12]),
+            "bay_head": " ".join(f"{bid}:{manual_bays[bid]}" for bid in sequence[:12]),
+            "error": (statistics or {}).get("cp_replay_error", ""),
+        })
+        # [AGENT-ADD] Store phase1 score into candidates dict for top-K profile replay selection
+        cand_key = (tuple(sequence), tuple(sorted(manual_bays.items())))
+        if cand_key in candidates and "_phase1_score" not in candidates[cand_key]:
+            candidates[cand_key]["_phase1_score"] = score
+        if best_score is None or score < best_score:
+            best_score = score
+            best_record = {
+                "candidate": {
+                    "label": label,
+                    "sequence": sequence,
+                    "manual_bays": manual_bays,
+                    "cp_status": "REPLAYED",
+                    # [AGENT-ADD] Preserve the replay mode that produced this
+                    # score, so the final saved CSV is generated with the same
+                    # masking/profile semantics.
+                    "allow_forced_prefix_override": bool(result.get("allow_forced_prefix_override", True)),
+                    "hard_profile": copy.deepcopy(result.get("hard_profile")),
+                },
+                "statistics": statistics or {},
+                "score": score,
+            }
+
+    replay_tasks = [
+        {
+            "label": str(candidate["label"]),
+            "sequence": list(candidate["sequence"]),
+            "manual_bays": dict(candidate["manual_bays"]),
+        }
+        for candidate in candidates.values()
+    ]
+    replay_workers = min(int(parallel_plan.get("workers", 1) or 1), len(replay_tasks))
+    if parallel_plan.get("enabled") and replay_workers > 1:
+        start_method = str(_get_setting(settings, "cp_start_method", "fork")).strip().lower()
+        try:
+            ctx = mp.get_context(start_method)
+        except Exception:
+            ctx = mp.get_context()
+        with ProcessPoolExecutor(
+            max_workers=replay_workers,
+            mp_context=ctx,
+            initializer=_init_cp_replay_worker,
+            initargs=(
+                copy.deepcopy(blocks),
+                copy.deepcopy(metadata),
+                start_date,
+                copy.deepcopy(get_runtime_config() or {}),
+                max_days,
+                date_offset,
+                1,
+            ),
+        ) as executor:
+            futures = [executor.submit(_run_parallel_cp_replay_task, task) for task in replay_tasks]
+            for idx, future in enumerate(as_completed(futures), 1):
+                _store_replay_result(future.result(), idx)
+                if idx == len(futures) or idx % replay_workers == 0:
+                    print(f"   [CP-SAT 병렬] final audit {idx}/{len(futures)}")
+    else:
+        for idx, task in enumerate(replay_tasks, 1):
+            try:
+                _, statistics = run_assembly_decoding_sequence_with_blocks(
+                    blocks=copy.deepcopy(blocks),
+                    metadata=copy.deepcopy(metadata),
+                    decoding_type="assembly",
+                    selection_method="priority",
+                    max_days=max_days,
+                    start_date=start_date,
+                    date_offset=date_offset,
+                    output_csv=os.devnull,
+                    save_csv=False,
+                    save_detailed=False,
+                    forced_sequence=None,
+                    expand_rows=True,
+                    forced_prefix_block_ids=task["sequence"],
+                    allow_forced_prefix_override=True,
+                    manual_bay_assignments=task["manual_bays"],
+                )
+                _store_replay_result({**task, "ok": True, "statistics": statistics or {}}, idx)
+            except Exception:
+                _store_replay_result({**task, "ok": False, "error": traceback.format_exc()}, idx)
+
+    # [AGENT-ADD] Phase 2: Profile-based masking-respecting replay for top-K candidates
+    # Like RL/GA profile exploration: try each hard profile with override=False so PBS masking
+    # filters the CP-SAT sequence and picks only feasible blocks at each step.
+    cp_profile_replay_top_k = max(0, int(_get_setting(settings, "cp_profile_replay_top_k", 6) or 6))
+    cp_profile_replay_enabled = _as_bool(_get_setting(settings, "cp_profile_replay", True), True)
+
+    if cp_profile_replay_enabled and cp_profile_replay_top_k > 0 and candidates and best_record is not None:
+        # Pick top-K candidates by Phase 1 score (best_score already updated in _store_replay_result)
+        scored_cands = sorted(
+            candidates.values(),
+            key=lambda c: c.get("_phase1_score", (float("inf"),) * 4),
+        )[:cp_profile_replay_top_k]
+
+        hard_profiles = _hard_profile_specs(expanded=True)  # 8 profiles
+        total_prof_replays = len(scored_cands) * len(hard_profiles)
+        print(f"   [CP-SAT 프로파일 재플레이] top_k={len(scored_cands)}, hard_profiles={len(hard_profiles)}, total={total_prof_replays}")
+        prof_replay_idx = 0
+
+        for cand in scored_cands:
+            for hard_profile in hard_profiles:
+                prof_label = f"{cand['label']}_prof_{hard_profile['label']}_nooverride"
+                try:
+                    _, p_stats = _run_with_profile(
+                        None,
+                        hard_profile,
+                        lambda seq=list(cand["sequence"]), bays=dict(cand["manual_bays"]): (
+                            run_assembly_decoding_sequence_with_blocks(
+                                blocks=copy.deepcopy(blocks),
+                                metadata=copy.deepcopy(metadata),
+                                decoding_type="assembly",
+                                selection_method="priority",
+                                max_days=max_days,
+                                start_date=start_date,
+                                date_offset=date_offset,
+                                output_csv=os.devnull,
+                                save_csv=False,
+                                save_detailed=False,
+                                forced_sequence=None,
+                                expand_rows=True,
+                                forced_prefix_block_ids=seq,
+                                allow_forced_prefix_override=False,  # masking 존중
+                                manual_bay_assignments=bays,
+                            )
+                        ),
+                    )
+                except Exception:
+                    p_stats = None
+
+                prof_replay_idx += 1
+                _store_replay_result({
+                    "ok": p_stats is not None,
+                    "label": prof_label,
+                    "sequence": list(cand["sequence"]),
+                    "manual_bays": dict(cand["manual_bays"]),
+                    "statistics": p_stats or {},
+                    "allow_forced_prefix_override": False,
+                    "hard_profile": copy.deepcopy(hard_profile),
+                }, -(10000 + prof_replay_idx))
+                primary_v = (p_stats or {}).get("total_violations_primary", (p_stats or {}).get("total_violations", "?"))
+                makespan_v = float((p_stats or {}).get("makespan_hours", 0) or 0)
+                print(f"   [프로파일 재플레이 {prof_replay_idx}/{total_prof_replays}] {prof_label} primary={primary_v} makespan={makespan_v:.2f}h")
+
+    if best_record is None:
+        elapsed = time.perf_counter() - start_t
+        return [], {
+            "makespan_hours": 0,
+            "total_violations": 0,
+            "cp_status": "NO_CANDIDATE",
+            "cp_model_mode": "fast",
+            "computation_seconds": elapsed,
+            "selected_result_csv_name": "cp_sat_evaluation_results.csv",
+        }, [], None
+
+    selected = best_record["candidate"]
+    selected_override = bool(selected.get("allow_forced_prefix_override", True))
+    selected_hard_profile = selected.get("hard_profile")
+
+    def _final_cp_replay():
+        return run_assembly_decoding_sequence_with_blocks(
+            blocks=copy.deepcopy(blocks),
+            metadata=copy.deepcopy(metadata),
+            decoding_type="assembly",
+            selection_method="priority",
+            max_days=max_days,
+            start_date=start_date,
+            date_offset=date_offset,
+            output_csv=output_csv,
+            save_csv=True,
+            save_detailed=save_detailed,
+            forced_sequence=None,
+            expand_rows=True,
+            forced_prefix_block_ids=selected["sequence"],
+            allow_forced_prefix_override=selected_override,
+            manual_bay_assignments=selected["manual_bays"],
+        )
+
+    if selected_hard_profile:
+        final_results, final_statistics = _run_with_profile(None, selected_hard_profile, _final_cp_replay)
+    else:
+        final_results, final_statistics = _final_cp_replay()
+
+    elapsed = time.perf_counter() - start_t
+    final_statistics["cp_status"] = selected.get("cp_status", "")
+    final_statistics["cp_model_mode"] = "fast"
+    final_statistics["cp_selection_score_order"] = "missing,primary_violations,makespan_hours,raw_violations"
+    final_statistics["cp_selected_candidate_label"] = selected.get("label", "")
+    final_statistics["cp_candidates_evaluated"] = len(candidates)
+    final_statistics["cp_candidates_requested"] = candidate_limit
+    final_statistics["cp_solver_time_slice_sec"] = time_slice
+    final_statistics["cp_solver_wall_time_total"] = solver_wall_total
+    final_statistics["cp_parallel_enabled"] = bool(parallel_plan.get("enabled"))
+    final_statistics["cp_parallel_workers"] = int(parallel_plan.get("workers", 1) or 1)
+    final_statistics["cp_candidate_threads"] = int(solver_threads)
+    final_statistics["cp_full_cpu"] = bool(full_cpu)
+    final_statistics["cp_time_limit_sec"] = time_limit
+    final_statistics["cp_workers"] = workers
+    final_statistics["cp_seed"] = seed
+    final_statistics["cp_time_scale"] = time_scale
+    final_statistics["cp_sequence_head"] = selected["sequence"][:12]
+    final_statistics["cp_manual_bay_head"] = " ".join(f"{bid}:{selected['manual_bays'][bid]}" for bid in selected["sequence"][:12])
+    final_statistics["cp_masking_hint"] = bool(cp_masking_hint)
+    final_statistics["cp_feasibility_weight"] = int(feasibility_weight)
+    final_statistics["cp_profile_replay"] = bool(cp_profile_replay_enabled)
+    final_statistics["cp_profile_replay_top_k"] = int(cp_profile_replay_top_k)
+    final_statistics["cp_selected_allow_forced_prefix_override"] = bool(selected_override)
+    final_statistics["cp_selected_hard_profile"] = str((selected_hard_profile or {}).get("label", "none"))
+    final_statistics["computation_seconds"] = elapsed
+    final_statistics["selected_result_csv_name"] = "cp_sat_evaluation_results.csv"
+
+    if result_folder:
+        try:
+            pd.DataFrame(solver_rows).to_csv(
+                os.path.join(result_folder, "cp_sat_solver_candidates.csv"),
+                index=False,
+                encoding="utf-8-sig",
+            )
+            pd.DataFrame(replay_rows).to_csv(
+                os.path.join(result_folder, "cp_sat_candidate_summary.csv"),
+                index=False,
+                encoding="utf-8-sig",
+            )
+        except Exception as exc:
+            print(f"   ⚠️ CP-SAT 후보 요약 저장 실패: {exc}")
+
+    print(
+        f"   CP-SAT 완료: mode=fast, selected={selected.get('label')}, "
+        f"Makespan = {float(final_statistics.get('makespan_hours', 0) or 0):.2f}시간, "
+        f"Primary = {final_statistics.get('total_violations_primary', final_statistics.get('total_violations', 0))}, "
+        f"계산시간 = {elapsed:.2f}s"
+    )
+    return final_results, final_statistics, [], None
+
+
+def run_cp_sat_baseline(blocks: List, metadata: Dict, start_date: str, result_folder: str = None,
+                        settings: Optional[Dict[str, object]] = None) -> Tuple[List[Dict], Dict, List[Dict], object]:
+    """OR-Tools CP-SAT baseline with explicit PBS process and Bay split.
+
+    # [AGENT-ADD] CP-SAT creates a full block order and manual 35A/36B assignment.
+    # The chosen solution is then replayed through the existing PBS scheduler with
+    # forced sequence + manual bay override, so final audit metrics stay identical
+    # to GA/RL/heuristic comparisons.
+    """
+    start_t = time.perf_counter()
+    output_csv = os.path.join(result_folder, "cp_sat_evaluation_results.csv") if result_folder else "cp_sat_evaluation_results.csv"
+    if os.path.exists(output_csv):
+        os.remove(output_csv)
+
+    try:
+        from ortools.sat.python import cp_model
+    except Exception as exc:
+        elapsed = time.perf_counter() - start_t
+        print(f"   ❌ CP-SAT 실행 불가: OR-Tools import 실패 ({exc})")
+        return [], {
+            "makespan_hours": 0,
+            "total_violations": 0,
+            "cp_status": "IMPORT_FAILED",
+            "cp_error": str(exc),
+            "computation_seconds": elapsed,
+            "selected_result_csv_name": "cp_sat_evaluation_results.csv",
+        }, [], None
+
+    max_days, date_offset, save_detailed = _get_common_settings(settings)
+    time_limit = float(_get_setting(settings, "cp_time_limit_sec", 60.0) or 60.0)
+    time_scale = max(1, int(_get_setting(settings, "cp_time_scale", 60) or 60))
+    seed = int(_get_setting(settings, "cp_seed", 42) or 42)
+    workers = _cp_sat_worker_count(settings)
+    enforce_basic_bay_rules = _as_bool(_get_setting(settings, "cp_enforce_basic_bay_rules", True), True)
+    objective_weight = max(1, int(_get_setting(settings, "cp_makespan_weight", 1000) or 1000))
+    model_mode = str(_get_setting(settings, "cp_model_mode", "fast") or "fast").strip().lower()
+    exact_max_blocks = int(_get_setting(settings, "cp_exact_max_blocks", 0) or 0)
+    native_cfg = ConstraintConfig()
+    native_cfg.set_constraint_scope("assembly")
+    # [AGENT-ADD] Prefix-level P7#1 is exact but expensive, so keep it opt-in.
+    setattr(native_cfg, "cp_native_prefix_balance", _as_bool(_get_setting(settings, "cp_native_prefix_balance", False), False))
+
+    block_ids = [_ga_block_id(block) for block in blocks]
+    n_blocks = len(block_ids)
+    if n_blocks == 0:
+        return [], {
+            "makespan_hours": 0,
+            "total_violations": 0,
+            "cp_status": "EMPTY",
+            "computation_seconds": time.perf_counter() - start_t,
+            "selected_result_csv_name": "cp_sat_evaluation_results.csv",
+        }, [], None
+
+    blocks_dict = {_ga_block_id(block): block for block in blocks}
+    durations = {block_id: _cp_sat_processing_times(blocks_dict[block_id], time_scale) for block_id in block_ids}
+
+    exact_modes = {"exact", "audit_exact", "exact_audit", "audit"}
+    exact_requested = model_mode in exact_modes
+    # [AGENT-EDIT] Do not silently downgrade an explicit exact/audit_exact request
+    # to fast mode just because cp_exact_max_blocks was omitted. A value <= 0 now
+    # means "run the requested exact mode for this instance size".
+    if exact_requested and exact_max_blocks <= 0:
+        exact_max_blocks = n_blocks
+    if not exact_requested:
+        return _cp_sat_fast_candidate_baseline(
+            cp_model=cp_model,
+            blocks=blocks,
+            metadata=metadata,
+            start_date=start_date,
+            result_folder=result_folder,
+            settings=settings,
+            output_csv=output_csv,
+            max_days=max_days,
+            date_offset=date_offset,
+            save_detailed=save_detailed,
+            time_limit=time_limit,
+            time_scale=time_scale,
+            seed=seed,
+            workers=workers,
+            enforce_basic_bay_rules=enforce_basic_bay_rules,
+        )
+    if n_blocks > exact_max_blocks:
+        print(
+            "   ⚠️ CP-SAT exact 요청이지만 블록 수가 제한을 초과하여 fast 후보 모드로 전환: "
+            f"blocks={n_blocks}, cp_exact_max_blocks={exact_max_blocks}"
+        )
+        return _cp_sat_fast_candidate_baseline(
+            cp_model=cp_model,
+            blocks=blocks,
+            metadata=metadata,
+            start_date=start_date,
+            result_folder=result_folder,
+            settings=settings,
+            output_csv=output_csv,
+            max_days=max_days,
+            date_offset=date_offset,
+            save_detailed=save_detailed,
+            time_limit=time_limit,
+            time_scale=time_scale,
+            seed=seed,
+            workers=workers,
+            enforce_basic_bay_rules=enforce_basic_bay_rules,
+        )
+
+    horizon = max(1, sum(sum(values) for values in durations.values()))
+    model = cp_model.CpModel()
+
+    print(
+        f" CP-SAT baseline 실행 중... "
+        f"(blocks={n_blocks}, mode={model_mode}, time_limit={time_limit:.1f}s, workers={workers}, scale={time_scale})"
+    )
+
+    position = {
+        block_id: model.NewIntVar(0, n_blocks - 1, f"pos_{block_id}")
+        for block_id in block_ids
+    }
+    model.AddAllDifferent([position[block_id] for block_id in block_ids])
+
+    bay_b = {
+        block_id: model.NewBoolVar(f"bay36b_{block_id}")
+        for block_id in block_ids
+    }
+    block_at_pos = [
+        model.NewIntVar(0, n_blocks - 1, f"block_index_at_pos_{pos_idx}")
+        for pos_idx in range(n_blocks)
+    ]
+    model.AddInverse([position[block_id] for block_id in block_ids], block_at_pos)
+
+    common_start: Dict[Tuple[int, int], object] = {}
+    common_end: Dict[Tuple[int, int], object] = {}
+    branch_start: Dict[Tuple[int, int], object] = {}
+    branch_end: Dict[Tuple[int, int], object] = {}
+
+    for block_id in block_ids:
+        block_durations = durations[block_id]
+        for proc_idx in range(5):
+            start_var = model.NewIntVar(0, horizon, f"c_s_{block_id}_{proc_idx}")
+            end_var = model.NewIntVar(0, horizon, f"c_e_{block_id}_{proc_idx}")
+            model.Add(end_var == start_var + block_durations[proc_idx])
+            if proc_idx > 0:
+                model.Add(start_var >= common_end[(block_id, proc_idx - 1)])
+            common_start[(block_id, proc_idx)] = start_var
+            common_end[(block_id, proc_idx)] = end_var
+
+        for branch_idx in range(3):
+            start_var = model.NewIntVar(0, horizon, f"b_s_{block_id}_{branch_idx}")
+            end_var = model.NewIntVar(0, horizon, f"b_e_{block_id}_{branch_idx}")
+            model.Add(end_var == start_var + block_durations[branch_idx + 5])
+            if branch_idx == 0:
+                model.Add(start_var >= common_end[(block_id, 4)])
+            else:
+                model.Add(start_var >= branch_end[(block_id, branch_idx - 1)])
+            branch_start[(block_id, branch_idx)] = start_var
+            branch_end[(block_id, branch_idx)] = end_var
+
+        # [AGENT-EDIT] Exact modes must not forbid violations that final audit
+        # would allow/count. Width and P/S-small Bay rules are modeled below as
+        # native soft penalties, not hard bans.
+        if False and enforce_basic_bay_rules:
+            block = blocks_dict[block_id]
+            width = float(getattr(block, "width", 0.0) or 0.0)
+            if width > 21.0 or _cp_sat_is_ps_small_pair(block, blocks_dict):
+                model.Add(bay_b[block_id] == 1)
+
+    order_literals: Dict[Tuple[int, int], object] = {}
+    for left_idx in range(n_blocks):
+        left_id = block_ids[left_idx]
+        for right_idx in range(left_idx + 1, n_blocks):
+            right_id = block_ids[right_idx]
+            left_before_right = model.NewBoolVar(f"order_{left_id}_before_{right_id}")
+            order_literals[(left_id, right_id)] = left_before_right
+            model.Add(position[left_id] < position[right_id]).OnlyEnforceIf(left_before_right)
+            model.Add(position[left_id] > position[right_id]).OnlyEnforceIf(left_before_right.Not())
+
+            # 공통 5개 공정은 하나의 연속 라인을 같은 순서로 통과한다.
+            for proc_idx in range(5):
+                model.Add(common_start[(right_id, proc_idx)] >= common_end[(left_id, proc_idx)]).OnlyEnforceIf(left_before_right)
+                model.Add(common_start[(left_id, proc_idx)] >= common_end[(right_id, proc_idx)]).OnlyEnforceIf(left_before_right.Not())
+
+            # 분기 3개 공정은 Bay가 같을 때만 같은 장비 순서를 공유한다.
+            for branch_idx in range(3):
+                model.Add(branch_start[(right_id, branch_idx)] >= branch_end[(left_id, branch_idx)]).OnlyEnforceIf(
+                    [left_before_right, bay_b[left_id].Not(), bay_b[right_id].Not()]
+                )
+                model.Add(branch_start[(right_id, branch_idx)] >= branch_end[(left_id, branch_idx)]).OnlyEnforceIf(
+                    [left_before_right, bay_b[left_id], bay_b[right_id]]
+                )
+                model.Add(branch_start[(left_id, branch_idx)] >= branch_end[(right_id, branch_idx)]).OnlyEnforceIf(
+                    [left_before_right.Not(), bay_b[left_id].Not(), bay_b[right_id].Not()]
+                )
+                model.Add(branch_start[(left_id, branch_idx)] >= branch_end[(right_id, branch_idx)]).OnlyEnforceIf(
+                    [left_before_right.Not(), bay_b[left_id], bay_b[right_id]]
+                )
+
+    makespan = model.NewIntVar(0, horizon, "makespan")
+    for block_id in block_ids:
+        model.Add(makespan >= branch_end[(block_id, 2)])
+
+    # Bay 분할은 makespan 다음의 보조 목적이다. 최종 위반은 replay audit에서 다시 계산된다.
+    bay_load_values = {
+        block_id: max(1, sum(durations[block_id][5:8]))
+        for block_id in block_ids
+    }
+    total_bay_load = max(1, sum(bay_load_values.values()))
+    bay_b_load = model.NewIntVar(0, total_bay_load, "bay_b_load")
+    model.Add(bay_b_load == sum(bay_load_values[block_id] * bay_b[block_id] for block_id in block_ids))
+    bay_balance_abs = model.NewIntVar(0, total_bay_load, "bay_balance_abs")
+    model.AddAbsEquality(bay_balance_abs, total_bay_load - 2 * bay_b_load)
+    native_primary_terms, native_raw_terms, native_constraint_counts = _cp_add_native_pbs_violation_terms(
+        model=model,
+        block_ids=block_ids,
+        blocks_dict=blocks_dict,
+        position=position,
+        bay_b=bay_b,
+        block_at_pos=block_at_pos,
+        common_start=common_start,
+        start_date=start_date,
+        max_days=max_days,
+        time_scale=time_scale,
+        horizon=horizon,
+        cfg=native_cfg,
+    )
+    native_primary_expr = sum(native_primary_terms) if native_primary_terms else 0
+    native_raw_expr = sum(native_raw_terms) if native_raw_terms else 0
+    primary_weight = max(1, int(horizon * objective_weight + total_bay_load + len(native_raw_terms) + 1000))
+    # [AGENT-EDIT] Native exact objective is violation-first. Makespan is only
+    # optimized after the CP-native primary violation count is minimized.
+    model.Minimize(native_primary_expr * primary_weight + makespan * objective_weight + native_raw_expr + bay_balance_abs)
+
+    # 기존 착수일 순서를 힌트로만 준다. 강제하지 않기 때문에 CP가 더 좋은 순서를 찾을 수 있다.
+    hinted_order = [
+        _ga_block_id(block)
+        for block in sorted(blocks, key=lambda b: str(getattr(b, "assembly_start_date", "")))
+    ]
+    for idx, block_id in enumerate(hinted_order):
+        if block_id in position:
+            model.AddHint(position[block_id], idx)
+            if enforce_basic_bay_rules and (
+                float(getattr(blocks_dict[block_id], "width", 0.0) or 0.0) > 21.0
+                or _cp_sat_is_ps_small_pair(blocks_dict[block_id], blocks_dict)
+            ):
+                model.AddHint(bay_b[block_id], 1)
+            else:
+                model.AddHint(bay_b[block_id], idx % 2)
+
+    solver = cp_model.CpSolver()
+    solver.parameters.max_time_in_seconds = time_limit
+    solver.parameters.num_search_workers = workers
+    solver.parameters.random_seed = seed
+
+    if model_mode in {"audit_exact", "exact_audit", "audit"}:
+        audit_deadline = time.perf_counter() + time_limit
+        max_rejections = max(1, int(_get_setting(settings, "cp_audit_max_rejections", 200) or 200))
+        continue_after_zero = _as_bool(_get_setting(settings, "cp_audit_continue_after_zero", True), True)
+        audit_rows: List[Dict[str, object]] = []
+        best_attempt: Optional[Dict[str, object]] = None
+        best_score: Optional[Tuple[float, float, float, float]] = None
+
+        print(
+            "[CP-SAT audit_exact] "
+            f"final audit를 제약 오라클로 사용, max_rejections={max_rejections}, "
+            "선택 기준=(missing, primary violation, makespan, raw violation)"
+        )
+
+        for attempt in range(1, max_rejections + 1):
+            remaining = audit_deadline - time.perf_counter()
+            if remaining <= 0:
+                break
+            solver = cp_model.CpSolver()
+            solver.parameters.max_time_in_seconds = max(0.1, remaining)
+            solver.parameters.num_search_workers = workers
+            solver.parameters.random_seed = seed + attempt - 1
+            status = solver.Solve(model)
+            status_name = solver.StatusName(status)
+            if status not in {cp_model.OPTIMAL, cp_model.FEASIBLE}:
+                elapsed = time.perf_counter() - start_t
+                print(f"   ⚠️ CP-SAT audit_exact 중단: status={status_name}, attempts={attempt - 1}")
+                if result_folder and audit_rows:
+                    pd.DataFrame(audit_rows).to_csv(
+                        os.path.join(result_folder, "cp_sat_audit_exact_attempts.csv"),
+                        index=False,
+                        encoding="utf-8-sig",
+                    )
+                return [], {
+                    "makespan_hours": 0,
+                    "total_violations": 0,
+                    "cp_status": status_name,
+                    "cp_model_mode": "audit_exact",
+                    "cp_audit_status": "NO_CP_SOLUTION",
+                    "cp_audit_attempts": attempt - 1,
+                    "cp_time_limit_sec": time_limit,
+                    "cp_workers": workers,
+                    "cp_seed": seed,
+                    "cp_time_scale": time_scale,
+                    "cp_wall_time": solver.WallTime(),
+                    "computation_seconds": elapsed,
+                    "selected_result_csv_name": "cp_sat_evaluation_results.csv",
+                }, [], None
+
+            cp_sequence = sorted(block_ids, key=lambda block_id: solver.Value(position[block_id]))
+            cp_manual_bays = {
+                block_id: "36B" if solver.Value(bay_b[block_id]) else "35A"
+                for block_id in block_ids
+            }
+            repair_count = 0
+            if enforce_basic_bay_rules:
+                cp_manual_bays, repair_count = _cp_repair_basic_manual_bays(cp_manual_bays, blocks_dict, native_cfg)
+            try:
+                _, audit_statistics = run_assembly_decoding_sequence_with_blocks(
+                    blocks=copy.deepcopy(blocks),
+                    metadata=copy.deepcopy(metadata),
+                    decoding_type="assembly",
+                    selection_method="priority",
+                    max_days=max_days,
+                    start_date=start_date,
+                    date_offset=date_offset,
+                    output_csv=os.devnull,
+                    save_csv=False,
+                    save_detailed=False,
+                    forced_sequence=None,
+                    expand_rows=True,
+                    forced_prefix_block_ids=cp_sequence,
+                    allow_forced_prefix_override=True,
+                    manual_bay_assignments=cp_manual_bays,
+                )
+            except Exception as exc:
+                audit_statistics = {
+                    "makespan_hours": float("inf"),
+                    "total_violations": 10**9,
+                    "total_violations_primary": 10**9,
+                    "cp_audit_error": str(exc),
+                }
+
+            score = _ga_score_from_stats(audit_statistics or {})
+            audit_rows.append({
+                "attempt": attempt,
+                "cp_status": status_name,
+                "cp_objective_value": float(solver.ObjectiveValue()),
+                "cp_best_bound": float(solver.BestObjectiveBound()),
+                "cp_wall_time": float(solver.WallTime()),
+                "missing_penalty": score[0],
+                "primary_violations": score[1],
+                "makespan_hours": score[2],
+                "raw_violations": score[3],
+                "sequence_head": " ".join(str(v) for v in cp_sequence[:12]),
+                "bay_head": " ".join(f"{bid}:{cp_manual_bays[bid]}" for bid in cp_sequence[:12]),
+                "cp_basic_bay_repair_count": int(repair_count),
+                "accepted": bool(score[0] == 0 and score[1] == 0),
+                "error": (audit_statistics or {}).get("cp_audit_error", ""),
+            })
+            print(
+                f"   [audit_exact {attempt}] cp={status_name} "
+                f"primary={score[1]:.0f}, makespan={score[2]:.2f}h, raw={score[3]:.0f}"
+            )
+
+            if best_score is None or score < best_score:
+                best_score = score
+                best_attempt = {
+                    "sequence": cp_sequence,
+                    "manual_bays": cp_manual_bays,
+                    "statistics": audit_statistics or {},
+                    "score": score,
+                    "cp_status": status_name,
+                    "cp_objective_value": float(solver.ObjectiveValue()),
+                    "cp_best_bound": float(solver.BestObjectiveBound()),
+                    "cp_wall_time": float(solver.WallTime()),
+                    "cp_basic_bay_repair_count": int(repair_count),
+                }
+
+            if score[0] == 0 and score[1] == 0 and not continue_after_zero:
+                break
+
+            no_good_terms = []
+            for pos_idx, block_id in enumerate(cp_sequence):
+                match_pos = model.NewBoolVar(f"audit_ng_{attempt}_pos_{block_id}")
+                model.Add(position[block_id] == pos_idx).OnlyEnforceIf(match_pos)
+                model.Add(position[block_id] != pos_idx).OnlyEnforceIf(match_pos.Not())
+                no_good_terms.append(match_pos.Not())
+            for block_id in block_ids:
+                if cp_manual_bays[block_id] == "36B":
+                    no_good_terms.append(bay_b[block_id].Not())
+                else:
+                    no_good_terms.append(bay_b[block_id])
+            model.AddBoolOr(no_good_terms)
+
+        if result_folder and audit_rows:
+            pd.DataFrame(audit_rows).to_csv(
+                os.path.join(result_folder, "cp_sat_audit_exact_attempts.csv"),
+                index=False,
+                encoding="utf-8-sig",
+            )
+
+        if best_attempt is None:
+            elapsed = time.perf_counter() - start_t
+            print(
+                f"   ⚠️ CP-SAT audit_exact: 제한 내 평가 가능한 해를 찾지 못함 "
+                f"(attempts={len(audit_rows)}, 계산시간={elapsed:.2f}s)"
+            )
+            return [], {
+                "makespan_hours": 0,
+                "total_violations": 0,
+                "cp_status": (best_attempt or {}).get("cp_status", "NO_AUDIT_FEASIBLE"),
+                "cp_model_mode": "audit_exact",
+                "cp_audit_status": "NO_AUDIT_CANDIDATE_WITHIN_LIMIT",
+                "cp_audit_attempts": len(audit_rows),
+                "cp_audit_best_score": str(best_score),
+                "cp_time_limit_sec": time_limit,
+                "cp_workers": workers,
+                "cp_seed": seed,
+                "cp_time_scale": time_scale,
+                "computation_seconds": elapsed,
+                "selected_result_csv_name": "cp_sat_evaluation_results.csv",
+            }, [], None
+
+        accepted_payload = best_attempt
+        cp_sequence = list(accepted_payload["sequence"])
+        cp_manual_bays = dict(accepted_payload["manual_bays"])
+        final_results, final_statistics = run_assembly_decoding_sequence_with_blocks(
+            blocks=copy.deepcopy(blocks),
+            metadata=copy.deepcopy(metadata),
+            decoding_type="assembly",
+            selection_method="priority",
+            max_days=max_days,
+            start_date=start_date,
+            date_offset=date_offset,
+            output_csv=output_csv,
+            save_csv=True,
+            save_detailed=save_detailed,
+            forced_sequence=None,
+            expand_rows=True,
+            forced_prefix_block_ids=cp_sequence,
+            allow_forced_prefix_override=True,
+            manual_bay_assignments=cp_manual_bays,
+        )
+
+        elapsed = time.perf_counter() - start_t
+        final_statistics["cp_status"] = accepted_payload.get("cp_status", "")
+        final_statistics["cp_model_mode"] = "audit_exact"
+        zero_primary = bool(best_score and best_score[0] == 0 and best_score[1] == 0)
+        final_statistics["cp_audit_status"] = "ZERO_PRIMARY_ACCEPTED" if zero_primary else "BEST_AUDIT_SCORE_WITHIN_LIMIT"
+        final_statistics["cp_selection_score_order"] = "missing,primary_violations,makespan_hours,raw_violations"
+        final_statistics["cp_audit_attempts"] = len(audit_rows)
+        final_statistics["cp_audit_continue_after_zero"] = bool(continue_after_zero)
+        final_statistics["cp_audit_best_score"] = str(best_score)
+        final_statistics["cp_objective_value"] = accepted_payload.get("cp_objective_value", "")
+        final_statistics["cp_best_bound"] = accepted_payload.get("cp_best_bound", "")
+        # [AGENT-ADD] Store proof gap so time-limited CP-SAT runs are not reported as fully proven.
+        try:
+            objective_value = float(final_statistics["cp_objective_value"])
+            best_bound = float(final_statistics["cp_best_bound"])
+            final_statistics["cp_gap"] = 0.0 if objective_value == 0 else abs(objective_value - best_bound) / max(1.0, abs(objective_value))
+        except Exception:
+            final_statistics["cp_gap"] = ""
+        final_statistics["cp_wall_time"] = accepted_payload.get("cp_wall_time", "")
+        final_statistics["cp_time_limit_sec"] = time_limit
+        final_statistics["cp_workers"] = workers
+        final_statistics["cp_seed"] = seed
+        final_statistics["cp_time_scale"] = time_scale
+        final_statistics["cp_sequence_head"] = cp_sequence[:12]
+        final_statistics["cp_manual_bay_head"] = " ".join(f"{block_id}:{cp_manual_bays[block_id]}" for block_id in cp_sequence[:12])
+        final_statistics["cp_basic_bay_repair_count"] = int(accepted_payload.get("cp_basic_bay_repair_count", 0) or 0)
+        final_statistics["cp_native_primary_terms"] = len(native_primary_terms)
+        final_statistics["cp_native_raw_terms"] = len(native_raw_terms)
+        final_statistics["cp_native_constraint_counts"] = str(native_constraint_counts)
+        final_statistics["cp_native_objective_order"] = "native_primary_violations,makespan,native_raw_violations,bay_balance"
+        final_statistics["cp_native_prefix_balance"] = bool(getattr(native_cfg, "cp_native_prefix_balance", False))
+        final_statistics["computation_seconds"] = elapsed
+        final_statistics["selected_result_csv_name"] = "cp_sat_evaluation_results.csv"
+        print(
+            f"   CP-SAT audit_exact 완료: attempts={len(audit_rows)}, "
+            f"Makespan = {float(final_statistics.get('makespan_hours', 0) or 0):.2f}시간, "
+            f"Primary = {final_statistics.get('total_violations_primary', final_statistics.get('total_violations', 0))}, "
+            f"계산시간 = {elapsed:.2f}s"
+        )
+        return final_results, final_statistics, [], None
+
+    status = solver.Solve(model)
+    status_name = solver.StatusName(status)
+    if status not in {cp_model.OPTIMAL, cp_model.FEASIBLE}:
+        elapsed = time.perf_counter() - start_t
+        print(f"   ⚠️ CP-SAT 해를 찾지 못함: status={status_name}, 계산시간={elapsed:.2f}s")
+        return [], {
+            "makespan_hours": 0,
+            "total_violations": 0,
+            "cp_status": status_name,
+            "cp_time_limit_sec": time_limit,
+            "cp_workers": workers,
+            "cp_seed": seed,
+            "cp_time_scale": time_scale,
+            "cp_wall_time": solver.WallTime(),
+            "computation_seconds": elapsed,
+            "selected_result_csv_name": "cp_sat_evaluation_results.csv",
+        }, [], None
+
+    cp_sequence = sorted(block_ids, key=lambda block_id: solver.Value(position[block_id]))
+    cp_manual_bays = {
+        block_id: "36B" if solver.Value(bay_b[block_id]) else "35A"
+        for block_id in block_ids
+    }
+    repair_count = 0
+    if enforce_basic_bay_rules:
+        cp_manual_bays, repair_count = _cp_repair_basic_manual_bays(cp_manual_bays, blocks_dict, native_cfg)
+
+    final_results, final_statistics = run_assembly_decoding_sequence_with_blocks(
+        blocks=copy.deepcopy(blocks),
+        metadata=copy.deepcopy(metadata),
+        decoding_type="assembly",
+        selection_method="priority",
+        max_days=max_days,
+        start_date=start_date,
+        date_offset=date_offset,
+        output_csv=output_csv,
+        save_csv=True,
+        save_detailed=save_detailed,
+        forced_sequence=None,
+        expand_rows=True,
+        forced_prefix_block_ids=cp_sequence,
+        allow_forced_prefix_override=True,
+        manual_bay_assignments=cp_manual_bays,
+    )
+
+    elapsed = time.perf_counter() - start_t
+    final_statistics["cp_status"] = status_name
+    final_statistics["cp_model_mode"] = "exact"
+    final_statistics["cp_selection_score_order"] = "single_exact_solution_replayed_by_final_audit"
+    final_statistics["cp_objective_value"] = float(solver.ObjectiveValue())
+    final_statistics["cp_best_bound"] = float(solver.BestObjectiveBound())
+    # [AGENT-ADD] Store proof gap so exact runs can distinguish OPTIMAL from FEASIBLE.
+    final_statistics["cp_gap"] = (
+        0.0
+        if float(solver.ObjectiveValue()) == 0
+        else abs(float(solver.ObjectiveValue()) - float(solver.BestObjectiveBound()))
+        / max(1.0, abs(float(solver.ObjectiveValue())))
+    )
+    final_statistics["cp_wall_time"] = float(solver.WallTime())
+    final_statistics["cp_time_limit_sec"] = time_limit
+    final_statistics["cp_workers"] = workers
+    final_statistics["cp_seed"] = seed
+    final_statistics["cp_time_scale"] = time_scale
+    final_statistics["cp_internal_makespan_units"] = int(solver.Value(makespan))
+    final_statistics["cp_internal_makespan_minutes"] = float(solver.Value(makespan)) / float(time_scale)
+    final_statistics["cp_sequence_head"] = cp_sequence[:12]
+    final_statistics["cp_manual_bay_head"] = " ".join(f"{block_id}:{cp_manual_bays[block_id]}" for block_id in cp_sequence[:12])
+    final_statistics["cp_basic_bay_repair_count"] = int(repair_count)
+    final_statistics["cp_native_primary_terms"] = len(native_primary_terms)
+    final_statistics["cp_native_raw_terms"] = len(native_raw_terms)
+    final_statistics["cp_native_constraint_counts"] = str(native_constraint_counts)
+    final_statistics["cp_native_objective_order"] = "native_primary_violations,makespan,native_raw_violations,bay_balance"
+    final_statistics["cp_native_prefix_balance"] = bool(getattr(native_cfg, "cp_native_prefix_balance", False))
+    final_statistics["computation_seconds"] = elapsed
+    final_statistics["selected_result_csv_name"] = "cp_sat_evaluation_results.csv"
+
+    if result_folder:
+        summary_path = os.path.join(result_folder, "cp_sat_solution_summary.csv")
+        try:
+            pd.DataFrame([
+                {
+                    "position": idx + 1,
+                    "block_id": block_id,
+                    "manual_bay": cp_manual_bays[block_id],
+                    "cp_common_start_min": solver.Value(common_start[(block_id, 0)]) / float(time_scale),
+                    "cp_common_end_min": solver.Value(common_end[(block_id, 4)]) / float(time_scale),
+                    "cp_branch_end_min": solver.Value(branch_end[(block_id, 2)]) / float(time_scale),
+                }
+                for idx, block_id in enumerate(cp_sequence)
+            ]).to_csv(summary_path, index=False, encoding="utf-8-sig")
+        except Exception as exc:
+            print(f"   ⚠️ CP-SAT 해 요약 저장 실패: {exc}")
+
+    print(
+        f"   CP-SAT 완료: status={status_name}, "
+        f"Makespan = {float(final_statistics.get('makespan_hours', 0) or 0):.2f}시간, "
+        f"Primary = {final_statistics.get('total_violations_primary', final_statistics.get('total_violations', 0))}, "
+        f"계산시간 = {elapsed:.2f}s"
     )
     return final_results, final_statistics, [], None
 # ==== [AGENT-ADD END] ====
@@ -1876,5 +3769,6 @@ __all__ = [
     "run_lpt_heuristic",
     "run_seam_min_heuristic",
     "run_ga_metaheuristic",
+    "run_cp_sat_baseline",
     "run_rl_evaluation",
 ]

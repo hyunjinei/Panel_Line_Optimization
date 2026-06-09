@@ -1,0 +1,353 @@
+[AGENT-ADD] LLM Connect Layer 초보자용 설명
+
+파일 목적
+이 문서는 발표 그림의 가운데 구조를 초보자도 이해할 수 있도록 설명하기 위한 자료이다.
+대상 구조는 다음 흐름이다.
+
+LLM Connect Layer
+-> Schedule Edit Request
+-> Scheduler Adapter
+-> Existing Scheduler
+
+
+1. 전체 의미
+
+이 구조는 "사람이 말로 요청한 스케줄 변경을 실제 스케줄러가 이해할 수 있는 형태로 바꾸는 과정"을 나타낸다.
+
+중요한 점은 LLM이 직접 스케줄을 만드는 것이 아니라는 점이다.
+LLM은 사람의 말을 이해하고, 그 말을 스케줄러가 사용할 수 있는 제약 형태로 바꿔준다.
+실제 스케줄 계산은 기존 LPT 또는 RL 스케줄러가 수행한다.
+
+즉 역할을 나누면 다음과 같다.
+
+- 사람: 자연어로 요청한다.
+- LLM Connect Layer: 요청의 의미를 이해한다.
+- Schedule Edit Request: 요청을 정해진 데이터 형식으로 정리한다.
+- Scheduler Adapter: 정리된 요청을 기존 스케줄러 입력 형식에 맞춘다.
+- Existing Scheduler: 실제로 재스케줄링을 수행한다.
+
+
+2. 왜 이런 구조가 필요한가
+
+작업자는 보통 코드를 직접 수정하지 않는다.
+대신 다음처럼 말할 수 있다.
+
+"1번 블록을 공정 정상화 후 가장 먼저 투입해줘."
+"12번 블록은 35A 베이에 배정해줘."
+"C/Seam 간격 제약은 runtime에서는 완화하고 audit에서는 유지해줘."
+"7번 블록은 2번 블록보다 먼저 처리해줘."
+
+하지만 스케줄러는 이런 문장을 그대로 이해하지 못한다.
+스케줄러는 숫자, 블록 번호, 제약 종류, 베이 이름, 설정값 같은 명확한 입력이 필요하다.
+
+따라서 자연어 요청을 바로 스케줄러에 넣는 것이 아니라, 중간에서 정해진 형식으로 바꾸는 계층이 필요하다.
+그 계층이 바로 LLM Connect Layer와 Schedule Edit Request이다.
+
+
+3. LLM Connect Layer
+
+그림:
+
+LLM Connect Layer
+- 자연어 요청 이해
+- 요청 의도 검증
+- 실행 가능한 제약으로 변환
+
+이 박스는 사람의 요청을 처음 받는 곳이다.
+여기서는 사용자가 말한 문장의 의미를 해석한다.
+
+예를 들어 사용자가 이렇게 말한다고 하자.
+
+"1번 블록을 먼저 넣어줘."
+
+LLM Connect Layer는 이 문장에서 다음 의미를 찾는다.
+
+- 대상 블록: 1번
+- 요청 종류: 순서 변경
+- 원하는 위치: 앞쪽 또는 첫 번째
+
+또 다른 예시:
+
+"12번 블록은 35A로 보내줘."
+
+LLM Connect Layer는 이 문장에서 다음 의미를 찾는다.
+
+- 대상 블록: 12번
+- 요청 종류: Bay 배정
+- 원하는 Bay: 35A
+
+또 다른 예시:
+
+"C/Seam은 runtime만 끄고 audit는 유지해줘."
+
+LLM Connect Layer는 이 문장에서 다음 의미를 찾는다.
+
+- 대상 제약: C/Seam 간격
+- runtime에서는 끔
+- audit에서는 유지
+
+여기서 runtime은 스케줄을 생성할 때 적용되는 규칙을 말한다.
+audit는 스케줄이 만들어진 뒤 최종 검증할 때 적용되는 규칙을 말한다.
+
+
+4. 요청 의도 검증
+
+LLM Connect Layer는 요청을 해석한 뒤, 그 요청이 말이 되는지도 확인해야 한다.
+
+예를 들어 다음 요청은 확인이 필요하다.
+
+"999번 블록을 처음으로 보내줘."
+
+만약 실제 데이터에 999번 블록이 없다면 이 요청은 실행할 수 없다.
+따라서 오류나 경고를 내야 한다.
+
+또 다른 예시:
+
+"12번 블록을 35C로 보내줘."
+
+현재 문제에서는 Bay가 35A와 36B라고 가정한다.
+따라서 35C는 유효한 Bay가 아니다.
+이 경우도 검증 단계에서 걸러야 한다.
+
+즉 요청 의도 검증은 사용자의 말을 무조건 실행하는 것이 아니라, 스케줄러가 처리 가능한 요청인지 확인하는 단계이다.
+
+
+5. Schedule Edit Request
+
+그림:
+
+Schedule Edit Request
+[순서 제약] [Bay 제약] [용량/규칙]
+
+이 박스는 자연어 요청을 정해진 데이터 형식으로 바꾼 결과이다.
+스케줄러가 이해할 수 있도록 요청을 종류별로 정리한다.
+
+예를 들어 자연어 요청이 다음과 같다고 하자.
+
+"1번 블록을 처음으로 보내줘."
+
+이 요청은 다음처럼 바뀐다.
+
+- type: fixed_position
+- block_id: 1
+- position: 0
+
+의미는 "1번 블록을 0번째 위치, 즉 가장 앞쪽에 고정하라"이다.
+
+다른 예시:
+
+"7번 블록은 2번 블록보다 먼저 해줘."
+
+이 요청은 다음처럼 바뀐다.
+
+- type: precedence
+- before_block_id: 7
+- after_block_id: 2
+
+의미는 "7번 블록이 2번 블록보다 먼저 나오도록 하라"이다.
+
+Bay 요청 예시:
+
+"12번 블록은 35A로 배정해줘."
+
+이 요청은 다음처럼 바뀐다.
+
+- type: manual_bay_assignment
+- block_id: 12
+- bay: 35A
+
+의미는 "12번 블록이 선택되면 후속 공정 Bay를 35A로 고정하라"이다.
+
+용량 또는 규칙 요청 예시:
+
+"C/Seam은 runtime만 끄고 audit는 유지해줘."
+
+이 요청은 다음처럼 바뀐다.
+
+- type: constraint_toggle
+- target: C/Seam 간격 제약
+- runtime: off
+- audit: on
+
+의미는 "스케줄 생성 중에는 C/Seam 제약을 완화하지만, 최종 검증에서는 C/Seam 위반을 그대로 세라"이다.
+
+
+6. Scheduler Adapter
+
+그림:
+
+Scheduler Adapter
+- forced prefix / precedence
+- manual bay / runtime config
+
+Schedule Edit Request가 만들어졌다고 해서 바로 기존 스케줄러가 사용할 수 있는 것은 아니다.
+기존 스케줄러는 자신이 받는 입력 형식이 따로 있다.
+
+그래서 Scheduler Adapter가 중간에서 변환을 한 번 더 한다.
+
+예를 들어 fixed_position 요청은 forced prefix 형태로 바뀐다.
+
+자연어:
+"1번 블록을 처음으로 보내줘."
+
+Schedule Edit Request:
+- type: fixed_position
+- block_id: 1
+- position: 0
+
+Scheduler Adapter 결과:
+- forced_prefix = [1]
+
+이렇게 되면 스케줄러는 첫 번째 위치에 1번 블록을 우선 고려할 수 있다.
+
+precedence 요청은 precedence_rules로 바뀐다.
+
+자연어:
+"7번 블록은 2번 블록보다 먼저 해줘."
+
+Scheduler Adapter 결과:
+- precedence_rules = [(7, 2)]
+
+manual bay 요청은 manual_bay_assignments로 바뀐다.
+
+자연어:
+"12번 블록은 35A로 배정해줘."
+
+Scheduler Adapter 결과:
+- manual_bay_assignments = {12: "35A"}
+
+constraint toggle 요청은 runtime_config로 바뀐다.
+
+자연어:
+"C/Seam은 runtime만 끄고 audit는 유지해줘."
+
+Scheduler Adapter 결과:
+- runtime 제약 설정 변경
+- audit 제약 설정 유지
+
+즉 Scheduler Adapter는 사람이 말한 요청을 "기존 스케줄러 함수가 받을 수 있는 인자"로 바꿔주는 번역기이다.
+
+
+7. Existing Scheduler
+
+그림:
+
+Existing Scheduler
+LPT / RL Re-scheduling
+
+이 박스가 실제로 스케줄을 다시 만드는 부분이다.
+
+여기서 중요한 점은 LLM이 스케줄을 직접 만들지 않는다는 것이다.
+LLM은 요청을 정리하고, 기존 스케줄러가 계산할 수 있게 입력을 만들어준다.
+그 뒤 실제 순서 선택과 Bay 배정, makespan 계산은 기존 스케줄러가 수행한다.
+
+Existing Scheduler에는 다음 방법들이 들어갈 수 있다.
+
+- LPT
+- SPT
+- SEAM_MIN
+- GA
+- RL
+
+특히 RL을 쓰는 경우에도, RL은 여전히 기존 환경과 마스킹, Bay 배정, makespan 계산을 사용한다.
+LLM이 RL을 대신하는 것이 아니다.
+
+
+8. 전체 예시
+
+상황:
+- 기존 순서: [3, 2, 4, 8, 11, ..., 1]
+- 3번과 2번은 이미 작업 중이다.
+- 4번은 다음 투입 예정이었지만 설비 고장으로 지연된다.
+- 작업자가 1번 블록을 공정 정상화 후 가장 먼저 넣어달라고 요청한다.
+
+사용자 요청:
+"1번 블록을 공정 정상화 후 가장 먼저 투입해줘."
+
+1단계: LLM Connect Layer
+- 요청 대상은 1번 블록이다.
+- 요청 의도는 우선 투입이다.
+- 이미 작업 중인 3번, 2번은 유지해야 한다.
+- 고장으로 인해 4번은 뒤로 밀릴 수 있다.
+
+2단계: Schedule Edit Request
+- 고정 구간: [3, 2]
+- 우선 블록: 1
+- 지연 블록: 4
+- 대상: 남은 블록 순서
+
+3단계: Scheduler Adapter
+- forced_prefix = [3, 2, 1]
+- 또는 precedence_rules로 1번이 4번보다 먼저 오도록 설정
+- 필요한 경우 runtime_config 조정
+
+4단계: Existing Scheduler
+- 기존 LPT 또는 RL 스케줄러가 다시 스케줄을 계산한다.
+- 결과 예시: [3, 2, 1, 15, 6, ..., 10]
+
+5단계: 결과 설명
+- 3번과 2번은 이미 작업 중이라 고정되었다.
+- 1번 긴급 요청이 반영되었다.
+- 4번은 설비 고장 때문에 즉시 투입 대상에서 제외되었다.
+- 최종 결과에서 makespan, 위반 수, Bay 변화가 검토되었다.
+
+
+9. Bay 요청 예시
+
+사용자 요청:
+"12번 블록은 35A로 배정해줘."
+
+LLM Connect Layer:
+- 12번 블록을 찾는다.
+- 요청이 Bay 배정 요청임을 이해한다.
+- 목표 Bay가 35A임을 파악한다.
+
+Schedule Edit Request:
+- type: manual_bay_assignment
+- block_id: 12
+- bay: 35A
+
+Scheduler Adapter:
+- manual_bay_assignments = {12: "35A"}
+
+Existing Scheduler:
+- 12번 블록이 선택되는 시점에 35A 배정을 반영한다.
+- 이 배정은 이후 35A/36B 부하, 대기 시간, makespan, Bay 관련 제약 위반에 영향을 줄 수 있다.
+
+이 예시가 중요한 이유는 LLM이 단순히 블록 순서만 바꾸는 것이 아니라, Bay divide 이후의 배정 요청도 구조화할 수 있음을 보여주기 때문이다.
+
+
+10. 발표에서 말할 핵심 문장
+
+이 구조의 핵심은 다음 한 문장으로 설명할 수 있다.
+
+"LLM은 스케줄을 직접 생성하지 않고, 작업자의 자연어 요청을 기존 스케줄러가 이해할 수 있는 structured edit request로 변환한다."
+
+조금 더 길게 말하면 다음과 같다.
+
+"LLM Connect Layer는 자연어 요청을 해석하고 검증한 뒤, 순서 제약, Bay 제약, 용량 및 규칙 제약으로 구조화한다. Scheduler Adapter는 이 구조화된 요청을 forced prefix, precedence rule, manual bay assignment, runtime config 형태로 변환하고, 기존 LPT/RL 스케줄러가 이를 반영해 실제 재스케줄링을 수행한다."
+
+
+11. 그림에서 강조해야 할 점
+
+그림을 그릴 때는 다음을 지키는 것이 좋다.
+
+- LLM Connect Layer는 입력 해석 계층으로 그린다.
+- Existing Scheduler는 실제 계산 계층으로 그린다.
+- Schedule Edit Request에는 순서 제약, Bay 제약, 용량/규칙 제약을 나눠서 표시한다.
+- Scheduler Adapter는 기존 코드와 연결되는 변환 계층으로 표시한다.
+- LLM이 직접 Bay를 계산하거나 직접 next block을 선택하는 것처럼 그리지 않는다.
+- 최종 결과 설명은 Final Audit 결과에 근거한다고 표시한다.
+
+
+12. 아주 쉬운 비유
+
+LLM은 운전자가 아니다.
+LLM은 운전자에게 목적지를 정확한 주소로 바꿔주는 안내 데스크에 가깝다.
+
+작업자는 말로 요청한다.
+LLM은 그 말을 정리한다.
+Scheduler Adapter는 정리된 요청을 스케줄러 입력으로 바꾼다.
+실제로 길을 선택하고 운전하는 것은 Existing Scheduler이다.
+
+이 비유에서 중요한 점은 "LLM은 결정권자라기보다 요청을 실행 가능한 형식으로 바꾸는 연결 계층"이라는 것이다.

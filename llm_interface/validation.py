@@ -12,6 +12,9 @@ from .schemas import EditConstraint, ScheduleEditRequest
 
 SUPPORTED_CONSTRAINT_TYPES = {
     "fixed_position",
+    "freeze_prefix",
+    "priority_block",
+    "delayed_block",
     "precedence",
     "manual_bay_assignment",
     "constraint_toggle",
@@ -20,6 +23,29 @@ SUPPORTED_CONSTRAINT_TYPES = {
     "date_specific_daily_seam_cap",
 }
 SUPPORTED_BAYS = {"35A", "36B"}
+
+
+def _to_int_list(raw: Any) -> List[int]:
+    """[AGENT-ADD] Normalize list-like LLM fields before dataclass construction."""
+    if raw is None:
+        return []
+    if isinstance(raw, (int, float)) and not isinstance(raw, bool):
+        return [int(raw)]
+    if isinstance(raw, str):
+        values = [item.strip() for item in raw.replace(";", ",").split(",")]
+    else:
+        try:
+            values = list(raw)
+        except TypeError:
+            return []
+
+    normalized: List[int] = []
+    for value in values:
+        try:
+            normalized.append(int(value))
+        except Exception:
+            continue
+    return normalized
 
 
 def request_to_dict(request: ScheduleEditRequest) -> Dict[str, Any]:
@@ -35,6 +61,10 @@ def request_from_dict(payload: Dict[str, Any], raw_request: str = "") -> Schedul
             continue
         allowed = EditConstraint.__dataclass_fields__.keys()
         kwargs = {key: value for key, value in raw_constraint.items() if key in allowed}
+        # [AGENT-EDIT] Gemini/Groq may emit list fields as strings or numbers.
+        for list_key in ("block_ids", "components"):
+            if list_key in kwargs:
+                kwargs[list_key] = _to_int_list(kwargs[list_key])
         constraints.append(EditConstraint(**kwargs))
 
     return ScheduleEditRequest(
@@ -85,6 +115,9 @@ def validate_request(
     fixed_positions: Dict[int, int] = {}
     manual_bays: Dict[int, str] = {}
     precedence_pairs: set[tuple[int, int]] = set()
+    frozen_prefix_ids: List[int] = []
+    priority_ids: List[int] = []
+    delayed_ids: List[int] = []
 
     for idx, constraint in enumerate(request.constraints, 1):
         ctype = str(constraint.type or "").strip()
@@ -107,6 +140,36 @@ def validate_request(
             if position in fixed_positions and fixed_positions[position] != block_id:
                 errors.append(f"position {position}에 서로 다른 블록이 동시에 고정됐습니다.")
             fixed_positions[position] = block_id
+
+        elif ctype == "freeze_prefix":
+            block_ids = _to_int_list(constraint.block_ids or ([] if constraint.block_id is None else [constraint.block_id]))
+            if not block_ids:
+                errors.append("freeze_prefix는 block_ids가 필요합니다.")
+                continue
+            if len(block_ids) != len(set(block_ids)):
+                errors.append("freeze_prefix 안에 같은 block_id가 중복됐습니다.")
+            for block_id in block_ids:
+                if sequence_ids and block_id not in sequence_ids:
+                    errors.append(f"freeze_prefix block_id {block_id}가 현재 시퀀스에 없습니다.")
+            frozen_prefix_ids.extend(block_ids)
+
+        elif ctype == "priority_block":
+            if constraint.block_id is None:
+                errors.append("priority_block은 block_id가 필요합니다.")
+                continue
+            block_id = int(constraint.block_id)
+            if sequence_ids and block_id not in sequence_ids:
+                errors.append(f"priority_block block_id {block_id}가 현재 시퀀스에 없습니다.")
+            priority_ids.append(block_id)
+
+        elif ctype == "delayed_block":
+            if constraint.block_id is None:
+                errors.append("delayed_block은 block_id가 필요합니다.")
+                continue
+            block_id = int(constraint.block_id)
+            if sequence_ids and block_id not in sequence_ids:
+                errors.append(f"delayed_block block_id {block_id}가 현재 시퀀스에 없습니다.")
+            delayed_ids.append(block_id)
 
         elif ctype == "precedence":
             if constraint.before_block_id is None or constraint.after_block_id is None:
@@ -162,6 +225,17 @@ def validate_request(
                 errors.append("date_specific_daily_seam_cap은 날짜가 필요합니다.")
             if constraint.seam_limit is None or int(constraint.seam_limit) < 0:
                 errors.append("date_specific_daily_seam_cap의 seam_limit은 0 이상이어야 합니다.")
+
+    forced_like_ids = frozen_prefix_ids + priority_ids
+    if len(forced_like_ids) != len(set(forced_like_ids)):
+        errors.append("freeze_prefix와 priority_block 사이에 같은 block_id가 중복됐습니다.")
+    for block_id in delayed_ids:
+        if block_id in priority_ids:
+            errors.append(f"block_id {block_id}는 priority_block과 delayed_block에 동시에 지정될 수 없습니다.")
+        if block_id in frozen_prefix_ids:
+            errors.append(f"block_id {block_id}는 freeze_prefix와 delayed_block에 동시에 지정될 수 없습니다.")
+    if delayed_ids and not priority_ids:
+        warnings.append("delayed_block은 priority_block과 함께 있을 때 즉시 투입 지연 효과가 명확합니다.")
 
     return errors, warnings
 

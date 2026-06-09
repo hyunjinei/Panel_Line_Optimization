@@ -78,6 +78,7 @@ SAMPLE_CASE_DIRS = {
 LLM_PARSER_OPTIONS = {
     "규칙 기반": "deterministic",
     "Groq": "groq",
+    "Gemini": "gemini",
     "Ollama 로컬": "ollama",
     "OpenAI": "openai",
     "OpenAI 호환 직접 지정": "openai_compatible",
@@ -1425,6 +1426,8 @@ def _llm_subprocess_env_from_controls(controls: Dict[str, Any]) -> Dict[str, str
         env["PBS_LLM_MODEL"] = model
         if provider == "groq":
             env["GROQ_MODEL"] = model
+        elif provider == "gemini":
+            env["GEMINI_MODEL"] = model
         elif provider == "ollama":
             env["OLLAMA_MODEL"] = model
         elif provider == "openai":
@@ -1434,6 +1437,8 @@ def _llm_subprocess_env_from_controls(controls: Dict[str, Any]) -> Dict[str, str
     if api_key:
         if provider == "groq":
             env["GROQ_API_KEY"] = api_key
+        elif provider == "gemini":
+            env["GEMINI_API_KEY"] = api_key
         elif provider == "openai":
             env["OPENAI_API_KEY"] = api_key
         else:
@@ -3570,6 +3575,8 @@ def _render_run_settings_panel(excel_files: List[str], rl_models: List[str], def
         default_base_url = ""
         if parser_mode == "groq":
             default_model = os.environ.get("GROQ_MODEL") or os.environ.get("PBS_LLM_MODEL") or "llama-3.3-70b-versatile"
+        elif parser_mode == "gemini":
+            default_model = os.environ.get("GEMINI_MODEL") or os.environ.get("PBS_LLM_MODEL") or "gemini-2.5-flash-lite"
         elif parser_mode == "ollama":
             default_model = os.environ.get("OLLAMA_MODEL") or os.environ.get("PBS_LLM_MODEL") or "llama3.1:8b"
             default_base_url = os.environ.get("PBS_LLM_BASE_URL") or "http://localhost:11434/v1"
@@ -3583,13 +3590,13 @@ def _render_run_settings_panel(excel_files: List[str], rl_models: List[str], def
         if parser_mode in {"ollama", "openai_compatible"}:
             llm_base_url = st.text_input("Base URL", value=default_base_url, key="settings_llm_base_url")
         llm_api_key = ""
-        if parser_mode in {"groq", "openai", "openai_compatible"}:
+        if parser_mode in {"groq", "gemini", "openai", "openai_compatible"}:
             llm_api_key = st.text_input(
                 "API key",
                 value="",
                 type="password",
                 key="settings_llm_api_key",
-                help="비워두면 쉘 환경변수(GROQ_API_KEY, OPENAI_API_KEY 등)를 사용합니다.",
+                help="비워두면 쉘 환경변수(GROQ_API_KEY, GEMINI_API_KEY, OPENAI_API_KEY 등)를 사용합니다.",
             )
         if parser_mode == "ollama":
             st.caption("Ollama는 로컬에서 `ollama serve`와 모델 pull이 되어 있어야 합니다.")

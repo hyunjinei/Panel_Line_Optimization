@@ -390,6 +390,49 @@ evaluation:
   # 멀티 시드 목록
   seeds: [42, 142, 242, 342, 442]
 
+# [AGENT-ADD] CA-CJH-Insertion 비교 휴리스틱 설정.
+ca_cjh:
+  enabled: true
+  method: insertion
+  objective_mode: strict_lexicographic
+  feature_mode: process_plus_core
+  trim_ratio: 0.1
+  w_cos: 0.5
+  w_jac: 0.5
+  local_similarity_tiebreak: true
+  priority_mode: cjh_difficulty
+  beta_load: 0.7
+  feasible_priority: true
+  respect_workshop_order: true
+  # [AGENT-ADD] Do not force masked-out blocks during CA-CJH replay. This keeps
+  # capacity constraints physically enforced while insertion positions are tested.
+  allow_forced_prefix_override: false
+  # [AGENT-EDIT] cjh_difficulty: CJH abnormality/shape deviation drive global
+  # ordering. Load is not used by default; enable load_amplifier only for ablation.
+  w_load: 0.0
+  w_abnormal: 0.7
+  w_shape_dev: 0.3
+  w_urgency: 0.0
+  w_risk: 0.0
+  load_amplifier: 0.0
+  alpha: 0.0
+  evaluation_mode: full_des_with_completion
+  completion_policy: cjh_priority
+  hard_constraint_priority: true
+  soft_violation_priority: true
+  include_longi_balance: true
+  use_all_insertion_positions: true
+  parallel: true
+  workers: 0
+  chunksize: auto
+  trace_enabled: true
+  trace_output_dir: results/ca_cjh_traces
+  max_blocks_for_full_insertion: 1000000000
+  beam_width:
+  enable_beam_search: false
+  auto_beam_width: 12
+  random_seed: 42
+
 replay:
   # 실적 재현 실행 시 추가 인자
   # 예: ["--some-flag", "value"]

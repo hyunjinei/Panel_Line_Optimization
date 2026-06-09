@@ -1,0 +1,2 @@
+﻿type,expected_current_prefix,actual_before_prefix,ok,note
+freeze_prefix,"[3, 2]","[3, 2]",True,freeze_prefix는 실제 실행 중 prefix와 before schedule prefix가 같을 때 운영 해석이 안전합니다.

@@ -1,0 +1,87 @@
+{
+  "request": {
+    "raw_request": "현재 3번과 2번 블록은 이미 작업 중이니까 순서를 고정하고, 설비 복구 후 1번 블록을 가장 먼저 투입해줘. 4번 블록은 고장 때문에 바로 다음 투입에서 제외하고, 15번 블록은 36B 베이에 배정해줘.",
+    "mode": "repair",
+    "preserve_existing_schedule_as_much_as_possible": true,
+    "constraints": [
+      {
+        "type": "freeze_prefix",
+        "block_id": null,
+        "block_ids": [
+          3,
+          2
+        ],
+        "position": null,
+        "before_block_id": null,
+        "after_block_id": null,
+        "bay": null,
+        "date_key": null,
+        "date_token": null,
+        "max_blocks": null,
+        "seam_limit": null,
+        "target": null,
+        "enabled": null,
+        "scope": "both",
+        "components": [],
+        "note": ""
+      },
+      {
+        "type": "priority_block",
+        "block_id": 1,
+        "block_ids": [],
+        "position": null,
+        "before_block_id": null,
+        "after_block_id": null,
+        "bay": null,
+        "date_key": null,
+        "date_token": null,
+        "max_blocks": null,
+        "seam_limit": null,
+        "target": "next_after_recovery",
+        "enabled": null,
+        "scope": "both",
+        "components": [],
+        "note": ""
+      },
+      {
+        "type": "delayed_block",
+        "block_id": 4,
+        "block_ids": [],
+        "position": null,
+        "before_block_id": null,
+        "after_block_id": null,
+        "bay": null,
+        "date_key": null,
+        "date_token": null,
+        "max_blocks": null,
+        "seam_limit": null,
+        "target": "not_immediate_next",
+        "enabled": null,
+        "scope": "both",
+        "components": [],
+        "note": ""
+      },
+      {
+        "type": "manual_bay_assignment",
+        "block_id": 15,
+        "block_ids": [],
+        "position": null,
+        "before_block_id": null,
+        "after_block_id": null,
+        "bay": "36B",
+        "date_key": null,
+        "date_token": null,
+        "max_blocks": null,
+        "seam_limit": null,
+        "target": null,
+        "enabled": null,
+        "scope": "both",
+        "components": [],
+        "note": ""
+      }
+    ],
+    "unparsed_fragments": []
+  },
+  "errors": [],
+  "warnings": []
+}

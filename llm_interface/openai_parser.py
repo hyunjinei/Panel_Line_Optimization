@@ -2,12 +2,14 @@
 
 # [AGENT-ADD] The parser is optional; deterministic parsing remains the safe fallback.
 # [AGENT-EDIT] Groq is supported through the OpenAI-compatible chat API.
+# [AGENT-ADD] Gemini is supported through google-genai without changing the public CLI.
 
 from __future__ import annotations
 
 import json
 import os
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Sequence
 
 from .parser import parse_natural_language_request
@@ -21,6 +23,7 @@ OLLAMA_BASE_URL = "http://localhost:11434/v1"
 DEFAULT_OPENAI_MODEL = "gpt-4.1-mini"
 DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile"
 DEFAULT_OLLAMA_MODEL = "llama3.1:8b"
+DEFAULT_GEMINI_MODEL = "gemini-2.5-flash-lite"
 
 
 @dataclass(frozen=True)
@@ -59,6 +62,29 @@ def _normalize_provider(provider: str | None) -> str:
     return str(raw).strip().lower().replace("-", "_")
 
 
+def _load_local_env_file() -> None:
+    """[AGENT-ADD] Load local .env secrets without requiring python-dotenv."""
+    candidates = [
+        Path.cwd() / ".env",
+        Path(__file__).resolve().parents[1] / ".env",
+    ]
+    for env_path in candidates:
+        if not env_path.exists():
+            continue
+        try:
+            for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+                line = raw_line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, value = line.split("=", 1)
+                key = key.strip()
+                value = value.strip().strip('"').strip("'")
+                if key and key not in os.environ:
+                    os.environ[key] = value
+        except OSError:
+            continue
+
+
 def _resolve_client_config(
     *,
     provider: str | None = None,
@@ -66,11 +92,14 @@ def _resolve_client_config(
     base_url: str | None = None,
     api_key_env: str | None = None,
 ) -> LLMClientConfig:
+    _load_local_env_file()
     selected_provider = _normalize_provider(provider)
     env_key = api_key_env or os.environ.get("PBS_LLM_API_KEY_ENV")
     if not env_key:
         if selected_provider == "groq":
             env_key = "GROQ_API_KEY"
+        elif selected_provider == "gemini":
+            env_key = "GEMINI_API_KEY"
         elif selected_provider == "ollama":
             env_key = "OLLAMA_API_KEY"
         else:
@@ -89,18 +118,22 @@ def _resolve_client_config(
 
     if selected_provider == "groq":
         provider_model_env = "GROQ_MODEL"
+    elif selected_provider == "gemini":
+        provider_model_env = "GEMINI_MODEL"
     elif selected_provider == "ollama":
         provider_model_env = "OLLAMA_MODEL"
     else:
         provider_model_env = "OPENAI_MODEL"
     if selected_provider == "groq":
         selected_model = model or os.environ.get(provider_model_env) or os.environ.get("PBS_LLM_MODEL") or DEFAULT_GROQ_MODEL
+    elif selected_provider == "gemini":
+        selected_model = model or os.environ.get(provider_model_env) or os.environ.get("PBS_LLM_MODEL") or DEFAULT_GEMINI_MODEL
     elif selected_provider == "ollama":
         selected_model = model or os.environ.get(provider_model_env) or os.environ.get("PBS_LLM_MODEL") or DEFAULT_OLLAMA_MODEL
     else:
         selected_model = model or os.environ.get(provider_model_env) or os.environ.get("PBS_LLM_MODEL") or DEFAULT_OPENAI_MODEL
 
-    default_style = "chat" if selected_provider in {"groq", "ollama", "openai_compatible"} else "responses"
+    default_style = "gemini" if selected_provider == "gemini" else "chat" if selected_provider in {"groq", "ollama", "openai_compatible"} else "responses"
     api_style = str(os.environ.get("PBS_LLM_API_STYLE") or default_style).strip().lower()
     return LLMClientConfig(
         provider=selected_provider,
@@ -152,6 +185,33 @@ def _response_text_from_responses_api(client: Any, config: LLMClientConfig, prom
     return str(response.output_text or "")
 
 
+def _response_text_from_gemini(config: LLMClientConfig, prompt: str) -> str:
+    """[AGENT-ADD] Generate parser JSON through the official Gemini SDK."""
+    try:
+        from google import genai
+        from google.genai import types
+    except Exception as exc:  # pragma: no cover - depends on local environment
+        raise RuntimeError("google-genai package is not installed in this environment.") from exc
+
+    client = genai.Client(api_key=config.api_key)
+    try:
+        gen_config = types.GenerateContentConfig(
+            temperature=0,
+            response_mime_type="application/json",
+        )
+        response = client.models.generate_content(
+            model=config.model,
+            contents=prompt,
+            config=gen_config,
+        )
+    except TypeError:
+        response = client.models.generate_content(
+            model=config.model,
+            contents=prompt,
+        )
+    return str(getattr(response, "text", "") or "")
+
+
 def parse_with_openai(
     user_request: str,
     *,
@@ -163,22 +223,31 @@ def parse_with_openai(
 ) -> ScheduleEditRequest:
     """Parse one Korean edit request through an OpenAI-compatible LLM."""
 
-    try:
-        from openai import OpenAI
-    except Exception as exc:  # pragma: no cover - depends on local environment
-        raise RuntimeError("openai package is not installed in this environment.") from exc
-
     config = _resolve_client_config(
         provider=provider,
         model=model,
         base_url=base_url,
         api_key_env=api_key_env,
     )
+    prompt = build_request_parser_prompt(user_request, current_sequence or [])
+    if config.provider == "gemini":
+        response_text = _response_text_from_gemini(config, prompt)
+        payload = _extract_json_object(response_text)
+        parsed = request_from_dict(payload, raw_request=user_request)
+        errors, _ = validate_request(parsed, sequence=current_sequence)
+        if errors:
+            raise ValueError("LLM parser produced invalid request: " + " / ".join(errors))
+        return parsed
+
+    try:
+        from openai import OpenAI
+    except Exception as exc:  # pragma: no cover - depends on local environment
+        raise RuntimeError("openai package is not installed in this environment.") from exc
+
     client_kwargs: dict[str, Any] = {"api_key": config.api_key}
     if config.base_url:
         client_kwargs["base_url"] = config.base_url
     client = OpenAI(**client_kwargs)
-    prompt = build_request_parser_prompt(user_request, current_sequence or [])
     if config.api_style == "chat":
         response_text = _response_text_from_chat_completion(client, config, prompt)
     else:
@@ -206,12 +275,12 @@ def parse_request_auto(
     mode = str(parser_mode or "deterministic").strip().lower()
     if mode in {"deterministic", "rule", "rules"}:
         return parse_natural_language_request(user_request)
-    if mode in {"llm", "openai", "groq", "ollama", "openai_compatible"}:
+    if mode in {"llm", "openai", "groq", "gemini", "ollama", "openai_compatible"}:
         return parse_with_openai(
             user_request,
             current_sequence=current_sequence,
             model=model,
-            provider=provider or (mode if mode in {"groq", "ollama", "openai_compatible"} else None),
+            provider=provider or (mode if mode in {"groq", "gemini", "ollama", "openai_compatible"} else None),
             base_url=base_url,
             api_key_env=api_key_env,
         )

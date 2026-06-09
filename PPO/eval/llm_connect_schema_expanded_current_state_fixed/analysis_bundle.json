@@ -1,0 +1,653 @@
+{
+  "request": "현재 3번과 2번 블록은 이미 작업 중이니까 순서를 고정하고, 설비 복구 후 1번 블록을 가장 먼저 투입해줘. 4번 블록은 고장 때문에 바로 다음 투입에서 제외하고, 15번 블록은 36B 베이에 배정해줘.",
+  "before": {
+    "label": "lpt_before",
+    "makespan_hours": 25.19,
+    "primary_violations": 8,
+    "raw_violations": 18,
+    "sequence_head": [
+      3,
+      2,
+      4,
+      19,
+      7,
+      20,
+      18,
+      12,
+      13,
+      11,
+      33,
+      5,
+      34,
+      6,
+      37
+    ],
+    "sequence_length": 68,
+    "top_constraints": {
+      "ROUTING_C_SEAM_SPACING": 7,
+      "LINE_GROUP_CONSTRAINT": 1
+    },
+    "date_counts": {
+      "20250101": 20,
+      "20250102": 17,
+      "20250103": 18,
+      "20250104": 11,
+      "20250105": 2
+    },
+    "notes": [
+      "audit_synced=[np.True_]"
+    ]
+  },
+  "after": {
+    "label": "lpt_after",
+    "makespan_hours": 25.11,
+    "primary_violations": 6,
+    "raw_violations": 19,
+    "sequence_head": [
+      3,
+      2,
+      1,
+      4,
+      19,
+      7,
+      20,
+      18,
+      12,
+      13,
+      11,
+      33,
+      5,
+      34,
+      6
+    ],
+    "sequence_length": 68,
+    "top_constraints": {
+      "ROUTING_C_SEAM_SPACING": 6
+    },
+    "date_counts": {
+      "20250101": 18,
+      "20250102": 18,
+      "20250103": 19,
+      "20250104": 11,
+      "20250105": 2
+    },
+    "notes": [
+      "audit_synced=[np.True_]"
+    ]
+  },
+  "delta": {
+    "makespan_hours": -0.08000000000000185,
+    "primary_violations": -2,
+    "raw_violations": 1,
+    "constraint_changes": [
+      {
+        "constraint_id": "LINE_GROUP_CONSTRAINT",
+        "before": 1,
+        "after": 0,
+        "delta": -1
+      },
+      {
+        "constraint_id": "ROUTING_C_SEAM_SPACING",
+        "before": 7,
+        "after": 6,
+        "delta": -1
+      }
+    ],
+    "date_count_changes": [
+      {
+        "date": "20250101",
+        "before": 20,
+        "after": 18,
+        "delta": -2
+      },
+      {
+        "date": "20250102",
+        "before": 17,
+        "after": 18,
+        "delta": 1
+      },
+      {
+        "date": "20250103",
+        "before": 18,
+        "after": 19,
+        "delta": 1
+      }
+    ],
+    "bay_changes": [
+      {
+        "block_id": 1,
+        "before_bay": "36B",
+        "after_bay": "35A"
+      },
+      {
+        "block_id": 4,
+        "before_bay": "35A",
+        "after_bay": "36B"
+      },
+      {
+        "block_id": 7,
+        "before_bay": "35A",
+        "after_bay": "36B"
+      },
+      {
+        "block_id": 12,
+        "before_bay": "36B",
+        "after_bay": "35A"
+      },
+      {
+        "block_id": 13,
+        "before_bay": "35A",
+        "after_bay": "36B"
+      },
+      {
+        "block_id": 18,
+        "before_bay": "35A",
+        "after_bay": "36B"
+      },
+      {
+        "block_id": 19,
+        "before_bay": "36B",
+        "after_bay": "35A"
+      },
+      {
+        "block_id": 20,
+        "before_bay": "36B",
+        "after_bay": "35A"
+      },
+      {
+        "block_id": 30,
+        "before_bay": "35A",
+        "after_bay": "36B"
+      },
+      {
+        "block_id": 39,
+        "before_bay": "35A",
+        "after_bay": "36B"
+      }
+    ],
+    "top_moved_blocks": [
+      {
+        "block_id": 1,
+        "before_position": 43,
+        "after_position": 3,
+        "position_delta": -40,
+        "absolute_shift": 40
+      },
+      {
+        "block_id": 53,
+        "before_position": 20,
+        "after_position": 36,
+        "position_delta": 16,
+        "absolute_shift": 16
+      },
+      {
+        "block_id": 29,
+        "before_position": 37,
+        "after_position": 45,
+        "position_delta": 8,
+        "absolute_shift": 8
+      },
+      {
+        "block_id": 49,
+        "before_position": 36,
+        "after_position": 44,
+        "position_delta": 8,
+        "absolute_shift": 8
+      },
+      {
+        "block_id": 43,
+        "before_position": 45,
+        "after_position": 41,
+        "position_delta": -4,
+        "absolute_shift": 4
+      },
+      {
+        "block_id": 60,
+        "before_position": 47,
+        "after_position": 43,
+        "position_delta": -4,
+        "absolute_shift": 4
+      },
+      {
+        "block_id": 27,
+        "before_position": 41,
+        "after_position": 39,
+        "position_delta": -2,
+        "absolute_shift": 2
+      },
+      {
+        "block_id": 36,
+        "before_position": 40,
+        "after_position": 38,
+        "position_delta": -2,
+        "absolute_shift": 2
+      },
+      {
+        "block_id": 47,
+        "before_position": 38,
+        "after_position": 40,
+        "position_delta": 2,
+        "absolute_shift": 2
+      },
+      {
+        "block_id": 54,
+        "before_position": 46,
+        "after_position": 48,
+        "position_delta": 2,
+        "absolute_shift": 2
+      }
+    ]
+  },
+  "trace": {
+    "before_csv": "/home/temp_id/Downloads/지금휴리스틱과RL에서조립착수일먼저하는거제거한상태베스트인데/PPO/eval/llm_connect_schema_expanded_current_state_fixed/before_decision_trace.csv",
+    "after_csv": "/home/temp_id/Downloads/지금휴리스틱과RL에서조립착수일먼저하는거제거한상태베스트인데/PPO/eval/llm_connect_schema_expanded_current_state_fixed/after_decision_trace.csv",
+    "before_steps": 68,
+    "after_steps": 68,
+    "before_preview": [
+      {
+        "step": 1,
+        "selected_block_id": 3,
+        "available_count": 3,
+        "current_date": "2025-01-01",
+        "current_datetime": "2025-01-01 08:25",
+        "selection_method": "lpt",
+        "selection_reason": "FORCED_PREFIX_OVERRIDE",
+        "masking_stage_used": NaN,
+        "forced_override": true,
+        "precedence_blocked_ids": NaN,
+        "manual_bay_override": NaN
+      },
+      {
+        "step": 2,
+        "selected_block_id": 2,
+        "available_count": 3,
+        "current_date": "2025-01-01",
+        "current_datetime": "2025-01-01 09:05",
+        "selection_method": "lpt",
+        "selection_reason": "FORCED_PREFIX_OVERRIDE",
+        "masking_stage_used": NaN,
+        "forced_override": true,
+        "precedence_blocked_ids": NaN,
+        "manual_bay_override": NaN
+      },
+      {
+        "step": 3,
+        "selected_block_id": 4,
+        "available_count": 3,
+        "current_date": "2025-01-01",
+        "current_datetime": "2025-01-01 09:43",
+        "selection_method": "lpt",
+        "selection_reason": "LPT 선택 (처리시간: 268.8분, 3개 중)",
+        "masking_stage_used": NaN,
+        "forced_override": false,
+        "precedence_blocked_ids": NaN,
+        "manual_bay_override": NaN
+      },
+      {
+        "step": 4,
+        "selected_block_id": 19,
+        "available_count": 2,
+        "current_date": "2025-01-01",
+        "current_datetime": "2025-01-01 10:03",
+        "selection_method": "lpt",
+        "selection_reason": "LPT 선택 (처리시간: 200.5분, 2개 중)",
+        "masking_stage_used": NaN,
+        "forced_override": false,
+        "precedence_blocked_ids": NaN,
+        "manual_bay_override": NaN
+      },
+      {
+        "step": 5,
+        "selected_block_id": 7,
+        "available_count": 1,
+        "current_date": "2025-01-01",
+        "current_datetime": "2025-01-01 10:28",
+        "selection_method": "lpt",
+        "selection_reason": "LPT 선택 (처리시간: 155.1분, 1개 중)",
+        "masking_stage_used": NaN,
+        "forced_override": false,
+        "precedence_blocked_ids": NaN,
+        "manual_bay_override": NaN
+      },
+      {
+        "step": 6,
+        "selected_block_id": 20,
+        "available_count": 4,
+        "current_date": "2025-01-01",
+        "current_datetime": "2025-01-01 11:16",
+        "selection_method": "lpt",
+        "selection_reason": "LPT 선택 (처리시간: 559.8분, 4개 중)",
+        "masking_stage_used": NaN,
+        "forced_override": false,
+        "precedence_blocked_ids": NaN,
+        "manual_bay_override": NaN
+      },
+      {
+        "step": 7,
+        "selected_block_id": 18,
+        "available_count": 1,
+        "current_date": "2025-01-01",
+        "current_datetime": "2025-01-01 11:28",
+        "selection_method": "lpt",
+        "selection_reason": "LPT 선택 (처리시간: 131.1분, 1개 중)",
+        "masking_stage_used": NaN,
+        "forced_override": false,
+        "precedence_blocked_ids": NaN,
+        "manual_bay_override": NaN
+      },
+      {
+        "step": 8,
+        "selected_block_id": 12,
+        "available_count": 2,
+        "current_date": "2025-01-01",
+        "current_datetime": "2025-01-01 12:03",
+        "selection_method": "lpt",
+        "selection_reason": "LPT 선택 (처리시간: 247.2분, 2개 중)",
+        "masking_stage_used": NaN,
+        "forced_override": false,
+        "precedence_blocked_ids": NaN,
+        "manual_bay_override": NaN
+      }
+    ],
+    "after_preview": [
+      {
+        "step": 1,
+        "selected_block_id": 3,
+        "available_count": 3,
+        "current_date": "2025-01-01",
+        "current_datetime": "2025-01-01 08:25",
+        "selection_method": "lpt",
+        "selection_reason": "FORCED_PREFIX_OVERRIDE",
+        "masking_stage_used": NaN,
+        "forced_override": true,
+        "precedence_blocked_ids": 4.0,
+        "manual_bay_override": NaN
+      },
+      {
+        "step": 2,
+        "selected_block_id": 2,
+        "available_count": 3,
+        "current_date": "2025-01-01",
+        "current_datetime": "2025-01-01 09:05",
+        "selection_method": "lpt",
+        "selection_reason": "FORCED_PREFIX_OVERRIDE",
+        "masking_stage_used": NaN,
+        "forced_override": true,
+        "precedence_blocked_ids": 4.0,
+        "manual_bay_override": NaN
+      },
+      {
+        "step": 3,
+        "selected_block_id": 1,
+        "available_count": 3,
+        "current_date": "2025-01-01",
+        "current_datetime": "2025-01-01 09:45",
+        "selection_method": "lpt",
+        "selection_reason": "FORCED_PREFIX_OVERRIDE",
+        "masking_stage_used": NaN,
+        "forced_override": true,
+        "precedence_blocked_ids": 4.0,
+        "manual_bay_override": NaN
+      },
+      {
+        "step": 4,
+        "selected_block_id": 4,
+        "available_count": 3,
+        "current_date": "2025-01-01",
+        "current_datetime": "2025-01-01 10:23",
+        "selection_method": "lpt",
+        "selection_reason": "LPT 선택 (처리시간: 268.8분, 3개 중)",
+        "masking_stage_used": NaN,
+        "forced_override": false,
+        "precedence_blocked_ids": NaN,
+        "manual_bay_override": NaN
+      },
+      {
+        "step": 5,
+        "selected_block_id": 19,
+        "available_count": 2,
+        "current_date": "2025-01-01",
+        "current_datetime": "2025-01-01 10:43",
+        "selection_method": "lpt",
+        "selection_reason": "LPT 선택 (처리시간: 200.5분, 2개 중)",
+        "masking_stage_used": NaN,
+        "forced_override": false,
+        "precedence_blocked_ids": NaN,
+        "manual_bay_override": NaN
+      },
+      {
+        "step": 6,
+        "selected_block_id": 7,
+        "available_count": 1,
+        "current_date": "2025-01-01",
+        "current_datetime": "2025-01-01 11:08",
+        "selection_method": "lpt",
+        "selection_reason": "LPT 선택 (처리시간: 155.1분, 1개 중)",
+        "masking_stage_used": NaN,
+        "forced_override": false,
+        "precedence_blocked_ids": NaN,
+        "manual_bay_override": NaN
+      },
+      {
+        "step": 7,
+        "selected_block_id": 20,
+        "available_count": 4,
+        "current_date": "2025-01-01",
+        "current_datetime": "2025-01-01 11:56",
+        "selection_method": "lpt",
+        "selection_reason": "LPT 선택 (처리시간: 559.8분, 4개 중)",
+        "masking_stage_used": NaN,
+        "forced_override": false,
+        "precedence_blocked_ids": NaN,
+        "manual_bay_override": NaN
+      },
+      {
+        "step": 8,
+        "selected_block_id": 18,
+        "available_count": 1,
+        "current_date": "2025-01-01",
+        "current_datetime": "2025-01-01 12:08",
+        "selection_method": "lpt",
+        "selection_reason": "LPT 선택 (처리시간: 131.1분, 1개 중)",
+        "masking_stage_used": NaN,
+        "forced_override": false,
+        "precedence_blocked_ids": NaN,
+        "manual_bay_override": NaN
+      }
+    ],
+    "changed_steps_preview": [
+      {
+        "step": 3,
+        "before_block_id": 4,
+        "after_block_id": 1,
+        "before_reason": "LPT 선택 (처리시간: 268.8분, 3개 중)",
+        "after_reason": "FORCED_PREFIX_OVERRIDE",
+        "before_available_count": 3,
+        "after_available_count": 3
+      },
+      {
+        "step": 4,
+        "before_block_id": 19,
+        "after_block_id": 4,
+        "before_reason": "LPT 선택 (처리시간: 200.5분, 2개 중)",
+        "after_reason": "LPT 선택 (처리시간: 268.8분, 3개 중)",
+        "before_available_count": 2,
+        "after_available_count": 3
+      },
+      {
+        "step": 5,
+        "before_block_id": 7,
+        "after_block_id": 19,
+        "before_reason": "LPT 선택 (처리시간: 155.1분, 1개 중)",
+        "after_reason": "LPT 선택 (처리시간: 200.5분, 2개 중)",
+        "before_available_count": 1,
+        "after_available_count": 2
+      },
+      {
+        "step": 6,
+        "before_block_id": 20,
+        "after_block_id": 7,
+        "before_reason": "LPT 선택 (처리시간: 559.8분, 4개 중)",
+        "after_reason": "LPT 선택 (처리시간: 155.1분, 1개 중)",
+        "before_available_count": 4,
+        "after_available_count": 1
+      },
+      {
+        "step": 7,
+        "before_block_id": 18,
+        "after_block_id": 20,
+        "before_reason": "LPT 선택 (처리시간: 131.1분, 1개 중)",
+        "after_reason": "LPT 선택 (처리시간: 559.8분, 4개 중)",
+        "before_available_count": 1,
+        "after_available_count": 4
+      },
+      {
+        "step": 8,
+        "before_block_id": 12,
+        "after_block_id": 18,
+        "before_reason": "LPT 선택 (처리시간: 247.2분, 2개 중)",
+        "after_reason": "LPT 선택 (처리시간: 131.1분, 1개 중)",
+        "before_available_count": 2,
+        "after_available_count": 1
+      },
+      {
+        "step": 9,
+        "before_block_id": 13,
+        "after_block_id": 12,
+        "before_reason": "LPT 선택 (처리시간: 247.2분, 1개 중)",
+        "after_reason": "LPT 선택 (처리시간: 247.2분, 2개 중)",
+        "before_available_count": 1,
+        "after_available_count": 2
+      },
+      {
+        "step": 10,
+        "before_block_id": 11,
+        "after_block_id": 13,
+        "before_reason": "LPT 선택 (처리시간: 405.8분, 5개 중)",
+        "after_reason": "LPT 선택 (처리시간: 247.2분, 1개 중)",
+        "before_available_count": 5,
+        "after_available_count": 1
+      },
+      {
+        "step": 11,
+        "before_block_id": 33,
+        "after_block_id": 11,
+        "before_reason": "LPT 선택 (처리시간: 454.4분, 9개 중)",
+        "after_reason": "LPT 선택 (처리시간: 405.8분, 5개 중)",
+        "before_available_count": 9,
+        "after_available_count": 5
+      },
+      {
+        "step": 12,
+        "before_block_id": 5,
+        "after_block_id": 33,
+        "before_reason": "LPT 선택 (처리시간: 320.9분, 6개 중)",
+        "after_reason": "LPT 선택 (처리시간: 454.4분, 9개 중)",
+        "before_available_count": 6,
+        "after_available_count": 9
+      }
+    ],
+    "forced_steps_after": [
+      {
+        "step": 1,
+        "selected_block_id": 3,
+        "selection_reason": "FORCED_PREFIX_OVERRIDE",
+        "masking_stage_used": NaN,
+        "manual_bay_override": NaN
+      },
+      {
+        "step": 2,
+        "selected_block_id": 2,
+        "selection_reason": "FORCED_PREFIX_OVERRIDE",
+        "masking_stage_used": NaN,
+        "manual_bay_override": NaN
+      },
+      {
+        "step": 3,
+        "selected_block_id": 1,
+        "selection_reason": "FORCED_PREFIX_OVERRIDE",
+        "masking_stage_used": NaN,
+        "manual_bay_override": NaN
+      }
+    ]
+  },
+  "official_stats": {
+    "before": {
+      "total_blocks_processed": 72,
+      "total_blocks_expected": 72,
+      "success_rate": 100.0,
+      "total_time_hours": 375.0199999999998,
+      "makespan_hours": 100.43333333333334,
+      "sum_daily_max_makespan_hours": 86.11000000000001,
+      "total_violations": 8,
+      "total_violations_primary": 8,
+      "total_violations_raw": 18,
+      "total_violations_meta": 0,
+      "total_violations_info": 10,
+      "total_cseam_violations": 7,
+      "ps_success_rate": 100.0,
+      "ps_pairs_total": 2,
+      "ps_pairs_successful": 2,
+      "daily_analyses_generated": 5,
+      "step_analyses_generated": 68,
+      "audit_workshop_order_inversions": 0,
+      "audit_constraint_ids": [
+        "ROUTING_C_SEAM_SPACING",
+        "ROUTING_C_SEAM_SPACING",
+        "ROUTING_C_SEAM_SPACING",
+        "ROUTING_C_SEAM_SPACING",
+        "ROUTING_C_SEAM_SPACING",
+        "ROUTING_C_SEAM_SPACING",
+        "ROUTING_C_SEAM_SPACING",
+        "LINE_GROUP_CONSTRAINT"
+      ],
+      "audit_constraint_families": [
+        "C_SEAM_SPACING_FAMILY",
+        "C_SEAM_SPACING_FAMILY",
+        "C_SEAM_SPACING_FAMILY",
+        "C_SEAM_SPACING_FAMILY",
+        "C_SEAM_SPACING_FAMILY",
+        "C_SEAM_SPACING_FAMILY",
+        "C_SEAM_SPACING_FAMILY",
+        "LINE_GROUP_FAMILY"
+      ]
+    },
+    "after": {
+      "total_blocks_processed": 72,
+      "total_blocks_expected": 72,
+      "success_rate": 100.0,
+      "total_time_hours": 375.0199999999998,
+      "makespan_hours": 100.43333333333334,
+      "sum_daily_max_makespan_hours": 86.49000000000001,
+      "total_violations": 6,
+      "total_violations_primary": 6,
+      "total_violations_raw": 19,
+      "total_violations_meta": 0,
+      "total_violations_info": 13,
+      "total_cseam_violations": 6,
+      "ps_success_rate": 100.0,
+      "ps_pairs_total": 2,
+      "ps_pairs_successful": 2,
+      "daily_analyses_generated": 5,
+      "step_analyses_generated": 68,
+      "audit_workshop_order_inversions": 0,
+      "audit_constraint_ids": [
+        "ROUTING_C_SEAM_SPACING",
+        "ROUTING_C_SEAM_SPACING",
+        "ROUTING_C_SEAM_SPACING",
+        "ROUTING_C_SEAM_SPACING",
+        "ROUTING_C_SEAM_SPACING",
+        "ROUTING_C_SEAM_SPACING"
+      ],
+      "audit_constraint_families": [
+        "C_SEAM_SPACING_FAMILY",
+        "C_SEAM_SPACING_FAMILY",
+        "C_SEAM_SPACING_FAMILY",
+        "C_SEAM_SPACING_FAMILY",
+        "C_SEAM_SPACING_FAMILY",
+        "C_SEAM_SPACING_FAMILY"
+      ]
+    }
+  },
+  "explanation": "사용자 요청 '현재 3번과 2번 블록은 이미 작업 중이니까 순서를 고정하고, 설비 복구 후 1번 블록을 가장 먼저 투입해줘. 4번 블록은 고장 때문에 바로 다음 투입에서 제외하고, 15번 블록은 36B 베이에 배정해줘.'을 반영한 결과입니다. makespan은 0.08시간 감소했습니다. primary violation은 2건 감소했습니다. raw violation은 1건 증가했습니다. 이 요청은 이미 작업 중인 prefix를 고정하고, 긴급 블록과 지연 블록 조건을 구조화한 뒤 기존 스케줄러를 다시 실행한 결과입니다. 순서가 바뀐 대표 블록은 1번(43->3), 53번(20->36), 49번(36->44), 29번(37->45), 43번(45->41)입니다. 제약 측면에서는 LINE_GROUP_CONSTRAINT는 1건 감소했습니다, ROUTING_C_SEAM_SPACING는 1건 감소했습니다. 일자별 처리량 기준으로는 20250101의 처리 블록 수는 20개에서 18개로 감소했습니다, 20250102의 처리 블록 수는 17개에서 18개로 증가했습니다, 20250103의 처리 블록 수는 18개에서 19개로 증가했습니다. 변경된 베이 배정은 1번(36B->35A), 4번(35A->36B), 19번(36B->35A), 7번(35A->36B), 20번(36B->35A)입니다. 종합적으로 보면 시간과 제약 지표가 서로 다른 방향으로 움직여 추가 판단이 필요한 결과입니다. 즉 이미 시작된 블록은 되돌리지 않고 고정하며, 긴급 블록은 남은 시퀀스 앞쪽으로 당기고 지연 블록은 우선 블록 뒤로 밀어 전체 상태를 다시 전개한 결과입니다. 주요 위반은 ROUTING_C_SEAM_SPACING 6건입니다. 추가 메모: audit_synced=[np.True_]"
+}

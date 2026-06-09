@@ -1,0 +1,19 @@
+﻿Scale group,Test instance,Problem type,Block count range,Block count values,Main generation setting,Utilization target,Paired-block relation ratio,Subassembly relation ratio,Seam scale,Tact-time scale,Length scale,Width scale,Thickness scale
+Small,S1,General,20-80,"20, 30, 40, 50, 60, 70, 80",Baseline generation condition without a dominant stress factor,1.0,0.0,0.0,1.0,1.0,1.0,1.0,1.0
+Small,S2,Paired Block,20-80,"20, 30, 40, 50, 60, 70, 80",Increased paired-block relation ratio,1.0,0.1,0.0,1.0,1.0,1.0,1.0,1.0
+Small,S3,Subassembly,20-80,"20, 30, 40, 50, 60, 70, 80",Increased subassembly or linked-block ratio,1.0,0.0,0.1,1.0,1.0,1.0,1.0,1.0
+Small,S4,Mixed Relation,20-80,"20, 30, 40, 50, 60, 70, 80",Combined paired-block and subassembly relation stress,1.0,0.1,0.1,1.0,1.0,1.0,1.0,1.0
+Small,S5,Heavy Workload,20-80,"20, 30, 40, 50, 60, 70, 80",Increased per-block workload and physical scale,1.0,0.05,0.05,1.2,1.2,1.05,1.05,1.2
+Small,S6,High Utilization,20-80,"20, 30, 40, 50, 60, 70, 80",Increased overall utilization and daily capacity pressure,1.25,0.05,0.05,1.1,1.1,1.0,1.0,1.0
+Medium,M1,General,90-140,"90, 100, 110, 120, 130, 140",Baseline generation condition without a dominant stress factor,1.0,0.0,0.0,1.0,1.0,1.0,1.0,1.0
+Medium,M2,Paired Block,90-140,"90, 100, 110, 120, 130, 140",Increased paired-block relation ratio,1.0,0.1,0.0,1.0,1.0,1.0,1.0,1.0
+Medium,M3,Subassembly,90-140,"90, 100, 110, 120, 130, 140",Increased subassembly or linked-block ratio,1.0,0.0,0.1,1.0,1.0,1.0,1.0,1.0
+Medium,M4,Mixed Relation,90-140,"90, 100, 110, 120, 130, 140",Combined paired-block and subassembly relation stress,1.0,0.1,0.1,1.0,1.0,1.0,1.0,1.0
+Medium,M5,Heavy Workload,90-140,"90, 100, 110, 120, 130, 140",Increased per-block workload and physical scale,1.0,0.05,0.05,1.2,1.2,1.05,1.05,1.2
+Medium,M6,High Utilization,90-140,"90, 100, 110, 120, 130, 140",Increased overall utilization and daily capacity pressure,1.25,0.05,0.05,1.1,1.1,1.0,1.0,1.0
+Large,L1,General,150-200,"150, 160, 170, 180, 190, 200",Baseline generation condition without a dominant stress factor,1.0,0.0,0.0,1.0,1.0,1.0,1.0,1.0
+Large,L2,Paired Block,150-200,"150, 160, 170, 180, 190, 200",Increased paired-block relation ratio,1.0,0.1,0.0,1.0,1.0,1.0,1.0,1.0
+Large,L3,Subassembly,150-200,"150, 160, 170, 180, 190, 200",Increased subassembly or linked-block ratio,1.0,0.0,0.1,1.0,1.0,1.0,1.0,1.0
+Large,L4,Mixed Relation,150-200,"150, 160, 170, 180, 190, 200",Combined paired-block and subassembly relation stress,1.0,0.1,0.1,1.0,1.0,1.0,1.0,1.0
+Large,L5,Heavy Workload,150-200,"150, 160, 170, 180, 190, 200",Increased per-block workload and physical scale,1.0,0.05,0.05,1.2,1.2,1.05,1.05,1.2
+Large,L6,High Utilization,150-200,"150, 160, 170, 180, 190, 200",Increased overall utilization and daily capacity pressure,1.25,0.05,0.05,1.1,1.1,1.0,1.0,1.0

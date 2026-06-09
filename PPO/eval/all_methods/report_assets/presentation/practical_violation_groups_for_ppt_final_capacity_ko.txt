@@ -1,0 +1,34 @@
+실적 데이터 제약 위반 발표용 집계 - MSDH 작업장 순서 제약 활성화 재실행
+
+집계 기준
+- INFO 항목(P7#1, P5#17)은 제약 조건 미준수 횟수에서 제외
+- 후공정 착수 순서 위반은 같은 작업장 내 조립착수일 순서 역전쌍으로 전수 계산
+- 일일 생산 용량 초과는 중간 누적 행이 아니라 최종 날짜 단위 상태로 1회 집계
+
+MSDH 재실행 조건
+- enable_routing_workshop_order = true
+- enabled_constraints_start_date에 ROUTING_WORKSHOP_ORDER 추가
+- hard_constraints_start_date에 ROUTING_WORKSHOP_ORDER 추가
+
+MSDH 재실행 결과
+- 제약 조건 미준수 횟수: 36건
+- 후공정 착수 순서 위반: 17회
+- 베이/론지 연속 배치 제한 위반: 3회
+- 특정 블록 및 공정 연속 배치 제한 위반: 15회
+- 일일 생산 용량 초과: 1회
+- 베이 적합성 위반: 0회
+- Makespan: 104.72시간
+
+전체 방법 합계
+- Manual: 70건
+- MSDH: 36건
+- SPT: 10건
+- MSF: 6건
+- LPT: 3건
+- GA: 5건
+- Proposed: 0건
+
+저장 파일
+- PPO/eval/all_methods/report_assets/presentation/practical_violation_groups_for_ppt_final_capacity_msdh_workshop_order_on.csv
+- PPO/eval/all_methods/report_assets/presentation/msdh_workshop_order_on/actionmasking_evaluation_results.csv
+- PPO/eval/all_methods/report_assets/presentation/msdh_workshop_order_on/audit/independent_constraint_audit_summary.csv
