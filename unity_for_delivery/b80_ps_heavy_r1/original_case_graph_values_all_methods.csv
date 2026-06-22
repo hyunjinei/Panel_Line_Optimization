@@ -1,0 +1,6 @@
+﻿grid_case_id,method_label,total_blocks,distribution_profile,makespan_hours,violations,missing_blocks,spread_days,actual_util,ps_ratio_actual,sub_ratio_actual,seam_scale,tact_time_scale,length_scale,width_scale,thickness_scale
+b80_ps_heavy_r1,SPT,80,ps_heavy,113.18333333333334,27,0,5,0.9411764705882352,0.1,0.0,1.0,1.0,1.0,1.0,1.0
+b80_ps_heavy_r1,MSF,80,ps_heavy,111.98333333333332,15,0,5,0.9411764705882352,0.1,0.0,1.0,1.0,1.0,1.0,1.0
+b80_ps_heavy_r1,LPT,80,ps_heavy,109.73333333333332,10,0,5,0.9411764705882352,0.1,0.0,1.0,1.0,1.0,1.0,1.0
+b80_ps_heavy_r1,GA,80,ps_heavy,109.75,3,0,5,0.9411764705882352,0.1,0.0,1.0,1.0,1.0,1.0,1.0
+b80_ps_heavy_r1,Proposed,80,ps_heavy,109.73333333333332,0,0,5,0.9411764705882352,0.1,0.0,1.0,1.0,1.0,1.0,1.0

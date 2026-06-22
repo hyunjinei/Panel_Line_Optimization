@@ -1,0 +1,41 @@
+file,column,basic_gantt_required,dashboard_or_detail_use,description
+case_graph_values_all_methods.csv,grid_case_id,X,방법 비교 필수,문제 케이스 이름입니다. 예: b20_base_r1
+case_graph_values_all_methods.csv,method_label,X,방법 비교 필수,방법 이름입니다. SPT MSF LPT GA Proposed 중 하나입니다.
+case_graph_values_all_methods.csv,total_blocks,X,방법 비교 선택,문제에 포함된 전체 블록 수입니다.
+case_graph_values_all_methods.csv,distribution_profile,X,방법 비교 선택,문제 생성 분포입니다. 예: base ps_heavy sub_heavy mixed_ps_sub heavy_work overload
+case_graph_values_all_methods.csv,makespan_hours,X,방법 비교 필수,전체 완료 시간입니다. 기존 그래프에 사용한 값입니다.
+case_graph_values_all_methods.csv,violations,X,방법 비교 필수,전체 제약 위반 수입니다. 기존 그래프에 사용한 값입니다.
+process_gantt.csv,grid_case_id,O,필터 선택,문제 케이스 이름입니다.
+process_gantt.csv,method_label,O,필터 선택,방법 이름입니다.
+process_gantt.csv,block_id,O,공정 막대 필수,블록 식별자입니다. Unity 오브젝트 키로 쓰기 좋습니다.
+process_gantt.csv,block_name,O,공정 막대 필수,화면에 표시할 블록명입니다.
+process_gantt.csv,sequence,O,정렬 필수,해당 방법에서 블록이 투입된 순서입니다.
+process_gantt.csv,process_name,O,공정 막대 필수,공정명입니다. 예: 판계 전면SAW TurnOver 후면SAW NC 베이35A 론지취부
+process_gantt.csv,process_index,O,정렬 필수,한 블록 안에서 공정 순서를 정렬하는 번호입니다.
+process_gantt.csv,start_time,O,공정 막대 필수,공정 시작 시간입니다.
+process_gantt.csv,end_time,O,공정 막대 필수,공정 종료 시간입니다.
+process_gantt.csv,duration_min,O,공정 막대 필수,공정 소요 시간입니다. 단위는 분입니다.
+process_gantt.csv,assigned_bay,O,라인 배치 필수,컬럼명은 legacy name입니다. 화면에서는 assigned line으로 표시합니다. downstream line 공정이면 35A 또는 36B입니다. shared upstream line 공정이면 비어 있을 수 있습니다.
+process_gantt.csv,machine_type,O,라인 배치 필수,시각화 line 구분입니다. 값은 공통 베이35A 베이36B입니다. 화면에서는 shared upstream line downstream line A downstream line B로 표시합니다.
+block_results.csv,grid_case_id,X,상세 조인 선택,문제 케이스 이름입니다.
+block_results.csv,method_label,X,상세 조인 선택,방법 이름입니다.
+block_results.csv,block_id,X,상세 조인 필수,process_gantt.csv와 연결하는 블록 식별자입니다.
+block_results.csv,block_name,X,상세 표시 필수,화면에 표시할 블록명입니다.
+block_results.csv,am_sequence,X,상세 표시 선택,블록 투입 순서입니다.
+block_results.csv,assigned_bay,X,상세 표시 필수,컬럼명은 legacy name입니다. 화면에서는 최종 배정 line으로 표시합니다.
+block_results.csv,total_time_min,X,상세 표시 선택,블록 전체 공정 시간입니다. 단위는 분입니다.
+block_results.csv,port_starboard,X,상세 표시 선택,P/S 정보입니다.
+block_results.csv,assembly_type,X,상세 표시 선택,조립 구분입니다.
+block_results.csv,line_group,X,상세 표시 선택,라인 그룹입니다.
+block_results.csv,width_m,X,상세 표시 선택,블록 너비입니다. 단위는 미터입니다.
+block_results.csv,longi_count,X,상세 표시 선택,론지 수입니다.
+block_results.csv,seam_count,X,상세 표시 선택,심수 또는 용접량 계열 값입니다.
+block_results.csv,c_seam_count,X,상세 표시 선택,C seam 수입니다.
+block_results.csv,violations,X,경고 표시 선택,블록 단위 최종 제약 위반 수입니다.
+block_results.csv,start_time,X,상세 표시 선택,블록 전체 시작 시간입니다.
+block_results.csv,end_time,X,상세 표시 선택,블록 전체 종료 시간입니다.
+block_results.csv,final_end_time,X,상세 표시 선택,블록 최종 완료 시간입니다.
+original_case_graph_values_all_methods.csv,all_columns,X,원본 보존용,전체 컬럼이 남아 있는 원본 비교 지표 CSV입니다. Unity 기본 화면에서는 읽지 않아도 됩니다.
+original_process_gantt.csv,all_columns,X,원본 보존용,전체 컬럼이 남아 있는 원본 공정 CSV입니다. Unity 기본 화면에서는 읽지 않아도 됩니다.
+original_block_results.csv,all_columns,X,원본 보존용,제약 상세와 내부 분석 컬럼이 남아 있는 원본 블록 결과 CSV입니다.
+original_expanded_verification.csv,all_columns,X,원본 보존용,제약 검증 상세 파일입니다. 기본 시각화에는 필요 없습니다.

@@ -1,0 +1,6 @@
+﻿grid_case_id,method_label,total_blocks,distribution_profile,makespan_hours,violations
+b120_overload_r1,SPT,120,overload,193.66666666666663,41
+b120_overload_r1,MSF,120,overload,177.75,26
+b120_overload_r1,LPT,120,overload,177.08333333333334,12
+b120_overload_r1,GA,120,overload,178.95,6
+b120_overload_r1,Proposed,120,overload,174.98333333333332,0

@@ -1,0 +1,6 @@
+﻿grid_case_id,method_label,total_blocks,distribution_profile,makespan_hours,violations,missing_blocks,spread_days,actual_util,ps_ratio_actual,sub_ratio_actual,seam_scale,tact_time_scale,length_scale,width_scale,thickness_scale
+b20_overload_r1,SPT,20,overload,31.83333333333333,1,0,3,0.392156862745098,0.0,0.0,1.1,1.1,1.0,1.0,1.0
+b20_overload_r1,MSF,20,overload,31.48333333333333,0,0,3,0.392156862745098,0.0,0.0,1.1,1.1,1.0,1.0,1.0
+b20_overload_r1,LPT,20,overload,32.1,0,0,3,0.392156862745098,0.0,0.0,1.1,1.1,1.0,1.0,1.0
+b20_overload_r1,GA,20,overload,28.966666666666665,0,0,3,0.392156862745098,0.0,0.0,1.1,1.1,1.0,1.0,1.0
+b20_overload_r1,Proposed,20,overload,29.516666666666666,0,0,3,0.392156862745098,0.0,0.0,1.1,1.1,1.0,1.0,1.0

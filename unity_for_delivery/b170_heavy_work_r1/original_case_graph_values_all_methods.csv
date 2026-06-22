@@ -1,0 +1,6 @@
+﻿grid_case_id,method_label,total_blocks,distribution_profile,makespan_hours,violations,missing_blocks,spread_days,actual_util,ps_ratio_actual,sub_ratio_actual,seam_scale,tact_time_scale,length_scale,width_scale,thickness_scale
+b170_heavy_work_r1,SPT,170,heavy_work,289.8666666666667,54,0,10,1.0,0.0470588235294117,0.0470588235294117,1.2,1.2,1.05,1.05,1.2
+b170_heavy_work_r1,MSF,170,heavy_work,274.35,38,0,10,1.0,0.0470588235294117,0.0470588235294117,1.2,1.2,1.05,1.05,1.2
+b170_heavy_work_r1,LPT,170,heavy_work,270.3666666666667,21,0,10,1.0,0.0470588235294117,0.0470588235294117,1.2,1.2,1.05,1.05,1.2
+b170_heavy_work_r1,GA,170,heavy_work,278.6,12,0,10,1.0,0.0470588235294117,0.0470588235294117,1.2,1.2,1.05,1.05,1.2
+b170_heavy_work_r1,Proposed,170,heavy_work,265.81666666666666,3,0,10,1.0,0.0470588235294117,0.0470588235294117,1.2,1.2,1.05,1.05,1.2

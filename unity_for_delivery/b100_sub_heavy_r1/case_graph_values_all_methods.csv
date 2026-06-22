@@ -1,0 +1,6 @@
+﻿grid_case_id,method_label,total_blocks,distribution_profile,makespan_hours,violations
+b100_sub_heavy_r1,SPT,100,sub_heavy,165.76666666666668,18
+b100_sub_heavy_r1,MSF,100,sub_heavy,162.75,11
+b100_sub_heavy_r1,LPT,100,sub_heavy,154.8,4
+b100_sub_heavy_r1,GA,100,sub_heavy,157.43333333333334,1
+b100_sub_heavy_r1,Proposed,100,sub_heavy,153.45,1
