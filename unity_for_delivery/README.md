@@ -6,9 +6,12 @@
 기존 전체 컬럼 CSV는 삭제하지 않고 같은 폴더에 `original_*.csv` 이름으로 보존했습니다.  
 따라서 Unity는 기본 CSV를 읽고, 연구 검증이나 디버그가 필요할 때만 `original_*.csv`를 열면 됩니다.
 
-## 0. CSV를 다시 생성했을 때 정리 명령어
+## 0. 전달용 CSV를 다시 만들 때 정리 명령어
 
-`unity/by_case`에서 전달용 폴더를 다시 만들 때는 아래 명령어를 사용합니다.
+주의: 일반 `main.py eval` 또는 학습/평가 명령이 `unity/by_case`를 자동으로 새로 만든다는 의미는 아닙니다.  
+현재 `scripts/build_unity_delivery.py`는 이미 준비된 `unity/by_case` 산출물을 `unity_for_delivery` 전달 형식으로 변환합니다.
+
+이미 `unity/by_case`가 준비되어 있고 전달용 폴더를 다시 만들 때는 아래 명령어를 사용합니다.
 
 ```bash
 python3 scripts/build_unity_delivery.py --source unity/by_case --output unity_for_delivery

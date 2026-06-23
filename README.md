@@ -193,7 +193,10 @@ Unity 또는 외부 시각화 담당자에게 전달할 데이터는 `unity_for_
 step별 candidate mask, action masking on/off 상태, 선택 불가 후보 사유 같은 **action masking trace는 포함하지 않습니다.**  
 따라서 action masking 과정을 화면에 보여줄 경우에는 고정 예시를 사용하거나, 별도의 masking trace CSV를 추가로 생성해야 합니다.
 
-전달용 데이터를 다시 만들 때는 아래 명령어를 사용합니다.
+주의: 일반 `main.py eval` 또는 학습/평가 명령이 `unity/by_case`를 자동으로 새로 만든다는 의미는 아닙니다.  
+현재 `scripts/build_unity_delivery.py`는 **이미 준비된 `unity/by_case` 산출물**을 `unity_for_delivery` 전달 형식으로 변환하는 스크립트입니다.
+
+이미 `unity/by_case`가 준비되어 있고 전달용 데이터를 다시 만들 때는 아래 명령어를 사용합니다.
 
 ```bash
 python3 scripts/build_unity_delivery.py --source unity/by_case --output unity_for_delivery
