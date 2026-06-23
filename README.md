@@ -154,6 +154,7 @@ main.py가 입력, 검증, 요약만 담당합니다.
 
 각 폴더에 간단한 설명과 핵심 파일을 정리한 README가 있습니다.
 
+- `unity_for_delivery/README.md` - Unity 시각화 전달용 CSV 구조와 컬럼 설명
 - `enhanced_environment/README.md`
 - `enhanced_environment/masking/README.md`
 - `enhanced_environment/constraints/README.md`
@@ -165,6 +166,44 @@ main.py가 입력, 검증, 요약만 담당합니다.
 - `scheduling/README.md`
 - `utils/README.md`
 - `environment/README.md`
+
+### Unity 시각화 전달 데이터
+
+Unity 또는 외부 시각화 담당자에게 전달할 데이터는 `unity_for_delivery/`를 기준으로 봅니다.  
+이 폴더의 기본 CSV는 시각화에 필요한 컬럼만 남긴 slim 파일이고, 전체 원본 컬럼은 같은 위치의 `original_*.csv`에 보존되어 있습니다.
+
+주요 파일은 아래 3개입니다.
+
+| 목적 | 파일 | 설명 |
+|---|---|---|
+| 공정 흐름, 간트 차트, 블록 이동 애니메이션 | `{case}/{method}/process_gantt.csv` | Unity의 메인 입력 로그입니다. |
+| 블록 리스트, 클릭 상세, 블록 속성 | `{case}/{method}/block_results.csv` | `block_id`로 `process_gantt.csv`와 연결합니다. |
+| 방법별 makespan, constraint 비교 | `{case}/case_graph_values_all_methods.csv` | SPT, MSF, LPT, GA, Proposed 비교용입니다. |
+
+용어는 화면 기준으로 아래처럼 통일합니다.
+
+| CSV 내부 값 또는 컬럼 | 화면 표기 |
+|---|---|
+| `공통` | shared upstream line |
+| `베이35A` | downstream line A |
+| `베이36B` | downstream line B |
+| `assigned_bay` | assigned line |
+
+주의: 현재 `unity_for_delivery/`는 최종 스케줄 결과와 공정 로그를 시각화하기 위한 데이터입니다.  
+step별 candidate mask, action masking on/off 상태, 선택 불가 후보 사유 같은 **action masking trace는 포함하지 않습니다.**  
+따라서 action masking 과정을 화면에 보여줄 경우에는 고정 예시를 사용하거나, 별도의 masking trace CSV를 추가로 생성해야 합니다.
+
+전달용 데이터를 다시 만들 때는 아래 명령어를 사용합니다.
+
+```bash
+python3 scripts/build_unity_delivery.py --source unity/by_case --output unity_for_delivery
+```
+
+검증만 할 때는 아래 명령어를 사용합니다.
+
+```bash
+python3 scripts/build_unity_delivery.py --output unity_for_delivery --check-only
+```
 
 ### 모드별 실행 흐름
 

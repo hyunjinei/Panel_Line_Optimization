@@ -69,6 +69,10 @@ Unity에서 기본 화면을 만들 때는 아래 3개 파일만 읽으면 됩�
 정리하면 `process_gantt.csv`가 메인 입력입니다.  
 하지만 블록 상세 정보나 방법별 성능 비교까지 보여줄 거면 `block_results.csv`, `case_graph_values_all_methods.csv`도 같이 씁니다.
 
+주의: 이 전달 데이터는 최종 스케줄 결과와 공정 로그를 위한 데이터입니다.  
+step별 candidate mask, action masking on/off 상태, 선택 불가 후보 사유 같은 action masking trace는 포함하지 않습니다.  
+따라서 action masking 과정을 시각화하려면 고정 예시를 쓰거나, 별도의 masking trace CSV를 추가로 생성해야 합니다.
+
 ### 공정 흐름, 간트 차트, 애니메이션
 
 사용 파일:
